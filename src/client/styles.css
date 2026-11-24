@@ -1,1 +1,593 @@
 @import 'tailwindcss';
+
+/*
+ * JScout design tokens.
+ *
+ * Raw tokens are plain CSS variables that change with the theme; @theme below
+ * exposes them as Tailwind utilities (bg-surface, text-muted, border-strong…).
+ * The default Tailwind palette is removed on purpose: a class such as
+ * bg-gray-100 would not adapt to the dark theme, so only tokens exist.
+ *
+ * The dark values appear twice (explicit [data-theme='dark'] and the system
+ * preference). They must stay identical; src/client/styles.test.ts checks that
+ * and the WCAG contrast of every text/background pairing.
+ */
+
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light'], [data-theme='dark']), :root:not([data-theme='light'], [data-theme='dark']) *) {
+      @slot;
+    }
+  }
+}
+
+:root {
+  color-scheme: light dark;
+
+  /* tokens:light */
+  --canvas: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #f1efe9;
+  --surface-3: #e7e4dc;
+  --hover: rgb(64 54 32 / 0.06);
+  --pressed: rgb(64 54 32 / 0.11);
+  --border: #e3dfd6;
+  --border-strong: #c9c3b6;
+  --border-control: #8f887a;
+  --fg: #1d1c19;
+  --muted: #55524a;
+  --subtle: #6d685d;
+  --primary: #1f5f5b;
+  --primary-hover: #184e4a;
+  --primary-active: #123d3a;
+  --primary-fg: #1f5f5b;
+  --on-primary: #ffffff;
+  --primary-soft: #e1efed;
+  --primary-soft-hover: #d0e6e3;
+  --accent: #f2b84b;
+  --accent-fg: #7d5200;
+  --on-accent: #3a2800;
+  --accent-soft: #fcefd3;
+  --success: #17693f;
+  --success-soft: #e0f2e6;
+  --warning: #8f4a05;
+  --warning-soft: #fde9d2;
+  --danger: #ad2a20;
+  --danger-soft: #fbe6e3;
+  --danger-solid: #bd3329;
+  --danger-solid-hover: #a3271e;
+  --on-danger: #ffffff;
+  --info: #1d5892;
+  --info-soft: #e2edf9;
+  --focus: #22807a;
+  --tooltip: #24231f;
+  --on-tooltip: #f6f5f1;
+  --scrim: rgb(29 28 25 / 0.42);
+  --elev-overlay: 0 0 0 1px rgb(29 28 25 / 0.04), 0 2px 6px -2px rgb(29 28 25 / 0.1), 0 10px 28px -6px rgb(29 28 25 / 0.16);
+  --elev-dialog: 0 0 0 1px rgb(29 28 25 / 0.05), 0 8px 20px -8px rgb(29 28 25 / 0.16), 0 28px 64px -16px rgb(29 28 25 / 0.28);
+  /* end tokens */
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* tokens:dark */
+  --canvas: #0b1213;
+  --surface: #111a1b;
+  --surface-2: #172324;
+  --surface-3: #1f2e2f;
+  --hover: rgb(196 236 232 / 0.07);
+  --pressed: rgb(196 236 232 / 0.12);
+  --border: #223234;
+  --border-strong: #34494b;
+  --border-control: #6d8587;
+  --fg: #e2eae9;
+  --muted: #a5b5b4;
+  --subtle: #84979a;
+  --primary: #237269;
+  --primary-hover: #287b72;
+  --primary-active: #1e645c;
+  --primary-fg: #6fcfc5;
+  --on-primary: #ffffff;
+  --primary-soft: #12302f;
+  --primary-soft-hover: #173c3a;
+  --accent: #f2b84b;
+  --accent-fg: #f0c36a;
+  --on-accent: #2e1f00;
+  --accent-soft: #33280f;
+  --success: #6fd09a;
+  --success-soft: #11301f;
+  --warning: #f0a868;
+  --warning-soft: #36230f;
+  --danger: #f59087;
+  --danger-soft: #3a1917;
+  --danger-solid: #c8443a;
+  --danger-solid-hover: #b53a31;
+  --on-danger: #ffffff;
+  --info: #8ab8f0;
+  --info-soft: #142a42;
+  --focus: #5fc4ba;
+  --tooltip: #2a3b3d;
+  --on-tooltip: #e2eae9;
+  --scrim: rgb(2 6 6 / 0.62);
+  --elev-overlay: 0 0 0 1px rgb(196 236 232 / 0.06), 0 4px 10px -2px rgb(0 0 0 / 0.45), 0 14px 32px -6px rgb(0 0 0 / 0.55);
+  --elev-dialog: 0 0 0 1px rgb(196 236 232 / 0.07), 0 10px 24px -8px rgb(0 0 0 / 0.55), 0 32px 72px -16px rgb(0 0 0 / 0.7);
+  /* end tokens */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'], [data-theme='dark']) {
+    color-scheme: dark;
+
+    /* tokens:dark-system */
+    --canvas: #0b1213;
+    --surface: #111a1b;
+    --surface-2: #172324;
+    --surface-3: #1f2e2f;
+    --hover: rgb(196 236 232 / 0.07);
+    --pressed: rgb(196 236 232 / 0.12);
+    --border: #223234;
+    --border-strong: #34494b;
+    --border-control: #6d8587;
+    --fg: #e2eae9;
+    --muted: #a5b5b4;
+    --subtle: #84979a;
+    --primary: #237269;
+    --primary-hover: #287b72;
+    --primary-active: #1e645c;
+    --primary-fg: #6fcfc5;
+    --on-primary: #ffffff;
+    --primary-soft: #12302f;
+    --primary-soft-hover: #173c3a;
+    --accent: #f2b84b;
+    --accent-fg: #f0c36a;
+    --on-accent: #2e1f00;
+    --accent-soft: #33280f;
+    --success: #6fd09a;
+    --success-soft: #11301f;
+    --warning: #f0a868;
+    --warning-soft: #36230f;
+    --danger: #f59087;
+    --danger-soft: #3a1917;
+    --danger-solid: #c8443a;
+    --danger-solid-hover: #b53a31;
+    --on-danger: #ffffff;
+    --info: #8ab8f0;
+    --info-soft: #142a42;
+    --focus: #5fc4ba;
+    --tooltip: #2a3b3d;
+    --on-tooltip: #e2eae9;
+    --scrim: rgb(2 6 6 / 0.62);
+    --elev-overlay: 0 0 0 1px rgb(196 236 232 / 0.06), 0 4px 10px -2px rgb(0 0 0 / 0.45), 0 14px 32px -6px rgb(0 0 0 / 0.55);
+    --elev-dialog: 0 0 0 1px rgb(196 236 232 / 0.07), 0 10px 24px -8px rgb(0 0 0 / 0.55), 0 32px 72px -16px rgb(0 0 0 / 0.7);
+    /* end tokens */
+  }
+}
+
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* System fonts only: the app works offline and the CSP forbids remote fonts. */
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  /* A denser scale than Tailwind's: text-base is the 14px body, text-sm the 13px secondary size. */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.125rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.25rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.125rem;
+  --text-xl--line-height: 1.625rem;
+  --text-2xl: 1.375rem;
+  --text-2xl--line-height: 1.75rem;
+  --text-3xl: 1.75rem;
+  --text-3xl--line-height: 2.125rem;
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+
+  --default-transition-duration: 140ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
+
+  --animate-fade-in: fade-in 140ms ease-out;
+  --animate-fade-out: fade-out 120ms ease-in forwards;
+  --animate-pop-in: pop-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-pop-out: pop-out 100ms ease-in forwards;
+  --animate-dialog-in: dialog-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-dialog-out: dialog-out 120ms ease-in forwards;
+  --animate-sheet-in-right: sheet-in-right 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-sheet-out-right: sheet-out-right 150ms ease-in forwards;
+  --animate-sheet-in-left: sheet-in-left 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-sheet-out-left: sheet-out-left 150ms ease-in forwards;
+  --animate-toast-in: toast-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-toast-out: toast-out 120ms ease-in forwards;
+  --animate-indeterminate: indeterminate 1.4s ease-in-out infinite;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  @keyframes pop-out {
+    to {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
+    }
+  }
+  @keyframes dialog-out {
+    to {
+      opacity: 0;
+      transform: translateY(4px) scale(0.98);
+    }
+  }
+  @keyframes sheet-in-right {
+    from {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes sheet-out-right {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes sheet-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes sheet-out-left {
+    to {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  @keyframes toast-out {
+    to {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+  }
+  @keyframes indeterminate {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(250%);
+    }
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-hover: var(--hover);
+  --color-pressed: var(--pressed);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-control: var(--border-control);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-fg: var(--primary-fg);
+  --color-on-primary: var(--on-primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-hover: var(--primary-soft-hover);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-solid-hover: var(--danger-solid-hover);
+  --color-on-danger: var(--on-danger);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-focus: var(--focus);
+  --color-tooltip: var(--tooltip);
+  --color-on-tooltip: var(--on-tooltip);
+  --color-scrim: var(--scrim);
+
+  /*
+   * The solid brand fills are too dark (light theme) or too mid-toned (dark
+   * theme) to double as text on every surface, so text-primary / text-accent
+   * resolve to the readable "-fg" shade while bg-primary / bg-accent stay solid.
+   */
+  --text-color-primary: var(--primary-fg);
+  --text-color-accent: var(--accent-fg);
+
+  /* border-strong: the border of inputs and secondary buttons. */
+  --border-color-strong: var(--border-strong);
+  --border-color-control: var(--border-control);
+  --divide-color-strong: var(--border-strong);
+
+  /* Shadows are reserved for things that float: menus, popovers, toasts (overlay) and dialogs, drawers (dialog). */
+  --shadow-overlay: var(--elev-overlay);
+  --shadow-dialog: var(--elev-dialog);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--canvas);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 600;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--primary-fg) 26%, transparent);
+  }
+
+  ::placeholder {
+    color: var(--subtle);
+    opacity: 1;
+  }
+
+  /* One focus treatment for everything keyboard-reachable; text fields draw it on their wrapper instead. */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Number inputs: the spinner arrows add noise in dense forms. */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    appearance: textfield;
+  }
+  input[type='search']::-webkit-search-cancel-button {
+    appearance: none;
+  }
+
+  mark {
+    background-color: transparent;
+    color: inherit;
+    font-weight: 600;
+  }
+}
+
+@layer components {
+  /*
+   * Sanitised job-description HTML. Descriptions come from many ATSs with
+   * inconsistent markup, so the rules are defensive: stray empty paragraphs and
+   * <br> runs collapse, wide tables scroll, long URLs wrap.
+   */
+  .prose-job {
+    color: var(--fg);
+    font-size: var(--text-base);
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+  }
+  .prose-job > :first-child {
+    margin-top: 0;
+  }
+  .prose-job > :last-child {
+    margin-bottom: 0;
+  }
+  .prose-job :where(p, ul, ol, blockquote, pre, table, figure) {
+    margin-block: 0.85em;
+  }
+  .prose-job :where(p:empty) {
+    display: none;
+  }
+  .prose-job :where(h1, h2, h3, h4, h5, h6) {
+    margin-top: 1.6em;
+    margin-bottom: 0.5em;
+    color: var(--fg);
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .prose-job :where(h1, h2, h3) {
+    font-size: var(--text-lg);
+  }
+  .prose-job :where(h4) {
+    font-size: var(--text-base);
+  }
+  .prose-job :where(h5, h6) {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .prose-job :where(strong, b) {
+    font-weight: 600;
+  }
+  .prose-job :where(em, i) {
+    font-style: italic;
+  }
+  .prose-job :where(ul, ol) {
+    padding-left: 1.4em;
+  }
+  .prose-job :where(ul) {
+    list-style: disc;
+  }
+  .prose-job :where(ol) {
+    list-style: decimal;
+  }
+  .prose-job :where(ul ul) {
+    list-style: circle;
+  }
+  .prose-job :where(li) {
+    margin-block: 0.3em;
+    padding-left: 0.2em;
+  }
+  .prose-job :where(li)::marker {
+    color: var(--subtle);
+  }
+  .prose-job :where(li > p) {
+    margin-block: 0.3em;
+  }
+  .prose-job :where(li > ul, li > ol) {
+    margin-block: 0.3em;
+  }
+  .prose-job :where(a) {
+    color: var(--primary-fg);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--primary-fg) 40%, transparent);
+    text-underline-offset: 2px;
+  }
+  .prose-job :where(a:hover) {
+    text-decoration-color: currentColor;
+  }
+  .prose-job :where(blockquote) {
+    border-left: 3px solid var(--border-strong);
+    padding-left: 1em;
+    color: var(--muted);
+  }
+  .prose-job :where(code) {
+    border: 1px solid var(--border);
+    border-radius: 0.3rem;
+    background-color: var(--surface-2);
+    padding: 0.1em 0.35em;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+  .prose-job :where(pre) {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background-color: var(--surface-2);
+    padding: 0.75em 1em;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    line-height: 1.55;
+    overflow-wrap: normal;
+  }
+  .prose-job :where(pre code) {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: inherit;
+  }
+  .prose-job :where(table) {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    overflow-wrap: normal;
+  }
+  .prose-job :where(th, td) {
+    border: 1px solid var(--border);
+    padding: 0.4em 0.75em;
+    text-align: left;
+    vertical-align: top;
+  }
+  .prose-job :where(th) {
+    background-color: var(--surface-2);
+    font-weight: 600;
+  }
+  .prose-job :where(hr) {
+    margin-block: 1.6em;
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+  .prose-job :where(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-control);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* A frozen spinner reads as "stuck"; keep the one essential loading cue moving, slowly. */
+  .animate-spin {
+    animation-duration: 1.8s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
