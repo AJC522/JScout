@@ -1,0 +1,60 @@
+{
+  "name": "jscout",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first job search tool: fast local index over many job sources, saved profile, broadened search, and application assistance.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "dev": "concurrently -k -n server,web -c blue,magenta \"tsx watch --clear-screen=false src/server/main.ts\" \"vite\"",
+    "dev:server": "tsx watch --clear-screen=false src/server/main.ts",
+    "dev:web": "vite",
+    "build": "vite build && node scripts/build-server.mjs",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.13.0",
+    "@fastify/multipart": "^10.1.9",
+    "@fastify/static": "^10.1.12",
+    "fast-xml-parser": "^5.12.1",
+    "fastify": "^5.12.8",
+    "mammoth": "^1.13.0",
+    "sanitize-html": "^2.18.2",
+    "unpdf": "^1.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "^4.3.5",
+    "@tanstack/react-query": "^5.108.4",
+    "@tanstack/react-virtual": "^3.14.28",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/sanitize-html": "^2.16.2",
+    "@vitejs/plugin-react": "^6.3.0",
+    "clsx": "^2.1.1",
+    "concurrently": "^10.0.7",
+    "esbuild": "^0.28.2",
+    "lucide-react": "^1.79.0",
+    "radix-ui": "^1.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router": "^7.18.6",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  }
+}
