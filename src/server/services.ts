@@ -131,7 +131,12 @@ export interface JobStore {
   setDescription(id: string, descriptionHtml: string, descriptionText: string): void;
   /** Every posting in a cluster as source links, best first. */
   clusterLinks(clusterKey: string): JobSourceLink[];
+  /** Record a liveness check; a 'closed' result also closes the posting (and 'open' re-opens it). */
   setLiveness(id: string, result: LivenessResult): void;
+  /** Close open postings of a feed by external id (e.g. reported closed by JobSource.checkOpen). */
+  closePostings(feedKey: string, externalIds: string[], now: Date): number;
+  /** Open postings of a feed not seen since `before` (candidates for checkOpen / staleness closing). */
+  unseenSince(feedKey: string, before: Date, limit?: number): Array<{ id: string; externalId: string; lastSeenAt: string }>;
   getLiveness(id: string): LivenessResult | undefined;
   /** Remove a feed's postings entirely (company removed / source disabled). Tracked jobs keep their snapshot. */
   removeFeed(feedKey: string): number;

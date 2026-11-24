@@ -58,10 +58,15 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX jobs_open_posted ON jobs (closed_at, posted_at);
   CREATE INDEX jobs_first_seen  ON jobs (first_seen_at);
 
-  -- One row per physical place a job is tied to, for location filtering.
+  -- Location index rows, for fast indexed location filtering:
+  --   city    one per city the job is tied to (city, admin1, country, lat, lon)
+  --   admin1  a state/province without a city (admin1, country)
+  --   country a country without a finer place (country)
+  --   region  one row per member country of a named region place, e.g. on-site "EMEA" (country)
+  --   scope   one row per country a REMOTE worker may live in (country); none = unrestricted
   CREATE TABLE job_places (
     job_rid  INTEGER NOT NULL REFERENCES jobs (rid) ON DELETE CASCADE,
-    kind     TEXT NOT NULL,       -- city | admin1 | country | region | anywhere
+    kind     TEXT NOT NULL,       -- city | admin1 | country | region | scope
     city     TEXT,
     admin1   TEXT,
     country  TEXT,
