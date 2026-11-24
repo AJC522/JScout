@@ -140,7 +140,7 @@ function parseRelative(s: string, now: number): number | undefined {
 }
 
 function parseString(raw: string, now: number): number | undefined {
-  const s = raw.trim();
+  const s = raw.trim().replace(/^(?:posted|published|updated|date posted)(?:\s+on)?\s*:?\s*(?=\w)/i, '');
   if (!s) return undefined;
 
   if (/^\d+(?:\.\d+)?$/.test(s)) {
