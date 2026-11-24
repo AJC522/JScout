@@ -12,7 +12,7 @@
  *       neighbourhood rows) and the GeoNames country names.
  *   - cities-15000-structured@1.0.1 code MIT; data GeoNames cities15000 (CC BY 4.0).
  *       Raw GeoNames TSV (2023-03 snapshot): ASCII names and feature codes,
- *       used to flag national capitals (PPLC/PPLG) and to add the few tiny
+ *       used to flag national capitals (PPLC) and to add the few tiny
  *       capitals that are missing from the i18n-cities list.
  *   - cities.json@1.1.66            licence CC-BY-4.0 (GeoNames admin1CodesASCII).
  *       admin1.json: first-level division names keyed "CC.code".
@@ -29,6 +29,10 @@
  *     srcDir  = directory containing node_modules with the packages above
  *               (default: current working directory)
  *     outFile = default <repo>/src/server/data/gazetteer.json
+ * Output: {version, countries[{code,name,aliases,continent,region}], admin1[{country,code,name,aliases}],
+ *   cities[[name, asciiName, admin1Code, countryCode, lat, lon, population]] (pop >= 15000 plus
+ *   national capitals, population desc), aliases[{alias,city,admin1,country}], regions[{name,aliases,countries}]},
+ *   one array entry per line. admin1 codes are GeoNames codes (US: USPS, GB: ENG/SCT/WLS/NIR, CA: 01..14, ...).
  * The output is deterministic for the same package versions. The script fails
  * loudly if an alias or abbreviation table entry no longer resolves.
  */
@@ -89,7 +93,7 @@ const uniqCI = (arr, exclude = []) => {
 
 // ---------------------------------------------------------------- cities
 const tsvById = new Map(tsv.map((r) => [Number(r[0]), r]));
-const capitalIds = new Set(tsv.filter((r) => r[7] === 'PPLC' || r[7] === 'PPLG').map((r) => Number(r[0])));
+const capitalIds = new Set(tsv.filter((r) => r[7] === 'PPLC').map((r) => Number(r[0])));
 const OBSOLETE = new Set(['CS', 'AN']);
 const picked = new Map(); // geonameid -> [id, name, ascii, admin1, cc, lat, lon, pop]
 for (const [id, name, lat, lon, cc, a1, pop] of I.cities) {
@@ -286,6 +290,11 @@ const US_TERRITORIES = [
   { code: 'MP', name: 'Northern Mariana Islands', aliases: ['CNMI', 'Northern Marianas'] },
 ];
 const FULL_ADMIN1 = Object.keys(A1);
+// GeoNames placeholder codes ("00") and the few codes missing from admin1CodesASCII
+// (some SG, AW, MO, ET, EH rows) are blanked so that every code used resolves.
+const srcA1 = new Set(admin1Src.map((a) => a.code));
+const blanked = cityRows.filter((r) => r[3] && !srcA1.has(`${r[4]}.${r[3]}`));
+for (const r of blanked) r[3] = '';
 const usedA1 = new Set(cityRows.filter((r) => r[3]).map((r) => `${r[4]}.${r[3]}`));
 const admin1 = [];
 const errors = [];
@@ -306,7 +315,7 @@ admin1.sort((a, b) => (a.country < b.country ? -1 : a.country > b.country ? 1 : 
 // "alias1, alias2 > City | CC [| admin1 code or name]"  (City matches name or asciiName)
 const ALIAS_SPEC = `
 nyc, n.y.c., new york, new york ny, nyc metro, ny metro, new york metro, new york metropolitan area, greater new york, tri-state area, tristate area, tri-state, silicon alley, nueva york > New York City | US
-manhattan ny, midtown manhattan, lower manhattan, midtown, downtown manhattan > Manhattan | US | NY
+manhattan ny, midtown manhattan, lower manhattan, downtown manhattan > Manhattan | US | NY
 bronx > The Bronx | US
 long island city > Queens | US | NY
 sf, s.f., san fran, bay area, the bay area, sf bay area, s.f. bay area, san francisco bay area, sf bay, greater san francisco > San Francisco | US
@@ -368,7 +377,7 @@ hull > Kingston upon Hull | GB
 londonderry > Derry | GB
 greater dublin, dublin city > Dublin | IE
 münchen, munchen, muenchen, múnich, munich area > Munich | DE
-cologne, köln, koln, koeln, colonia > Köln | DE
+cologne, köln, koln, koeln > Köln | DE
 nürnberg, nurnberg, nuernberg > Nuremberg | DE
 frankfurt, frankfurt am main, frankfurt/main, frankfurt a.m., frankfurt (main), rhein-main, rhine-main, frankfurt rhine-main > Frankfurt am Main | DE
 hanover > Hannover | DE
@@ -382,6 +391,8 @@ berne > Bern | CH
 praha, prag, praga > Prague | CZ
 lisboa, lissabon > Lisbon | PT
 oporto > Porto | PT
+seville > Sevilla | ES
+lucerne > Luzern | CH
 warszawa, warschau > Warsaw | PL
 cracow > Kraków | PL
 tricity, trójmiasto, trojmiasto > Gdańsk | PL
@@ -447,7 +458,6 @@ subang jaya > Petaling Jaya | MY
 metro manila > Manila | PH
 bgc, bonifacio global city, fort bonifacio > Taguig | PH
 makati > Makati City | PH
-qc > Quezon City | PH
 greater jakarta, jabodetabek > Jakarta | ID
 krung thep > Bangkok | TH
 greater tokyo, tokyo metropolis, tokio > Tokyo | JP
@@ -580,4 +590,4 @@ JSON.parse(out);
 fs.mkdirSync(path.dirname(outFile), { recursive: true });
 fs.writeFileSync(outFile, out);
 const noA1 = cityRows.filter((r) => r[3] && !a1Set.has(`${r[4]}.${r[3]}`)).length;
-console.log(`wrote ${outFile} (${out.length} bytes): ${countries.length} countries, ${admin1.length} admin1, ${cityRows.length} cities, ${aliases.length} aliases, ${regions.length} regions; city rows with empty admin1: ${cityRows.filter((r) => !r[3]).length}, with admin1 code absent from admin1 list: ${noA1}`);
+console.log(`wrote ${outFile} (${out.length} bytes): ${countries.length} countries, ${admin1.length} admin1, ${cityRows.length} cities, ${aliases.length} aliases, ${regions.length} regions; city rows with empty admin1: ${cityRows.filter((r) => !r[3]).length}, with admin1 code absent from admin1 list: ${noA1}; admin1 codes blanked (not in GeoNames admin1 list): ${blanked.length}`);
