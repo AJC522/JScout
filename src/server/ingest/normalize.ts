@@ -29,7 +29,8 @@ export function jobIdFor(sourceId: string, feedKey: string, externalId: string):
 
 /**
  * Normalise one posting. Returns null when the posting is unusable (no title,
- * company or http(s) url after cleaning) — callers count and log those.
+ * company or http(s) url after cleaning) or already expired (raw.expiresAt before
+ * ctx.now) — callers count and log those.
  *
  * Steps (each uses the library named; none of this belongs in adapters):
  *  - id = jobIdFor(source.id, feedKey, externalId); title/company: entities decoded, whitespace

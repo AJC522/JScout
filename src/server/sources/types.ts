@@ -40,6 +40,8 @@ export interface RawPosting {
   /** Publication date: ISO-8601, RFC 2822, or epoch seconds/milliseconds as given. */
   postedAt?: string | number;
   updatedAt?: string | number;
+  /** When the source says the posting expires (same formats as postedAt). Expired postings are dropped at ingest. */
+  expiresAt?: string | number;
   salary?: RawSalary;
   /** Raw value, e.g. "Full-time", "contract". */
   employmentType?: string;
