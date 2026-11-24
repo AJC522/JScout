@@ -110,8 +110,16 @@ export function migrate(db: Db): void {
 
 /** Open (creating if needed) and migrate the database. Use ':memory:' in tests. */
 export function openDb(filename: string): Db {
-  if (filename !== ':memory:') fs.mkdirSync(path.dirname(filename), { recursive: true });
+  if (filename !== ':memory:') fs.mkdirSync(path.dirname(filename), { recursive: true, mode: 0o700 });
   const db = new Db(filename);
+  if (filename !== ':memory:') {
+    // The database holds personal data and API keys: keep it readable by the owner only (no-op on Windows).
+    try {
+      fs.chmodSync(filename, 0o600);
+    } catch {
+      /* best effort */
+    }
+  }
   migrate(db);
   return db;
 }

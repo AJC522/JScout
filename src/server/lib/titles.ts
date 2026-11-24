@@ -19,12 +19,17 @@ export interface RoleRef {
 export interface TitleInfo {
   raw: string;
   /**
-   * The title with noise removed and seniority stripped, in normalizeText form:
-   * "Sr. Software Engineer II (Remote) - Payments" -> "software engineer".
+   * The title with noise removed and seniority stripped, in normalizeText form, keeping
+   * specialisation/team words in their original order:
+   *   "Sr. Software Engineer II (Remote) - Payments"  -> "software engineer payments"
+   *   "Senior Software Engineer, Backend (Remote - US)" -> "software engineer backend"
    * Removed: seniority words and levels (I/II/III, L4, "level 2"), parenthetical/bracketed asides,
-   * trailing location or team segments after " - ", " | ", " @ ", ", " when the head is already a title,
-   * work-arrangement and contract words (remote, hybrid, contract, m/f/d, f/m/x, h/f), requisition ids.
-   * Used for de-duplication and for exact-title matching.
+   * trailing location segments, work-arrangement and contract words (remote, hybrid, contract,
+   * m/f/d, f/m/x, h/f, "all genders"), pay/shift decorations, requisition ids.
+   * Kept: team and specialisation words, because "Software Engineer - Payments" and
+   * "Software Engineer - Fraud" are different jobs and must not be merged as duplicates.
+   * Used for de-duplication (same company + same core + same seniority + same place = same job)
+   * and for title matching.
    */
   core: string;
   seniority: Seniority;

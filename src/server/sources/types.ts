@@ -160,6 +160,12 @@ export interface JobSource {
     board?: BoardRef,
   ): Promise<Partial<RawPosting> | null>;
   /**
+   * For feeds that are NOT complete snapshots (rolling windows): report which of the
+   * given postings are still open, so ones that dropped out of the window can be
+   * closed when the source says so. Ids missing from the result are left untouched.
+   */
+  checkOpen?(ctx: SourceContext, externalIds: string[]): Promise<Map<string, boolean>>;
+  /**
    * perCompany sources: quick existence probe used when a user adds a company.
    * Resolve with the open-job count and the board's display name when it can be read; null when the board does not exist.
    */

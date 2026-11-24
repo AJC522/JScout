@@ -10,3 +10,8 @@ test-results/
 playwright-report/
 .vite/
 *.tsbuildinfo
+
+# Raw API responses captured from live job sources during development. They hold
+# third-party posting content, so they stay local; committed tests use the
+# synthetic fixtures instead.
+tests/fixtures/sources/
