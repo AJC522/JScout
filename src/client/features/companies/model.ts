@@ -1,6 +1,6 @@
 /** Pure helpers for the companies page: labels, filters -> request, and the bulk-change scope. */
 import type { CompanyBulkUpdate, CompanyListQuery } from '../../../shared/api';
-import type { AtsKind } from '../../../shared/types';
+import type { AtsKind, SourceInfo } from '../../../shared/types';
 
 export const COMPANIES_PAGE_SIZE = 50;
 
@@ -12,6 +12,16 @@ export const ATS_LABELS: Record<AtsKind, string> = {
   workable: 'Workable',
 };
 export const ATS_KINDS = Object.keys(ATS_LABELS) as AtsKind[];
+
+/**
+ * Job boards JScout can sync, for the job-board filter: those with a per-company source (whose
+ * id is the ATS name). Boards it cannot add or sync would only ever filter to nothing. The
+ * selected one stays listed so the control never shows the wrong value.
+ */
+export function syncableAts(sources: ReadonlyArray<Pick<SourceInfo, 'id' | 'perCompany'>> | undefined, selected?: AtsKind): AtsKind[] {
+  const ids = new Set((sources ?? []).filter((s) => s.perCompany).map((s) => s.id));
+  return ATS_KINDS.filter((ats) => ids.has(ats) || ats === selected);
+}
 
 export type FollowFilter = 'all' | 'following' | 'not-following';
 

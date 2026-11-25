@@ -6,6 +6,7 @@ import { api, errorMessage } from '../../api/client';
 import { useToast } from '../../components/ui';
 import { qk } from '../../lib/query';
 import { useSaveProfile } from '../profile/profile-api';
+import { placeRecap } from '../profile/preferences-model';
 import { StepLayout } from './StepLayout';
 
 interface DoneStepProps {
@@ -26,15 +27,7 @@ export function DoneStep({ profile, onBack, onFinished }: DoneStepProps) {
   const recap = [
     { done: profile.resume !== null, text: profile.resume ? `Résumé added (${profile.resume.fileName || 'pasted text'})` : 'No résumé yet' },
     { done: p.targetTitles.length > 0, text: p.targetTitles.length > 0 ? `Looking for ${listOf(p.targetTitles)}` : 'No job titles yet' },
-    {
-      done: p.locations.length > 0 || p.remote.length > 0,
-      text:
-        p.locations.length > 0
-          ? `In ${listOf(p.locations)}${p.remote.includes('remote') ? ', or remote' : ''}`
-          : p.remote.includes('remote')
-            ? 'Remote jobs'
-            : 'Any location',
-    },
+    { done: p.locations.length > 0 || p.remote.length > 0, text: placeRecap(p.locations.length > 0 ? listOf(p.locations) : '', p.remote) },
     { done: p.skills.length > 0, text: p.skills.length > 0 ? `${p.skills.length} skills to match against` : 'No skills yet' },
   ];
 

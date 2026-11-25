@@ -6,6 +6,9 @@ import { errorMessage } from '../../api/client';
 import { Badge, Button, Field, Input, useConfirm, useToast } from '../../components/ui';
 import { SectionCard } from '../profile/SectionCard';
 import { useAiStatus, useTestAi, useUpdateSettings } from './settings-api';
+import { keyRemovalResult } from './settings-model';
+
+const ENV_KEY_NOTE = 'No key is saved here, but JScout is using the ANTHROPIC_API_KEY environment variable. To turn AI drafting off, unset it and restart JScout.';
 
 export function AiSection({ settings }: { settings: AppSettings }) {
   const update = useUpdateSettings();
@@ -14,6 +17,9 @@ export function AiSection({ settings }: { settings: AppSettings }) {
   const status = useAiStatus(settings.ai.hasKey);
   const test = useTestAi();
   const [key, setKey] = useState('');
+  // Set when removing the saved key left AI on: the key comes from the ANTHROPIC_API_KEY environment variable.
+  const [envKeyInUse, setEnvKeyInUse] = useState(false);
+  const usingEnvKey = envKeyInUse && settings.ai.hasKey;
   const [model, setModel] = useState(settings.ai.model);
   const [savedModel, setSavedModel] = useState(settings.ai.model);
   // Follow the stored model when it changes elsewhere, unless the user is editing it.
@@ -32,6 +38,7 @@ export function AiSection({ settings }: { settings: AppSettings }) {
       {
         onSuccess: () => {
           setKey('');
+          setEnvKeyInUse(false);
           test.reset();
           toast.success('API key saved', { description: 'Use Test to check that it works.' });
         },
@@ -51,9 +58,15 @@ export function AiSection({ settings }: { settings: AppSettings }) {
     update.mutate(
       { ai: { apiKey: null } },
       {
-        onSuccess: () => {
+        onSuccess: (saved) => {
           test.reset();
-          toast.success('API key removed');
+          if (keyRemovalResult(saved) === 'removed') {
+            setEnvKeyInUse(false);
+            toast.success('API key removed');
+            return;
+          }
+          setEnvKeyInUse(true);
+          toast.info('AI drafting is still on', { description: ENV_KEY_NOTE });
         },
         onError: (err) => toast.error('Could not remove the key', { description: errorMessage(err) }),
       },
@@ -81,7 +94,7 @@ export function AiSection({ settings }: { settings: AppSettings }) {
       actions={
         settings.ai.hasKey ? (
           <Badge tone="success" dot>
-            Key saved
+            {usingEnvKey ? 'Key from environment' : 'Key saved'}
           </Badge>
         ) : (
           <Badge>Off</Badge>
@@ -91,7 +104,8 @@ export function AiSection({ settings }: { settings: AppSettings }) {
       <div className="flex flex-col gap-5">
         <p className="text-sm text-muted">
           Nothing is sent to Anthropic unless you press a “with AI” button. Without a key, JScout drafts from built-in templates. You can get a key at
-          console.anthropic.com; usage is billed to your Anthropic account.
+          console.anthropic.com; usage is billed to your Anthropic account. When no key is saved here, JScout uses the ANTHROPIC_API_KEY environment
+          variable if it is set.
         </p>
 
         <form
@@ -121,12 +135,15 @@ export function AiSection({ settings }: { settings: AppSettings }) {
                 <Button type="button" size="sm" loading={test.isPending} onClick={() => test.mutate()}>
                   Test
                 </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => void removeKey()}>
-                  Remove key
-                </Button>
+                {usingEnvKey ? null : (
+                  <Button type="button" size="sm" variant="ghost" onClick={() => void removeKey()}>
+                    Remove key
+                  </Button>
+                )}
               </>
             ) : null}
           </div>
+          {usingEnvKey ? <p className="text-sm text-muted">{ENV_KEY_NOTE}</p> : null}
           {settings.ai.hasKey && (tested || lastError) ? (
             lastError ? (
               <p role="status" className="flex items-start gap-1.5 text-sm text-danger">

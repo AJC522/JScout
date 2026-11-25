@@ -1,6 +1,7 @@
 /** Experience and education entries from the matching résumé sections. */
 import { randomUUID } from 'node:crypto';
 import type { EducationEntry, ExperienceEntry } from '../../../shared/types';
+import { resolvePlace } from '../../lib/location';
 import { findRole } from '../../lib/titles';
 import { type DateRange, findDateRanges, findSingleDate, formatDatePoint } from './resume-dates';
 import { findPlace, isBullet, splitParts, stripBullet } from './resume-parse';
@@ -36,6 +37,39 @@ const cutSpan = (line: string, span: { index: number; length: number }) =>
     .replace(/^[\s,|–—-]+|[\s,|–—(-]+$/g, '')
     .trim();
 
+const MIN_STANDALONE_CITY_POPULATION = 50_000;
+
+/** "Berlin", "New York", "California": a piece that names a place on its own (not a code, title or employer). */
+function standalonePlace(piece: string): boolean {
+  if (piece.length < 3 || !/^\p{Lu}/u.test(piece) || /^[A-Z]{2,3}$/.test(piece) || piece.split(/\s+/).length > 3) return false;
+  if (TITLE_WORDS_RE.test(piece) || COMPANY_WORDS_RE.test(piece)) return false;
+  const place = resolvePlace(piece);
+  if (!place) return false;
+  if (place.kind === 'city') return (place.population ?? 0) >= MIN_STANDALONE_CITY_POPULATION;
+  return place.kind === 'admin1' || place.kind === 'country';
+}
+
+/** "Zalando, Hamburg" read as an unknown town in the state of Hamburg. */
+function unknownLocality(place: string): boolean {
+  const resolved = resolvePlace(place);
+  return resolved?.kind === 'admin1' && resolved.city !== undefined;
+}
+
+/**
+ * The location at the end of a header part. In "Title, Company, City" the place is the last piece:
+ * "Senior Engineer, Brightline Analytics, Berlin" must not become the town "Brightline Analytics" in the
+ * state of Berlin (losing the employer), and "…, Acme Corp, London" must keep London.
+ */
+function headerPlace(part: string): { place: string; index: number } | undefined {
+  const found = findPlace(part);
+  const pieces = part.split(/,\s*/);
+  const last = pieces.at(-1)!.trim();
+  if (pieces.length >= 3 && (!found || unknownLocality(found.place)) && standalonePlace(last)) {
+    return { place: last, index: part.lastIndexOf(last) };
+  }
+  return found;
+}
+
 /** Header text -> title/company candidates and a location. */
 function headerParts(texts: string[]): { parts: string[]; location: string } {
   const parts: string[] = [];
@@ -46,7 +80,7 @@ function headerParts(texts: string[]): { parts: string[]; location: string } {
         location ||= part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
         continue;
       }
-      const place = findPlace(part);
+      const place = headerPlace(part);
       if (place) {
         location ||= place.place;
         part = part.slice(0, place.index).replace(/[\s,]+$/, '');

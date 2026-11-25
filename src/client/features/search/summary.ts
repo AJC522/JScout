@@ -1,6 +1,7 @@
 /** Plain-English descriptions of what a search actually ran, for the interpretation bar. Pure. */
 import type { BroadenSuggestion, ExpandedTitle, SearchInterpretation, SearchQuery } from '../../../shared/types';
 import { pluralize } from '../../lib/format';
+import { describeRemoteOnlyPlace, isRemoteOnly } from '../saved/describe';
 
 /** "Software Engineer + 6 similar titles", "“react” and “rust”", or "Any job". */
 export function describeTitles(interpretation: SearchInterpretation, query: SearchQuery): string {
@@ -16,14 +17,16 @@ export function describeTitles(interpretation: SearchInterpretation, query: Sear
   return query.q.trim() ? query.q.trim() : 'Any job';
 }
 
-/** "Austin, TX within 50 km + remote", "Remote only", or "Anywhere". */
+/** "Austin, TX within 50 km + remote", "Remote jobs open to Austin, TX", "Remote only", or "Anywhere". */
 export function describePlace(interpretation: SearchInterpretation, query: SearchQuery): string {
   const remote = query.remote ?? [];
   const remoteAllowed = remote.length === 0 || remote.includes('remote');
-  if (!query.location) return remote.length === 1 && remote[0] === 'remote' ? 'Remote only' : 'Anywhere';
+  if (!query.location) return isRemoteOnly(remote) ? 'Remote only' : 'Anywhere';
   const place = interpretation.place;
   const name = place && !interpretation.placeUnresolved ? place.label : query.location;
   const radius = place?.kind === 'city' && query.radiusKm ? ` within ${query.radiusKm} km` : '';
+  // The arrangement filter drops local on-site and hybrid jobs, so this is not "place + remote".
+  if (isRemoteOnly(remote)) return describeRemoteOnlyPlace(name, radius, query.includeRemote);
   const plusRemote = query.includeRemote !== false && remoteAllowed ? ' + remote' : '';
   return `${name}${radius}${plusRemote}`;
 }

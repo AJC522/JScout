@@ -118,6 +118,15 @@ export function registerProfileRoutes(app: FastifyInstance, ctx: AppContext): vo
         clearAllSettings(ctx);
       }
     });
+    // Deleted rows must not stay readable in freed pages or old WAL frames. The index is gone too, so
+    // the rebuild is quick. The reset itself is committed: a failure here must not report it as failed.
+    if (scope === 'everything') {
+      try {
+        ctx.db.scrub({ vacuum: true });
+      } catch (err) {
+        ctx.log.warn('Could not compact the database after the reset', { err });
+      }
+    }
     // The reset is committed; failing to notify open tabs must not report it as failed.
     try {
       ctx.events.publish({ type: 'index-changed', index: s.sync.summary() });

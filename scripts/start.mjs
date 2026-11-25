@@ -34,10 +34,27 @@ function needsBuild() {
 
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
-if (!fs.existsSync(path.join(root, 'node_modules'))) {
-  console.log('Installing dependencies (first run)…');
+/**
+ * First run, or an update that changed the dependencies: package-lock.json is then newer than npm's
+ * record of the last install (node_modules/.package-lock.json, written just after it by `npm install`).
+ */
+function needsInstall() {
+  if (!fs.existsSync(path.join(root, 'node_modules'))) return 'Installing dependencies (first run)…';
+  const lock = path.join(root, 'package-lock.json');
+  const installed = path.join(root, 'node_modules', '.package-lock.json');
+  if (!fs.existsSync(lock)) return undefined;
+  if (!fs.existsSync(installed) || fs.statSync(lock).mtimeMs > fs.statSync(installed).mtimeMs + 5_000) return 'Updating dependencies…';
+  return undefined;
+}
+
+const installMessage = needsInstall();
+if (installMessage) {
+  console.log(installMessage);
   const install = spawnSync(npm, ['install', '--no-audit', '--no-fund'], { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' });
-  if (install.status !== 0) process.exit(install.status ?? 1);
+  if (install.status !== 0) {
+    console.error('\nInstalling dependencies failed. Check your internet connection (and HTTPS_PROXY), then run "npm install" and "npm start" again.');
+    process.exit(install.status ?? 1);
+  }
 }
 
 if (needsBuild()) {
@@ -51,6 +68,13 @@ if (needsBuild()) {
 const env = { ...process.env };
 const proxied = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'].some((k) => env[k]);
 if (proxied && env.NODE_USE_ENV_PROXY === undefined) env.NODE_USE_ENV_PROXY = '1';
+// fetch honours NODE_USE_ENV_PROXY from Node.js 22.21 (and 24) on; older versions ignore it.
+if (proxied && !(major >= 24 || (major === 22 && minor >= 21))) {
+  console.warn(
+    `A proxy is set (HTTPS_PROXY), but Node.js ${process.versions.node} cannot send JScout's requests through it, so syncing\n` +
+      'will try to connect directly. Install Node.js 22.21 or newer to sync through the proxy.',
+  );
+}
 
 // node:sqlite and the proxy agent print "experimental" warnings at startup, before any of the
 // server's own code runs (so src/server/quiet-warnings.ts cannot catch them); both work fine.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyProfile } from '../../../shared/constants';
 import type { ExperienceEntry, Profile, ResumeAnalysis } from '../../../shared/types';
 import { filterAnswers, unansweredCommon } from './answers-model';
-import { LIST_LIMITS, formatSalaryInput, preferencesErrors, radiusLabel, toggle } from './preferences-model';
+import { LIST_LIMITS, arrangementHint, formatSalaryInput, placeRecap, preferencesErrors, radiusLabel, toggle } from './preferences-model';
 import { applyProfilePatch, isEmptyPatch, mergeUnique, missingFrom, moveItem, upsertById } from './profile-model';
 import { buildResumePatch, initialSelection, newExperience, suggestsPaste } from './resume-apply';
 import { checkResumeFile, isValidEmail, isValidLink, isYearMonth, parseOptionalNumber, validatePersonal } from './validation';
@@ -197,6 +197,21 @@ describe('answers and preferences', () => {
     expect(formatSalaryInput(null)).toBe('');
     expect(toggle(['a'], 'b')).toEqual(['a', 'b']);
     expect(toggle(['a', 'b'], 'a')).toEqual(['b']);
+  });
+
+  it('recaps a location with only "Remote" ticked as remote jobs open to it, not local ones too', () => {
+    expect(placeRecap('Berlin, Germany', ['remote'])).toBe('Remote jobs open to Berlin, Germany');
+    expect(placeRecap('Berlin, Germany', [])).toBe('In Berlin, Germany, or remote');
+    expect(placeRecap('Berlin, Germany', ['remote', 'hybrid'])).toBe('In Berlin, Germany, or remote');
+    expect(placeRecap('Berlin, Germany', ['onsite'])).toBe('In Berlin, Germany');
+    expect(placeRecap('', ['remote'])).toBe('Remote jobs');
+    expect(placeRecap('', [])).toBe('Any location');
+  });
+
+  it('warns under the arrangement chips when "Remote" alone hides local jobs', () => {
+    expect(arrangementHint({ locations: ['Berlin'], remote: ['remote'] })).toMatch(/^Only remote jobs will show/);
+    expect(arrangementHint({ locations: [], remote: ['remote'] })).toBe('Pick none to see every kind.');
+    expect(arrangementHint({ locations: ['Berlin'], remote: ['remote', 'hybrid'] })).toBe('Pick none to see every kind.');
   });
 
   it('flags preference lists longer than the server keeps', () => {

@@ -1,3 +1,4 @@
+import type { ServerResponse } from 'node:http';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { ApiRoutes } from '../../shared/api';
@@ -51,6 +52,14 @@ export function registerAppRoutes(app: FastifyInstance, ctx: AppContext): void {
   app.patch('/api/settings', async (request) => s.settings.updateApp(parse(settingsPatchSchema, request.body)));
 
   // Server-sent events: sync progress and index changes. One long-lived response per tab.
+  // They never end on their own, so they are ended when the server closes (else every Ctrl+C with a tab
+  // open waited out the forced exit and skipped closing the database).
+  const streams = new Set<ServerResponse>();
+  app.addHook('preClose', async () => {
+    for (const res of streams) res.end();
+    streams.clear();
+  });
+
   app.get(EVENTS_PATH, (request, reply) => {
     reply.hijack();
     const res = reply.raw;
@@ -73,9 +82,11 @@ export function registerAppRoutes(app: FastifyInstance, ctx: AppContext): void {
     const unsubscribe = ctx.events.subscribe(send);
     const heartbeat = setInterval(() => res.write(': ping\n\n'), 25_000);
     heartbeat.unref();
+    streams.add(res);
     const cleanup = () => {
       clearInterval(heartbeat);
       unsubscribe();
+      streams.delete(res);
     };
     request.raw.on('close', cleanup);
     res.on('error', cleanup);

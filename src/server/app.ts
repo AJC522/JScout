@@ -49,10 +49,10 @@ export interface BuiltApp {
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 
-function hostnameOf(value: string | undefined): string | undefined {
+function urlOf(value: string | undefined): URL | undefined {
   if (!value) return undefined;
   try {
-    return new URL(value.includes('://') ? value : `http://${value}`).hostname;
+    return new URL(value.includes('://') ? value : `http://${value}`);
   } catch {
     return undefined;
   }
@@ -62,15 +62,18 @@ function hostnameOf(value: string | undefined): string | undefined {
  * JScout holds personal data and API keys and listens on localhost. Any website
  * the user visits can try to talk to localhost, so:
  *  - reject requests whose Host is not a loopback name (defeats DNS rebinding);
- *  - reject state-changing requests that carry a non-loopback Origin (defeats CSRF);
+ *  - reject state-changing requests whose Origin is not JScout itself (defeats CSRF): an http
+ *    loopback origin on the port the request was sent to. Other local web servers (another port)
+ *    can send form posts without a preflight, so the port matters. Through the dev server's proxy
+ *    the Host stays the dev server's, so its pages pass as same-origin;
  *  - never send CORS headers.
  */
 function isLocalRequest(headers: { host?: string; origin?: string }, method: string): boolean {
-  const host = hostnameOf(headers.host);
-  if (!host || !LOCAL_HOSTNAMES.has(host)) return false;
+  const host = urlOf(headers.host);
+  if (!host || !LOCAL_HOSTNAMES.has(host.hostname)) return false;
   if (method !== 'GET' && method !== 'HEAD' && headers.origin !== undefined) {
-    const origin = hostnameOf(headers.origin);
-    if (!origin || !LOCAL_HOSTNAMES.has(origin)) return false;
+    const origin = urlOf(headers.origin);
+    if (!origin || origin.protocol !== 'http:' || !LOCAL_HOSTNAMES.has(origin.hostname) || origin.port !== host.port) return false;
   }
   return true;
 }

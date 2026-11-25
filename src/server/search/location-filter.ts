@@ -22,7 +22,10 @@ export interface SqlCond {
 }
 
 export interface LocationFilter {
+  /** The (first) resolved place. */
   place?: Place;
+  /** Every resolved place when several were given ("Berlin, Germany; Munich, Germany"); a posting may be in any. */
+  places: Place[];
   placeUnresolved: boolean;
   /** Condition on `j` (jobs) when the place resolved. */
   cond?: SqlCond;
@@ -120,10 +123,23 @@ function placeFilter(place: Place, opts: { radiusKm: number; includeRemote: bool
   return { sql: `(${parts.map((p) => p.sql).join(' OR ')})`, params: parts.flatMap((p) => p.params) };
 }
 
+/** Separates several places in one location ("Berlin, Germany; Munich, Germany"): commas belong to places. */
+export const LOCATION_SEPARATOR = ';';
+
+/** The places of a location text, as typed. */
+export function locationPieces(location: string | undefined): string[] {
+  return (location ?? '').split(LOCATION_SEPARATOR).map((p) => p.trim()).filter((p) => tokenize(p).length > 0);
+}
+
 export function locationFilter(location: string | undefined, opts: { radiusKm: number; includeRemote: boolean }): LocationFilter {
-  const text = location?.trim() ?? '';
-  if (tokenize(text).length === 0) return { placeUnresolved: false };
-  const place = resolvePlace(text);
-  if (place && place.kind !== 'unknown') return { place, placeUnresolved: false, cond: placeFilter(place, opts) };
-  return { placeUnresolved: true, fts: ftsScope(['location'], ftsString(text)) };
+  const pieces = locationPieces(location);
+  if (pieces.length === 0) return { places: [], placeUnresolved: false };
+  const places = pieces.map((p) => resolvePlace(p)).filter((p): p is Place => p !== undefined && p.kind !== 'unknown');
+  if (places.length === 0) return { places: [], placeUnresolved: true, fts: ftsScope(['location'], ftsString(pieces.join(' '))) };
+  // "Anywhere" in the list means no geographic limit at all.
+  const anywhere = places.find((p) => p.kind === 'anywhere');
+  if (anywhere) return { place: anywhere, places: [anywhere], placeUnresolved: false };
+  const conds = places.map((p) => placeFilter(p, opts)).filter((c): c is SqlCond => c !== undefined);
+  const cond = conds.length <= 1 ? conds[0] : { sql: `(${conds.map((c) => c.sql).join(' OR ')})`, params: conds.flatMap((c) => c.params) };
+  return { place: places[0], places, placeUnresolved: false, ...(cond ? { cond } : {}) };
 }

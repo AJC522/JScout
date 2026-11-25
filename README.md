@@ -23,7 +23,7 @@ npm install
 npm start
 ```
 
-`npm start` builds the app the first time (and again after updates), then opens it at <http://localhost:4310>. A short setup asks for your résumé, what you are looking for, and which industries' employers to follow; every step can be skipped. JScout then fetches jobs in the background: the job boards give you around 9,000 postings within a couple of minutes, and the employers you follow are added as they sync.
+`npm start` builds the app the first time (and again after updates, installing any new dependencies), then opens it at <http://localhost:4310>. A short setup asks for your résumé, what you are looking for, and which industries' employers to follow; every step can be skipped. JScout then fetches jobs in the background: the job boards give you around 9,000 postings within a couple of minutes, and the employers you follow are added as they sync.
 
 Stop it with `Ctrl+C` in the terminal. Run `npm start` again whenever you want to use it.
 
@@ -37,7 +37,7 @@ Set these environment variables before `npm start` if you need them:
 | `JSCOUT_DATA_DIR` | `./data` | Where the database and your résumé are stored |
 | `JSCOUT_NO_OPEN` | unset | Set to `1` to not open the browser automatically |
 | `ANTHROPIC_API_KEY` | unset | Optional; same as entering a key in Settings |
-| `HTTPS_PROXY` | unset | Use a proxy for syncing (picked up automatically) |
+| `HTTPS_PROXY` | unset | Use a proxy for syncing (picked up automatically on Node.js 22.21 or newer) |
 
 ## Where jobs come from
 
@@ -56,7 +56,7 @@ Sites that do not allow automated access (such as LinkedIn and Indeed) are not i
 ## Privacy
 
 - Everything you enter — profile, résumé, applications, saved searches, API keys — is stored only in the local data folder (`./data` by default). Back it up or move it with **Settings → Your data → Export**.
-- JScout only accepts connections from your own computer.
+- JScout only accepts connections from your own computer. It has no password, though: while it runs, anyone else signed in to the same computer (another user account) could read your data through it, so on a shared computer stop it when you are done.
 - Requests to job sources never include your personal information.
 - Nothing is sent to an AI provider unless you add a key **and** press a "with AI" button.
 
@@ -66,7 +66,8 @@ Sites that do not allow automated access (such as LinkedIn and Indeed) are not i
 npm run dev        # API with auto-reload + Vite dev server at http://localhost:5173
 npm test           # unit tests (Vitest)
 npm run typecheck  # TypeScript, server and client
-npm run e2e        # end-to-end tests (Playwright) against the built app
+npm run e2e        # end-to-end tests (Playwright) against the built app;
+                   # run `npx playwright install chromium` once before the first run
 npm run build      # production build into dist/
 ```
 
@@ -75,7 +76,7 @@ Code layout: `src/shared` holds the types and API contract shared by both sides;
 ## Troubleshooting
 
 - **"Port 4310 is already in use"** — JScout may already be running; open <http://localhost:4310>. Or start it on another port: `JSCOUT_PORT=4311 npm start` (PowerShell: `$env:JSCOUT_PORT=4311; npm start`).
-- **No jobs appear** — check Settings → Job sources for errors. Behind a company proxy, set `HTTPS_PROXY`.
+- **No jobs appear** — check Settings → Job sources for errors. Behind a company proxy, set `HTTPS_PROXY`; this needs Node.js 22.21 or newer (older versions ignore the proxy).
 - **A scanned PDF résumé shows no text** — paste the text instead (Profile → Résumé).
 
 ## Credits

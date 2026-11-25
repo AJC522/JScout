@@ -12,6 +12,7 @@ import type { EmploymentType, RemoteMode, Seniority } from '../../shared/types';
 import type { Db, SqlValue } from '../db';
 import { BM25_ARGS } from './fts';
 import type { CandidateRow, SearchPlan, SqlCond } from './plan';
+import type { Exclusion } from './understand';
 
 function whereClause(conds: SqlCond[]): { sql: string; params: SqlValue[] } {
   if (conds.length === 0) return { sql: '', params: [] };
@@ -29,19 +30,79 @@ function textConds(plan: SearchPlan): SqlCond[] {
   return conds;
 }
 
-const excludeCond = (expr: string): SqlCond => ({ sql: '+j.rid NOT IN (SELECT rowid FROM jobs_fts WHERE jobs_fts MATCH ?)', params: [expr] });
+/** Postings matching every expression of the exclusion (table names are constants). */
+function excludeCond(e: Exclusion): SqlCond[] {
+  const parts: Array<[string, string]> = [];
+  if (e.fts) parts.push(['jobs_fts', e.fts]);
+  if (e.words) parts.push(['jobs_words', e.words]);
+  if (e.title) parts.push(['jobs_title', e.title]);
+  if (parts.length === 0) return [];
+  const sql = parts.map(([table]) => `SELECT rowid FROM ${table} WHERE ${table} MATCH ?`).join(' INTERSECT ');
+  return [{ sql: `+j.rid NOT IN (${sql})`, params: parts.map(([, expr]) => expr) }];
+}
 const titleExactCond = (expr: string): SqlCond => ({ sql: '+j.rid IN (SELECT rowid FROM jobs_title WHERE jobs_title MATCH ?)', params: [expr] });
+
+const ACRONYM_FN = 'jscout_acronym_title';
+const acronymPatterns = new Map<string, RegExp>();
+
+/** 1 when `title` has one of the acronyms (a JSON array) in capitals as a word of its own, not followed by a number. */
+function acronymTitle(title: unknown, words: unknown): number {
+  if (typeof title !== 'string' || typeof words !== 'string') return 0;
+  let re = acronymPatterns.get(words);
+  if (!re) {
+    const list = (JSON.parse(words) as string[]).filter((w) => /^[a-z]{1,3}$/.test(w)).map((w) => w.toUpperCase());
+    re = list.length ? new RegExp(`(?<![\\p{L}\\p{N}])(?:${list.join('|')})(?![\\p{L}\\p{N}])(?!\\s*[-#:.]?\\s*\\d)`, 'u') : /(?!)/;
+    acronymPatterns.set(words, re);
+  }
+  return re.test(title) ? 1 : 0;
+}
+
+const withFunctions = new WeakSet<Db>();
+function ensureFunctions(db: Db): void {
+  if (withFunctions.has(db)) return;
+  db.raw.function(ACRONYM_FN, { deterministic: true }, acronymTitle);
+  withFunctions.add(db);
+}
+
+/** A posting matched only through an acronym title must spell it as one ("RN - ICU", not "RN 71344"). */
+function acronymCond(check: NonNullable<SearchPlan['titleAcronyms']>): SqlCond {
+  const words = JSON.stringify(check.words);
+  if (!check.strict) return { sql: `${ACRONYM_FN}(j.title, ?)`, params: [words] };
+  return { sql: `(+j.rid IN (SELECT rowid FROM jobs_title WHERE jobs_title MATCH ?) OR ${ACRONYM_FN}(j.title, ?))`, params: [check.strict, words] };
+}
 
 /** Text conditions that only narrow the positive match: the unstemmed title check and exclusions. */
 function filterConds(plan: SearchPlan): SqlCond[] {
-  return [...(plan.titleExact ? [titleExactCond(plan.titleExact)] : []), ...(plan.exclude ? [excludeCond(plan.exclude)] : [])];
+  return [
+    ...(plan.titleExact ? [titleExactCond(plan.titleExact)] : []),
+    ...(plan.titleAcronyms ? [acronymCond(plan.titleAcronyms)] : []),
+    ...plan.exclusions.flatMap(excludeCond),
+  ];
 }
 
 /** De-duplicated result count (distinct clusters) with every filter applied, plus optional extra conditions. */
 export function countClusters(db: Db, plan: SearchPlan, extra: SqlCond[] = []): number {
+  ensureFunctions(db);
   const dims = Object.values(plan.dims).map((d) => d.cond);
   const where = whereClause([...textConds(plan), ...plan.base, ...dims, ...extra]);
   return db.get<{ n: number }>(`SELECT COUNT(DISTINCT j.cluster_key) AS n FROM jobs j ${where.sql}`, ...where.params)?.n ?? 0;
+}
+
+/**
+ * Clusters passing every filter that are new since `after`: first seen after it in every passing copy,
+ * so an aggregator re-listing a job the user already saw does not count it as new again.
+ */
+export function countNewClusters(db: Db, plan: SearchPlan, after: string): number {
+  ensureFunctions(db);
+  const dims = Object.values(plan.dims).map((d) => d.cond);
+  const where = whereClause([...textConds(plan), ...plan.base, ...dims]);
+  return (
+    db.get<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM (SELECT 1 FROM jobs j ${where.sql} GROUP BY j.cluster_key HAVING MIN(j.first_seen_at) > ?)`,
+      ...where.params,
+      after,
+    )?.n ?? 0
+  );
 }
 
 // --- candidate fetch -------------------------------------------------------------------
@@ -109,6 +170,7 @@ function decode(t: CandidateTuple): CandidateRow {
  * with its own filter removed from the same rows.
  */
 export function fetchCandidates(db: Db, plan: SearchPlan): CandidateRow[] {
+  ensureFunctions(db);
   const where = whereClause([...plan.base, ...filterConds(plan)]);
   const salary = plan.opts.sort === 'salary' ? `, ${SALARY_COLUMNS}` : '';
   const tuples = plan.match

@@ -243,4 +243,29 @@ export const MIGRATIONS: string[] = [
     INSERT INTO jobs_title (rowid, title) VALUES (new.rid, new.title);
   END;
   `,
+  // 4 — unstemmed word index for exclusions (search). Porter stems "international" and "internal" to
+  // "intern", so excluding "intern" through jobs_fts dropped every posting with either word. An
+  // exclusion must also match here, where words keep their spelling. One column holding every
+  // jobs_fts column's text; detail=none stores only which rows have a word, which keeps it small
+  // (no phrases or column filters: jobs_fts still checks those). The job store writes it next to
+  // jobs_fts. Rows indexed before this migration get their description HTML, not its plain text: the
+  // stemmed jobs_fts match an exclusion also needs keeps markup words from excluding anything.
+  `
+  CREATE VIRTUAL TABLE jobs_words USING fts5 (
+    text,
+    content = '',
+    contentless_delete = 1,
+    detail = none,
+    tokenize = "unicode61 remove_diacritics 2 tokenchars '+#'"
+  );
+  INSERT INTO jobs_words (rowid, text)
+    SELECT rid, title || ' ' || company || ' ' || location_text || ' ' || tags || ' ' || skills || ' ' || COALESCE(department, '') || ' ' || description_html
+    FROM jobs;
+  `,
+  // 5 — feeds whose postings are being removed (a disabled source or company board). Deleting tens of
+  // thousands of postings takes seconds, so they are hidden from search and counts at once and deleted
+  // a few hundred at a time in the background; the table makes that survive a restart.
+  `
+  CREATE TABLE removed_feeds (feed_key TEXT PRIMARY KEY);
+  `,
 ];

@@ -8,6 +8,7 @@ import { useCompanies } from '../companies/queries';
 import { aboutCount } from '../onboarding/industries';
 import { describeQuery, SUMMARY_SEPARATOR } from '../saved/describe';
 import { useClearHistory, useProfileQuery, useSearchHistory } from './queries';
+import { isBlankQuery } from './url-state';
 
 const MAX_RECENT = 6;
 
@@ -38,6 +39,8 @@ function ProfileCard({ onRun }: { onRun: (query: SearchQuery) => void }) {
     return <ErrorState compact title="Could not load your profile search" error={profileQuery.error} onRetry={() => void profileQuery.refetch()} retrying={profileQuery.isFetching} />;
   }
   const query = profileQuery.data;
+  // A profile with nothing to search by (setup skipped, or left empty) would make the button do nothing.
+  if (isBlankQuery(query)) return <SetUpProfileCard />;
   const titles = splitTitles(query.q);
   return (
     <Card padded className="border-primary/30 bg-primary-soft/30">
@@ -70,6 +73,21 @@ function ProfileCard({ onRun }: { onRun: (query: SearchQuery) => void }) {
           </Link>
         </div>
       </div>
+    </Card>
+  );
+}
+
+function SetUpProfileCard() {
+  return (
+    <Card padded className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <UserRound className="size-8 shrink-0 text-primary" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <h2 className="text-base font-semibold text-fg">Search faster with a profile</h2>
+        <p className="mt-0.5 text-sm text-muted">Tell JScout the roles and places you want once. Then search, rank and apply in one click.</p>
+      </div>
+      <Button asChild variant="primary">
+        <Link to="/welcome">Set up my profile</Link>
+      </Button>
     </Card>
   );
 }
@@ -148,20 +166,7 @@ function FollowCompaniesCard() {
 export function StartPanel({ onboarded, onRun }: { onboarded: boolean; onRun: (query: SearchQuery) => void }) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {onboarded ? (
-        <ProfileCard onRun={onRun} />
-      ) : (
-        <Card padded className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <UserRound className="size-8 shrink-0 text-primary" aria-hidden="true" />
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-fg">Search faster with a profile</h2>
-            <p className="mt-0.5 text-sm text-muted">Tell JScout the roles and places you want once. Then search, rank and apply in one click.</p>
-          </div>
-          <Button asChild variant="primary">
-            <Link to="/welcome">Set up my profile</Link>
-          </Button>
-        </Card>
-      )}
+      {onboarded ? <ProfileCard onRun={onRun} /> : <SetUpProfileCard />}
       <FollowCompaniesCard />
       <RecentSearches onRun={onRun} />
       <p className="text-center text-sm text-muted">

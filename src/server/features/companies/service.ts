@@ -92,15 +92,15 @@ export function createCompaniesService(ctx: AppContext, options: CompaniesOption
     return toBoard(row, ctx.services.jobs.openCountByFeed([key]), syncRows([key]));
   }
 
-  /** Remove the postings and sync state of boards that stop being synced (inside the caller's transaction). */
+  /**
+   * Remove the postings and sync state of boards that stop being synced (inside the caller's transaction).
+   * The postings leave search at once and are deleted in the background, so disabling hundreds of boards
+   * does not freeze the app.
+   */
   function dropFeeds(rows: CompanyRow[]): number {
-    let removed = 0;
-    for (const row of rows) {
-      const key = feedKey(row);
-      removed += ctx.services.jobs.removeFeed(key);
-      db.run('DELETE FROM sync_state WHERE feed_key = ?', key);
-    }
-    return removed;
+    const keys = rows.map(feedKey);
+    db.run('DELETE FROM sync_state WHERE feed_key IN (SELECT value FROM json_each(?))', JSON.stringify(keys));
+    return ctx.services.jobs.hideFeeds(keys);
   }
 
   function queueSync(feedKeys: string[]): void {

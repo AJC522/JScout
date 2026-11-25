@@ -1,14 +1,27 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import type { Ok } from '../../shared/api';
+import { JOB_DETAIL_QUERY_PARAM, type Ok } from '../../shared/api';
 import { searchQuerySchema } from '../../shared/schemas';
 import type { JobDetail, JobUserState, SearchQuery } from '../../shared/types';
-import { notFound } from '../errors';
+import { badRequest, notFound } from '../errors';
 import { stableHash } from '../lib/text';
 import type { AppContext } from '../services';
 import { parse, queryInt } from '../validate';
 
 const idParamsSchema = z.object({ id: z.string().min(1).max(200) });
+/** GET /api/jobs/:id?query=<JSON SearchQuery>: score and explain the job against the search it was opened from. */
+const jobDetailQuerySchema = z.object({ [JOB_DETAIL_QUERY_PARAM]: z.string().max(20_000).optional() });
+
+function searchQueryParam(raw: string | undefined): SearchQuery | undefined {
+  if (raw === undefined || raw === '') return undefined;
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw badRequest(`${JOB_DETAIL_QUERY_PARAM} must be a search query as JSON`);
+  }
+  return parse(searchQuerySchema, value);
+}
 const suggestQuerySchema = z.object({
   q: z.string().trim().min(1).max(100),
   limit: queryInt(1, 20).default(8),
@@ -96,7 +109,9 @@ export function registerSearchRoutes(app: FastifyInstance, ctx: AppContext): voi
 
   app.get('/api/jobs/:id', async (request): Promise<JobDetail> => {
     const { id } = parse(idParamsSchema, request.params);
-    const detail = s.search.jobDetail(id);
+    // Without a query the job is scored against the profile.
+    const query = searchQueryParam(parse(jobDetailQuerySchema, request.query)[JOB_DETAIL_QUERY_PARAM]);
+    const detail = s.search.jobDetail(id, query);
     if (!detail) throw notFound('Job');
     if (detail.descriptionHtml) return detail;
     // Some sources list jobs without descriptions: fetch it now, but never keep the user waiting long.
@@ -108,7 +123,7 @@ export function registerSearchRoutes(app: FastifyInstance, ctx: AppContext): voi
       DESCRIPTION_TIMEOUT_MS,
       '',
     );
-    return fetched ? (s.search.jobDetail(id) ?? detail) : detail;
+    return fetched ? (s.search.jobDetail(id, query) ?? detail) : detail;
   });
 
   app.post('/api/jobs/:id/view', async (request): Promise<JobUserState> => {

@@ -177,7 +177,8 @@ function addOpening(d: Draft): void {
 function addMatch(d: Draft): void {
   const { skills, themes, missing, tone, job } = d.input;
   if (d.strengths.length > 0) {
-    d.add('match', d.variant('match', MATCHES[tone](listPhrase(d.strengths.slice(0, 3)), d.companyName)), 0);
+    const strengths = d.strengths.slice(0, 3);
+    d.add('match', d.variant('match', MATCHES[tone](listPhrase(strengths), d.companyName, strengths.length === 1)), 0);
   }
   if (skills.length > 3) d.add('background', `I also work with ${listPhrase(skills.slice(3, 6))}.`, 4);
   const extraThemes = skills.length > 0 ? themes.slice(0, 2) : themes.slice(3, 5);
@@ -339,26 +340,33 @@ const OPENERS: Record<LetterTone, Phrasings> = {
   ],
 };
 
-const MATCHES: Record<LetterTone, Phrasings> = {
-  professional: (list) => [
-    `The role calls for ${list}, all of which are part of my skill set.`,
-    `Your posting highlights ${list}, and those are skills I bring.`,
+/** Match sentences; `one` is true when a single skill is listed, so they never say "those are skills" about one. */
+const MATCHES: Record<LetterTone, (list: string, company: string, one: boolean) => string[]> = {
+  professional: (list, _company, one) => [
+    one ? `The role calls for ${list}, which is part of my skill set.` : `The role calls for ${list}, all of which are part of my skill set.`,
+    one ? `Your posting highlights ${list}, and that is a skill I bring.` : `Your posting highlights ${list}, and those are skills I bring.`,
     `Several of your requirements line up with my background, including ${list}.`,
   ],
-  warm: (list) => [
-    `I was especially glad to see ${list} in the posting, since they are a big part of my skill set.`,
+  warm: (list, _company, one) => [
+    one
+      ? `I was especially glad to see ${list} in the posting, since it is a big part of my skill set.`
+      : `I was especially glad to see ${list} in the posting, since they are a big part of my skill set.`,
     `Reading the posting, I noticed how closely it lines up with my background, including ${list}.`,
-    `It was great to see that the role calls for ${list}, because those are skills I bring.`,
+    one
+      ? `It was great to see that the role calls for ${list}, because that is a skill I bring.`
+      : `It was great to see that the role calls for ${list}, because those are skills I bring.`,
   ],
-  concise: (list) => [
+  concise: (list, _company, one) => [
     `My skills match your requirements, including ${list}.`,
     `I bring ${list}, which the role calls for.`,
-    `The role needs ${list}; those are skills I have.`,
+    one ? `The role needs ${list}; that is a skill I have.` : `The role needs ${list}; those are skills I have.`,
   ],
-  enthusiastic: (list, company) => [
-    `I was excited to see ${list} in the posting, since they are exactly the skills I bring.`,
-    `The role calls for ${list}, and I'd be excited to put those skills to work at ${company}.`,
-    `Your posting asks for ${list}, and I'm eager to bring those skills to ${company}.`,
+  enthusiastic: (list, company, one) => [
+    one
+      ? `I was excited to see ${list} in the posting, since it is exactly the skill I bring.`
+      : `I was excited to see ${list} in the posting, since they are exactly the skills I bring.`,
+    `The role calls for ${list}, and I'd be excited to put ${one ? 'that skill' : 'those skills'} to work at ${company}.`,
+    `Your posting asks for ${list}, and I'm eager to bring ${one ? 'that skill' : 'those skills'} to ${company}.`,
   ],
 };
 

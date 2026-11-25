@@ -28,6 +28,18 @@ describe('titleTier', () => {
   });
 });
 
+describe('titleTier with generic synonyms', () => {
+  const u = understandQuery({ q: 'registered nurse' });
+  it('ranks titles with a specific synonym above titles of another role that only share "nurse"', () => {
+    const rn = titleTier({ title: 'RN - ICU Nights', titleCore: 'rn icu nights' }, u);
+    const np = titleTier({ title: 'Nurse Practitioner', titleCore: 'nurse practitioner', roleId: 'nurse-practitioner' }, u);
+    const plain = titleTier({ title: 'New Patient Nurse', titleCore: 'new patient nurse' }, u);
+    expect(rn.points).toBe(30);
+    expect(plain.points).toBe(26);
+    expect(np.points).toBeLessThan(plain.points);
+  });
+});
+
 describe('scorePosting', () => {
   it('scores a perfect match near 100 and explains it on the same scale', () => {
     const { score, match } = scorePosting(input({ ts: NOW.toISOString(), salary: { min: 90_000, max: 130_000, annualMin: 90_000, annualMax: 130_000, currency: 'USD', period: 'year' } }), ctx('software engineer'));
@@ -35,6 +47,22 @@ describe('scorePosting', () => {
     expect(match.titleMatch).toBe('exact');
     expect(match.reasons.map((r) => r.label)).toEqual(['Title matches “Software Engineer”', 'Strong keyword match', 'Posted today', 'Salary listed: $90k–$130k/yr']);
     expect(match.reasons.reduce((n, r) => n + r.points, 0)).toBeCloseTo(score, -1);
+  });
+
+  it('explains places the location filter accepts: a region including the country, a city next door', () => {
+    const reason = (job: string, target: string, radiusKm = 0) =>
+      scorePosting(
+        input({ location: { places: [resolvePlace(job)!], remote: 'onsite', remoteScope: [] } }),
+        ctx('software engineer', { location: { place: resolvePlace(target)!, radiusKm, includeRemote: false } }),
+      ).match.reasons.find((r) => r.key === 'location')!;
+    const emea = reason('EMEA', 'Germany');
+    expect(emea.label).toMatch(/^In EMEA.*, which includes Germany$/);
+    expect(emea.points).toBeGreaterThan(0);
+    expect(reason('North America', 'United States').label).toMatch(/which includes United States/);
+    expect(reason('EMEA', 'Europe').label).toMatch(/which overlaps Europe/);
+    const somerville = reason('Somerville, MA', 'Cambridge, MA');
+    expect(somerville.label).toMatch(/^In Somerville, MA.*\(\d km\)$/);
+    expect(reason('Austin, TX', 'Germany').label).toBe('Not in Germany');
   });
 
   it('explains skills, seniority and location against the profile', () => {

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { SearchQuery, SearchResponse } from '../../shared/types';
+import { normalizePosting } from '../ingest/normalize';
+import { getSource } from '../sources/registry';
 import { createSearchTestEnv, FIXTURE_NOW, type SearchTestEnv } from './testing';
 
 let env: SearchTestEnv;
@@ -50,6 +52,61 @@ describe('finding the right titles', () => {
     expect(teacher.items.every((i) => i.match.titleMatch === 'exact')).toBe(true);
     // Acronyms match as typed: "SWE" must not find "Swedish".
     expect(ids(run({ q: 'swe', synonyms: false }))).toEqual(['acme-swe-remote-us']);
+  });
+
+  it('exclusions match words as spelled, not by stem: "intern" keeps "international" postings', () => {
+    const all = env.db.all<{ external_id: string; title: string; description_html: string }>(
+      'SELECT external_id, title, description_html FROM jobs WHERE closed_at IS NULL',
+    );
+    const has = (re: RegExp) => new Set(all.filter((r) => re.test(`${r.title} ${r.description_html}`)).map((r) => r.external_id));
+    const intern = has(/(?<![\p{L}\p{N}])interns?(?![\p{L}\p{N}])/iu);
+    const internationalOnly = [...has(/\binternational\b/i)].filter((id) => !intern.has(id));
+    expect(internationalOnly.length).toBeGreaterThan(0);
+    const kept = new Set(ids(run({ q: '', excludeTerms: ['intern'], limit: 1000 })));
+    const everything = ids(run({ q: '', limit: 1000 }));
+    for (const id of internationalOnly) if (everything.includes(id)) expect(kept, id).toContain(id);
+    for (const id of everything) if (!kept.has(id)) expect(intern, `${id} was excluded`).toContain(id);
+    // "-manager" in a keyword search keeps "management" postings; plurals are still excluded.
+    expect(ids(run({ q: 'teachers -teacher' }))).not.toContain('remotive-teachers');
+    expect(ids(run({ q: 'accountant -account', titleOnly: false }))).toContain('remotive-accountant');
+  });
+
+  it('a title typed in the plural finds the same jobs as the singular', () => {
+    for (const [plural, singular] of [
+      ['software engineers', 'software engineer'],
+      ['registered nurses', 'registered nurse'],
+      ['accountants', 'accountant'],
+      ['data engineers', 'data engineer'],
+    ] as const) {
+      const one = run({ q: singular });
+      expect(one.total, singular).toBeGreaterThan(0);
+      expect(ids(run({ q: plural })).sort(), plural).toEqual(ids(one).sort());
+    }
+  });
+
+  it('arrangement and place words next to a title are not required in the title', () => {
+    const plain = run({ q: 'software engineer' });
+    const remote = run({ q: 'remote software engineer' });
+    expect(remote.total).toBeGreaterThan(0);
+    expect(remote.items.every((i) => i.job.location.remote === 'remote')).toBe(true);
+    expect(ids(run({ q: 'software engineer remote' })).sort()).toEqual(ids(remote).sort());
+    expect(ids(remote).every((id) => ids(plain).includes(id))).toBe(true);
+    expect(remote.interpretation.terms).toContain('remote');
+    // The facet, when set, wins over the word.
+    expect(run({ q: 'remote software engineer', remote: ['hybrid'] }).items.every((i) => i.job.location.remote === 'hybrid')).toBe(true);
+    expect(ids(run({ q: 'software engineer berlin' }))).toContain('acme-swe-berlin');
+    const fullTime = run({ q: 'full time software engineer' });
+    expect(fullTime.total).toBeGreaterThan(0);
+    expect(fullTime.items.every((i) => i.job.employmentType === 'full-time')).toBe(true);
+  });
+
+  it('"Search keywords anywhere" only adds results to a title search', () => {
+    for (const q of ['software engineer', 'backend engineer']) {
+      const title = run({ q, limit: 1000 });
+      const anywhere = run({ q, titleOnly: false, limit: 1000 });
+      expect(anywhere.total, q).toBeGreaterThanOrEqual(title.total);
+      for (const id of ids(title)) expect(ids(anywhere), `${q}: ${id}`).toContain(id);
+    }
   });
 
   it('a leading minus excludes a word', () => {
@@ -123,6 +180,15 @@ describe('location', () => {
     expect(ids(r)).not.toContain('globex-swe-london');
     expect(ids(r)).not.toContain('acme-swe-remote-us');
     expect(r.interpretation.place).toMatchObject({ kind: 'country', country: 'DE' });
+  });
+
+  it('several places (a profile with more than one city) match postings in any of them', () => {
+    const r = run({ q: '', location: 'Berlin, Germany; Munich, Germany', includeRemote: false });
+    expect(ids(r)).toEqual(expect.arrayContaining(['acme-swe-berlin', 'acme-backend-munich']));
+    expect(ids(r)).not.toContain('acme-swe-austin');
+    const munich = item(r, 'acme-backend-munich')!;
+    expect(munich.match.reasons.find((x) => x.key === 'location')?.label).toMatch(/^In M(ü|u)nich/);
+    expect(r.interpretation.place?.city).toBe('Berlin');
   });
 
   it('"EMEA" covers London and Berlin but not Austin', () => {
@@ -246,6 +312,88 @@ describe('de-duplication', () => {
     }
     expect(env.search.count({ q: '' }, { firstSeenAfter: FIXTURE_NOW.toISOString() })).toBe(0);
     expect(env.search.count({ q: '' }, { firstSeenAfter: '2000-01-01T00:00:00.000Z' })).toBe(env.search.count({ q: '' }));
+  });
+
+  it("a job its employer's board has closed is closed, whatever aggregators still list", async () => {
+    const small = await createSearchTestEnv({ fixtures: false });
+    try {
+      const q = { q: 'SWE', synonyms: false };
+      expect(ids(small.search.search(q))).toEqual(['acme-swe-remote-us']);
+      small.store.closePostings('greenhouse:acmerobotics', ['acme-swe-remote-us'], FIXTURE_NOW);
+      expect(small.search.search(q).total).toBe(0);
+      expect(small.search.count(q)).toBe(0);
+      expect(small.search.search({ ...q, includeClosed: true }).total).toBe(1);
+      const links = small.store.clusterLinks(small.store.getPosting(small.id('remotive-acme-swe'))!.clusterKey);
+      expect(links.find((l) => l.source === 'greenhouse')?.closedAt).toBe(FIXTURE_NOW.toISOString());
+      expect(links.find((l) => l.source === 'remotive')?.closedAt).toBeUndefined();
+      // Closing only the aggregator's copy leaves the employer's open copy.
+      small.db.run('UPDATE jobs SET closed_at = NULL');
+      small.store.closePostings('remotive', ['remotive-acme-swe'], FIXTURE_NOW);
+      expect(ids(small.search.search(q))).toEqual(['acme-swe-remote-us']);
+    } finally {
+      small.close();
+    }
+  });
+
+  it('a removed feed leaves search at once, before its postings are deleted', async () => {
+    const small = await createSearchTestEnv({ fixtures: false });
+    try {
+      const before = small.search.search({ q: '' });
+      expect(before.facets.source.some((f) => f.value === 'remotive')).toBe(true);
+      small.store.hideFeeds(['remotive']);
+      const after = small.search.search({ q: '' });
+      expect(after.facets.source.some((f) => f.value === 'remotive')).toBe(false);
+      expect(small.search.count({ q: '' })).toBe(after.total);
+      await small.store.purgePending();
+      expect(small.search.search({ q: '' }).total).toBe(after.total);
+    } finally {
+      small.close();
+    }
+  });
+
+  it('acronym titles count only written as one: "RN" is not the reference code in "RN 71344"', async () => {
+    const small = await createSearchTestEnv({ fixtures: false });
+    try {
+      const def = getSource('remotive')!.def;
+      const postings = [
+        ['code', 'Konstrukteur Mechanik; RN 71344', 'Maschinenbau GmbH'],
+        ['rn-icu', 'RN - ICU Night Shift', 'City Hospital'],
+        ['np', 'Nurse Practitioner', 'City Hospital'],
+        ['rn-word', 'Registered Nurse - Med Surg', 'County Clinic'],
+      ].map(([externalId = '', title = '', company = '']) =>
+        normalizePosting(
+          { externalId, title, company, url: `https://jobs.example.com/${externalId}`, locations: ['Remote - US'], remote: 'remote', descriptionHtml: '<p>Join us.</p>' },
+          { source: def, feedKey: 'remotive', now: FIXTURE_NOW },
+        )!,
+      );
+      small.store.upsertPostings({ feedKey: 'remotive', source: 'remotive' }, postings, FIXTURE_NOW);
+      const r = small.search.search({ q: 'registered nurse', limit: 50 });
+      const found = ids(r);
+      expect(found).not.toContain('code');
+      expect(found).toEqual(expect.arrayContaining(['rn-icu', 'rn-word', 'np']));
+      expect(found.indexOf('rn-icu')).toBeLessThan(found.indexOf('np'));
+      expect(small.search.count({ q: 'registered nurse' })).toBe(r.total);
+      expect(ids(small.search.search({ q: 'RN', synonyms: false }))).toEqual(['rn-icu']);
+    } finally {
+      small.close();
+    }
+  });
+
+  it('a new copy of a job seen before does not make it new', async () => {
+    const small = await createSearchTestEnv({ fixtures: false });
+    try {
+      const day = 86_400_000;
+      const at = (days: number) => new Date(FIXTURE_NOW.getTime() - days * day).toISOString();
+      small.db.run('UPDATE jobs SET first_seen_at = ?', at(3));
+      small.db.run("UPDATE jobs SET first_seen_at = ? WHERE external_id = 'remotive-acme-swe'", at(0));
+      const q = { q: 'SWE', synonyms: false };
+      expect(small.search.count(q)).toBe(1);
+      expect(small.search.count(q, { firstSeenAfter: at(1) })).toBe(0);
+      small.db.run("UPDATE jobs SET first_seen_at = ? WHERE external_id = 'acme-swe-remote-us'", at(0));
+      expect(small.search.count(q, { firstSeenAfter: at(1) })).toBe(1);
+    } finally {
+      small.close();
+    }
   });
 });
 

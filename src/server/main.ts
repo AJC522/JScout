@@ -2,6 +2,7 @@ import './quiet-warnings';
 import { spawn } from 'node:child_process';
 import { buildApp } from './app';
 import { loadConfig } from './config';
+import { databaseProblem } from './startup-errors';
 
 const [major = 0, minor = 0] = process.versions.node.split('.').map(Number);
 if (major < 22 || (major === 22 && minor < 13)) {
@@ -27,7 +28,15 @@ function openInBrowser(url: string): void {
 
 async function main(): Promise<void> {
   const config = loadConfig();
-  const built = await buildApp({ config });
+  let built: Awaited<ReturnType<typeof buildApp>>;
+  try {
+    built = await buildApp({ config });
+  } catch (err) {
+    const problem = databaseProblem(err, config.dbPath);
+    if (!problem) throw err;
+    console.error(`\n  ${problem}\n`);
+    process.exit(1);
+  }
 
   let shuttingDown = false;
   const shutdown = async (signal: string) => {

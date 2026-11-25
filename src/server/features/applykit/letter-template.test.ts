@@ -73,6 +73,29 @@ describe('template cover letters', () => {
     }
   }
 
+  it('speaks of one matched skill in the singular', () => {
+    const me = loadProfile({
+      get: () => structuredClone(softwareProfile.profile),
+      effectiveSkills: () => softwareProfile.skills,
+      resumeText: () => softwareProfile.resumeText,
+    } as Partial<ProfileService> as ProfileService);
+    for (const tone of LETTER_TONES) {
+      for (let seed = 0; seed < 6; seed++) {
+        const letter = templateLetter({
+          job: { ...job, title: `${job.title} ${seed}` },
+          profile: me.profile,
+          skills: ['TypeScript'],
+          themes: [],
+          missing: [],
+          locationOk: true,
+          tone,
+          length: 'medium',
+        });
+        expect(letter, tone).not.toMatch(/those are skills|all of which|since they are|those skills|exactly the skills/);
+      }
+    }
+  });
+
   it('grows with the requested length', () => {
     const counts = LETTER_LENGTHS.map((length) => wordCount(letterFor(job, softwareProfile, { tone: 'professional', length })));
     expect(counts[0]!).toBeLessThan(counts[1]!);

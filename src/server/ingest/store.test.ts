@@ -419,6 +419,47 @@ describe('removal', () => {
     expect(store.removeFeed(GH.feedKey)).toBe(0);
   });
 
+  it('hideFeeds hides postings at once and deletes them in the background, a batch per turn', async () => {
+    store.upsertFeed(GH, Array.from({ length: 600 }, (_, i) => posting({ externalId: String(i) })), { complete: true, now: T0 });
+    const other = posting({ externalId: '1', title: 'Remote Writer' }, RO);
+    store.upsertFeed(RO, [other], { complete: true, now: T0 });
+    expect(store.hideFeeds([GH.feedKey])).toBe(600);
+    expect(store.removingFeeds()).toBe(true);
+    expect(store.openCount()).toBe(1);
+    expect(store.openCountByFeed([GH.feedKey]).get(GH.feedKey)).toBe(0);
+    expect(store.openCountBySource().get('greenhouse')).toBeUndefined();
+    let turns = 0;
+    const ticker = setInterval(() => turns++, 0);
+    await store.purgePending();
+    clearInterval(ticker);
+    expect(turns).toBeGreaterThan(0);
+    expect(store.removingFeeds()).toBe(false);
+    expect(counts()).toEqual({ jobs: 1, places: 1, fts: 1 });
+    expect(fts('platform')).toEqual([]);
+    expect(db.scalar('SELECT COUNT(*) FROM removed_feeds')).toBe(0);
+  });
+
+  it('writing to a hidden feed again cancels its removal', async () => {
+    store.upsertFeed(GH, [posting({ externalId: '1' })], { complete: true, now: T0 });
+    store.hideFeeds([GH.feedKey]);
+    store.upsertFeed(GH, [posting({ externalId: '1' }), posting({ externalId: '2' })], { complete: true, now: T1 });
+    expect(store.openCount()).toBe(2);
+    await store.purgePending();
+    expect(counts().jobs).toBe(2);
+  });
+
+  it('a complete feed written in batches closes only what the run did not see', () => {
+    store.upsertFeed(GH, ['1', '2', '3'].map((externalId) => posting({ externalId })), { complete: true, now: T0 });
+    store.upsertPostings(GH, [posting({ externalId: '1' })], T1);
+    store.upsertPostings(GH, [posting({ externalId: '3' }), posting({ externalId: '4' })], T1);
+    expect(store.closeUnseen(GH, ['1', '3', '4'], { now: T1 })).toBe(1);
+    expect(store.unseenSince(GH.feedKey, T2).map((p) => p.externalId).sort()).toEqual(['1', '3', '4']);
+    // With a grace cut-off, postings seen since then stay open.
+    store.upsertPostings(GH, [posting({ externalId: '1' })], T2);
+    expect(store.closeUnseen(GH, ['1'], { now: T2, closeUnseenBefore: T1 })).toBe(0);
+    expect(store.closeUnseen(GH, ['1'], { now: T2, closeUnseenBefore: T2 })).toBe(2);
+  });
+
   it('purgeClosed removes only postings closed strictly before the cut-off', () => {
     const ps = ['1', '2', '3'].map((externalId) => posting({ externalId }));
     store.upsertFeed(GH, ps, { complete: true, now: T0 });

@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_AI_MODEL } from '../../../shared/constants';
 import { type Db, openDb } from '../../db';
@@ -152,5 +155,27 @@ describe('generic JSON storage', () => {
     expect(settings.getApp()).toMatchObject({ theme: 'system', ai: { hasKey: false } });
     expect(settings.getJson('x')).toBeUndefined();
     expect(db.scalar('SELECT COUNT(*) FROM settings')).toBe(0);
+  });
+});
+
+describe('removed keys', () => {
+  it('do not stay readable in the database files', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jscout-settings-'));
+    const file = path.join(dir, 'jscout.db');
+    const fileDb = openDb(file);
+    try {
+      const fileSettings = createSettingsService({ ...ctx, db: fileDb });
+      const onDisk = () => ['', '-wal'].map((s) => (fs.existsSync(file + s) ? fs.readFileSync(file + s).toString('latin1') : '')).join('');
+      fileSettings.updateApp({ ai: { apiKey: 'sk-ant-REMOVEDKEY42' } });
+      fileSettings.setSourceState('adzuna', { config: { appKey: 'adz-REMOVEDKEY77' } });
+      expect(onDisk()).toContain('sk-ant-REMOVEDKEY42');
+      fileSettings.updateApp({ ai: { apiKey: null } });
+      fileSettings.setSourceState('adzuna', { config: { appKey: null } });
+      expect(onDisk()).not.toContain('sk-ant-REMOVEDKEY42');
+      expect(onDisk()).not.toContain('adz-REMOVEDKEY77');
+    } finally {
+      fileDb.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -1,5 +1,6 @@
 /** Small pure helpers behind the search-preference controls. */
-import type { SearchPreferences } from '../../../shared/types';
+import type { RemoteMode, SearchPreferences } from '../../../shared/types';
+import { isRemoteOnly } from '../saved/describe';
 
 /** Currencies offered first; any other stored code is added to the list as-is. */
 export const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'NZD', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'INR', 'SGD', 'JPY', 'BRL', 'MXN', 'ZAR'];
@@ -11,6 +12,26 @@ const KM_PER_MILE = 1.609344;
 export function radiusLabel(km: number): string {
   if (km === 0) return 'Only that place';
   return `Within ${km} km (${Math.round(km / KM_PER_MILE)} mi)`;
+}
+
+/**
+ * Where the profile search looks, worded the way it runs. Work arrangement is a filter, so a
+ * location with only "Remote" ticked finds remote jobs open to it, not local jobs as well.
+ * `places` is the locations already joined for display ("" for none).
+ */
+export function placeRecap(places: string, remote: readonly RemoteMode[]): string {
+  if (!places) return isRemoteOnly(remote) ? 'Remote jobs' : 'Any location';
+  if (isRemoteOnly(remote)) return `Remote jobs open to ${places}`;
+  // No arrangement picked still includes remote jobs open to the place.
+  return remote.length === 0 || remote.includes('remote') ? `In ${places}, or remote` : `In ${places}`;
+}
+
+/** The hint under the work-arrangement chips, warning when "Remote" alone hides local jobs. */
+export function arrangementHint(value: Pick<SearchPreferences, 'locations' | 'remote'>): string {
+  if (value.locations.some((l) => l.trim()) && isRemoteOnly(value.remote)) {
+    return 'Only remote jobs will show. Pick none to also see on-site and hybrid jobs near you.';
+  }
+  return 'Pick none to see every kind.';
 }
 
 /** "85,000" for 85000; "" when not set. */

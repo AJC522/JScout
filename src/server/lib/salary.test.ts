@@ -704,3 +704,31 @@ describe('fuzzing', () => {
     }
   });
 });
+
+describe('review regressions', () => {
+  it('keeps the upper bound when the period is written as hourly, weekly, monthly or yearly', () => {
+    expect(parseSalaryText('$18-22 hourly')).toMatchObject({ min: 18, max: 22, period: 'hour' });
+    expect(parseSalaryText('$120k-150k yearly')).toMatchObject({ min: 120_000, max: 150_000, period: 'year' });
+    expect(parseSalaryText('USD 3,000 - 4,000 monthly')).toMatchObject({ min: 3_000, max: 4_000, period: 'month' });
+    expect(parseSalaryText('$40 - 50 hourly')).toMatchObject({ min: 40, max: 50 });
+    expect(extractSalaryFromText('Pay: $18-22 hourly, depending on experience.')).toMatchObject({ min: 18, max: 22 });
+    expect(extractSalaryFromText('Salary: $120,000-150,000 yearly.')).toMatchObject({ min: 120_000, max: 150_000 });
+    // Durations are still not salaries.
+    expect(extractSalaryFromText('We have 3 - 5 years of runway; salary is competitive.')).toBeUndefined();
+  });
+
+  it('keeps a small monthly salary the source states instead of reading text as hourly', () => {
+    expect(normalizeSalary({ min: 400, max: 400, currency: 'USD', period: 'month' }, { country: 'PH' })).toMatchObject({
+      min: 400, period: 'month', annualMin: 4_800,
+    });
+    // An undeclared period still has to be plausible.
+    expect(normalizeSalary({ min: 300, max: 300, currency: 'USD', period: 'year' })?.period).not.toBe('year');
+  });
+
+  it('never infers an hourly rate for a lone amount without a period word, nor a piece rate', () => {
+    expect(extractSalaryFromText('Compensation: $400 base + $40 night shift allowance monthly')?.period).not.toBe('hour');
+    expect(extractSalaryFromText("You'll get paid $100 for each video you successfully sell.")).toBeUndefined();
+    expect(extractSalaryFromText('Pay: $25 per hour.')).toMatchObject({ min: 25, period: 'hour' });
+    expect(extractSalaryFromText('Salary: $85,000')).toMatchObject({ min: 85_000, period: 'year' });
+  });
+});

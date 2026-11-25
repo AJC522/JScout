@@ -14,10 +14,11 @@ import { foldText } from '../lib/text';
 import type { AppContext, SearchService } from '../services';
 import { broadenCandidates, rankSuggestions } from './broaden';
 import { collapse, countPassing } from './collapse';
-import { countClusters, fetchCandidates, fetchScoringRows } from './engine';
+import { countClusters, countNewClusters, fetchCandidates, fetchScoringRows } from './engine';
 import { externalLinks } from './external';
 import { createSearchHistory } from './history';
 import { bestRank, orderResults } from './order';
+import { locationPieces } from './location-filter';
 import { buildPlan, type CandidateRow, type PlanEnv, type SearchPlan } from './plan';
 import { queryFromPreferences, upstreamQuery } from './profile-query';
 import { type LocationTarget, type ScoreContext, type ScoreInput, scorePosting } from './rank';
@@ -76,6 +77,7 @@ export function createSearchService(ctx: AppContext): SearchService {
       now: ctx.now(),
       maxPostingAgeDays: ctx.services.settings.getApp().maxPostingAgeDays,
       defaultCurrency: profile.preferences.salaryCurrency || 'USD',
+      hideRemovedFeeds: ctx.services.jobs.removingFeeds?.() ?? false,
     };
   }
 
@@ -85,7 +87,8 @@ export function createSearchService(ctx: AppContext): SearchService {
     let location: LocationTarget | undefined;
     const place = plan.location.place;
     if (place && place.kind !== 'anywhere') {
-      location = { place, radiusKm: plan.opts.radiusKm, includeRemote: plan.opts.includeRemote };
+      const others = plan.location.places.slice(1);
+      location = { place, ...(others.length ? { others } : {}), radiusKm: plan.opts.radiusKm, includeRemote: plan.opts.includeRemote };
     } else if (useProfile && !plan.location.placeUnresolved) {
       const preferred = profile.preferences.locations.map((l) => resolvePlace(l)).find((p): p is Place => p !== undefined && p.kind !== 'anywhere' && p.kind !== 'unknown');
       if (preferred) location = { place: preferred, radiusKm: profile.preferences.radiusKm, includeRemote: true };
@@ -146,7 +149,7 @@ export function createSearchService(ctx: AppContext): SearchService {
       interpretation: interpretation(plan),
       facets,
       suggestions: rankSuggestions(broadenCandidates(query, plan, planEnv.maxPostingAgeDays), total, countPatched),
-      externalLinks: externalLinks(plan.understanding.parsed, query.location, plan.location.place),
+      externalLinks: externalLinks(plan.understanding.parsed, locationPieces(query.location)[0], plan.location.place),
       index: ctx.services.sync.summary(),
     };
     return { ...response, tookMs: Math.round((performance.now() - started) * 10) / 10 };
@@ -157,8 +160,7 @@ export function createSearchService(ctx: AppContext): SearchService {
 
     count(query, opts) {
       const plan = buildPlan(query, env(ctx.services.profile.get()));
-      const extra = opts?.firstSeenAfter ? [{ sql: 'j.first_seen_at > ?', params: [opts.firstSeenAfter] }] : [];
-      return countClusters(db, plan, extra);
+      return opts?.firstSeenAfter ? countNewClusters(db, plan, opts.firstSeenAfter) : countClusters(db, plan);
     },
 
     jobDetail(id, query) {

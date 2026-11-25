@@ -288,3 +288,27 @@ describe('data reset', () => {
     expect(calls).toEqual([]);
   });
 });
+
+describe('data reset on disk', () => {
+  it('leaves no deleted key or note readable in the data folder', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jscout-reset-'));
+    const real = await buildApp({ config: loadConfig({ logLevel: 'silent', disableSync: true, clientDir: undefined, dataDir: dir }) });
+    try {
+      const send = (method: 'POST' | 'PATCH', url: string, payload: object) => real.app.inject({ method, url, headers: HOST, payload });
+      expect((await send('PATCH', '/api/settings', { ai: { apiKey: 'sk-ant-RESETKEY4242' } })).statusCode).toBe(200);
+      const created = await send('POST', '/api/applications', {
+        job: { title: 'Engineer', company: 'Acme' },
+        notes: 'Spoke to recruiter Zebedee Quiltwhistle',
+      });
+      expect(created.statusCode).toBe(200);
+      expect((await send('POST', '/api/data/reset', { scope: 'everything' })).statusCode).toBe(200);
+      const file = real.ctx.config.dbPath;
+      const bytes = ['', '-wal'].map((s) => (fs.existsSync(file + s) ? fs.readFileSync(file + s).toString('latin1') : '')).join('');
+      expect(bytes).not.toContain('sk-ant-RESETKEY4242');
+      expect(bytes).not.toContain('Zebedee Quiltwhistle');
+    } finally {
+      await real.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

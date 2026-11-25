@@ -151,8 +151,9 @@ const PLUS_EXTRA = String.raw`${EXTRA_WORDS}|ote|uncapped\s+commission`;
  * "$120,000 + annual bonus" (a glued "$90k+ with equity" still means "or more").
  */
 const PLUS_RE = new RegExp(String.raw`^(?:\+(?!\s*(?:${PLUS_EXTRA})\b)|\s+\+(?!\s*(?:[a-z][\w-]*\s+){0,2}(?:${PLUS_EXTRA})\b))`, 'i');
+/** A count or duration after a number ("50 employees", "3 years"). Whole words: "4,000 monthly" is pay, not months. */
 const UNIT_WORD_RE =
-  /^\s*\+?\s*(?:employees|people|persons|staff|users|customers|clients|members|engineers|developers|countries|offices|locations|years?|yrs?|months?|hours?|hrs?|days?|weeks?|students|downloads|installs|companies|businesses|partners|teams|times|x\b|%)/i;
+  /^\s*\+?\s*(?:(?:employees|people|persons|staff|users|customers|clients|members|engineers|developers|countries|offices|locations|years?|yrs?|months?|hours?|hrs?|days?|weeks?|students|downloads|installs|companies|businesses|partners|teams|times|x)\b|%)/i;
 
 function multiplierOf(word: string): number {
   const w = word.toLowerCase();
@@ -290,10 +291,10 @@ function isExtra(text: string, t: Tok): boolean {
   return EXTRA_BEFORE_RE.test(before);
 }
 
-/** A rate per piece of work ("$100 per video", "$0.10/word"), not a salary. */
+/** A rate per piece of work ("$100 per video", "$0.10/word", "$100 for each video"), not a salary. */
 function isPieceRate(text: string, end: number): boolean {
-  return /^\s*(?:\/|per\s+)(?!(?:hours?|hrs?|h|days?|d|weeks?|wks?|w|months?|mos?|m|years?|yrs?|y|annum|anum|calendar\s+month)\b)[\w-]/i.test(
-    text.slice(end, end + 24),
+  return /^\s*(?:\/|per\s+|for\s+(?:each|every)\s+)(?!(?:hours?|hrs?|h|days?|d|weeks?|wks?|w|months?|mos?|m|years?|yrs?|y|annum|anum|calendar\s+month)\b)[\w-]/i.test(
+    text.slice(end, end + 30),
   );
 }
 
@@ -424,8 +425,15 @@ interface Draft {
 }
 
 /** Fill annual figures and apply the plausibility bounds; undefined when implausible. */
-function finish(d: Draft): Salary | undefined {
-  const [lo, hi] = annualBounds(d.currency);
+/**
+ * Yearly figures below the usual floor are kept when the source itself states a shorter period: $400 a
+ * month is a real salary in some countries. Down to this share of the floor.
+ */
+const DECLARED_PERIOD_FLOOR_SHARE = 0.2;
+
+function finish(d: Draft, opts: { declaredPeriod?: boolean } = {}): Salary | undefined {
+  const [floor, hi] = annualBounds(d.currency);
+  const lo = opts.declaredPeriod && d.period !== 'year' ? floor * DECLARED_PERIOD_FLOOR_SHARE : floor;
   const out: Salary = {};
   if (d.min !== undefined) out.min = round2(d.min);
   if (d.max !== undefined) out.max = round2(d.max);
@@ -620,13 +628,16 @@ export function normalizeSalary(raw: RawSalary | undefined, opts: SalaryOptions 
   if (period === 'year' && ref < lo) period = ref < 200 * f ? 'hour' : 'month';
   else if (period !== 'year' && ref >= MISLABELLED_YEARLY[period] * f && ref <= hi) period = 'year';
 
-  const out = finish({
-    ...(min !== undefined ? { min } : {}),
-    ...(max !== undefined ? { max } : {}),
-    ...(currency ? { currency } : {}),
-    period,
-    ...(text ? { text } : {}),
-  });
+  const out = finish(
+    {
+      ...(min !== undefined ? { min } : {}),
+      ...(max !== undefined ? { max } : {}),
+      ...(currency ? { currency } : {}),
+      period,
+      ...(text ? { text } : {}),
+    },
+    { declaredPeriod: declared !== undefined && declared === period },
+  );
   return out ?? parsed;
 }
 
@@ -760,6 +771,9 @@ export function extractSalaryFromText(descriptionText: string, opts: SalaryOptio
     if (!b && !STRONG_PAY_RE.test(payContext(s, a.start, last.end))) return false;
     const salary = fromTokens(s, { a, b }, [afterPeriod, findPeriod(gap), beforePeriod], opts, undefined);
     if (!salary) return false;
+    // A lone amount with no period word is only taken as a yearly salary ("Salary: $85,000"). Read as
+    // hourly by its size, "$400 base … monthly" became $832k a year.
+    if (!b && !afterPeriod && !beforePeriod && salary.period !== 'year') return false;
     found.push({ salary, range: Boolean(b), start: a.start, end: last.end });
     return true;
   };

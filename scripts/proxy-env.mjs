@@ -10,6 +10,11 @@ if (!cmd) {
 const env = { ...process.env };
 const proxied = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'].some((k) => env[k]);
 if (proxied && env.NODE_USE_ENV_PROXY === undefined) env.NODE_USE_ENV_PROXY = '1';
+// fetch honours NODE_USE_ENV_PROXY from Node.js 22.21 (and 24) on; older versions ignore it.
+const [major = 0, minor = 0] = process.versions.node.split('.').map(Number);
+if (proxied && !(major >= 24 || (major === 22 && minor >= 21))) {
+  console.warn(`A proxy is set, but Node.js ${process.versions.node} ignores it for fetch: install Node.js 22.21 or newer to sync through it.`);
+}
 // node:sqlite and the proxy agent warn that they are experimental before the server's code runs; both work fine.
 env.NODE_OPTIONS = [env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning', '--disable-warning=UNDICI-EHPA'].filter(Boolean).join(' ');
 

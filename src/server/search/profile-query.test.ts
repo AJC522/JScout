@@ -12,7 +12,7 @@ describe('queryFromPreferences', () => {
     });
     expect(queryFromPreferences(profile)).toEqual({
       q: 'Data Engineer, Analytics Engineer BI, ML Engineer',
-      location: 'Denver, CO', radiusKm: 40, remote: ['remote', 'hybrid'], salaryMin: 120_000, salaryCurrency: 'USD',
+      location: 'Denver, CO; Boulder', radiusKm: 40, remote: ['remote', 'hybrid'], salaryMin: 120_000, salaryCurrency: 'USD',
       employmentTypes: ['full-time'], seniority: ['senior'], excludeCompanies: ['Initech'], excludeTerms: ['clearance'],
     });
   });
@@ -29,6 +29,8 @@ describe('upstreamQuery', () => {
     expect(u.keywords.length).toBe(3);
     expect(u.keywords).not.toContain('senior');
     expect(u).toMatchObject({ locationText: 'Austin, TX', city: 'Austin', admin1: 'TX', country: 'US', remoteOnly: true, postedWithinDays: 7, salaryMin: 100_000, salaryCurrency: 'USD', limit: 60 });
+    // Upstream sources take one place: the first of several.
+    expect(upstreamQuery({ q: 'nurse', location: 'Austin, TX; Denver, CO' })).toMatchObject({ locationText: 'Austin, TX', city: 'Austin' });
   });
 
   it('keeps keywords as typed for keyword searches and leaves regions as text', () => {

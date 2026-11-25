@@ -141,8 +141,23 @@ export interface JobStore {
   getLiveness(id: string): LivenessResult | undefined;
   /** Remove a feed's postings entirely (company removed / source disabled). Tracked jobs keep their snapshot. */
   removeFeed(feedKey: string): number;
-  /** Delete postings closed for longer than the retention period. Returns rows removed. */
-  purgeClosed(olderThan: Date): number;
+  /**
+   * Remove feeds' postings without blocking: they leave search and counts at once and are deleted a few
+   * hundred at a time in the background (writing to a feed again cancels its removal). Returns the
+   * open postings hidden.
+   */
+  hideFeeds(feedKeys: string[]): number;
+  /** True while hidden feeds still have postings to delete (search must then filter them out). */
+  removingFeeds(): boolean;
+  /** Resolves once the background deletion of hidden feeds has finished. */
+  purgePending(): Promise<void>;
+  /**
+   * Last step of a complete feed written in batches with upsertPostings: close the feed's open postings
+   * not among `seenExternalIds` (and, with a grace cut-off, not seen since it). Returns postings closed.
+   */
+  closeUnseen(feed: { feedKey: string; source: string }, seenExternalIds: string[], opts: { now: Date; closeUnseenBefore?: Date }): number;
+  /** Delete postings closed for longer than the retention period (at most `limit` of them). Returns rows removed. */
+  purgeClosed(olderThan: Date, limit?: number): number;
   openCount(): number;
   openCountBySource(): Map<string, number>;
   openCountByFeed(feedKeys?: string[]): Map<string, number>;

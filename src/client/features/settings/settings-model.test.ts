@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AppSettings } from '../../../shared/types';
-import { applySettingsUpdate, backupFileName, dayOptions, matchesResetPhrase, readBackup, ttlLabel, ttlOptions } from './settings-model';
+import { applySettingsUpdate, backupFileName, dayOptions, keyRemovalResult, matchesResetPhrase, readBackup, ttlLabel, ttlOptions } from './settings-model';
 
 const settings: AppSettings = {
   theme: 'system',
@@ -9,6 +9,13 @@ const settings: AppSettings = {
   maxPostingAgeDays: 60,
   ai: { hasKey: false, model: 'claude-opus-5-5' },
 };
+
+describe('keyRemovalResult', () => {
+  it('does not report a removed key while the server still has one from ANTHROPIC_API_KEY', () => {
+    expect(keyRemovalResult({ ...settings, ai: { ...settings.ai, hasKey: false } })).toBe('removed');
+    expect(keyRemovalResult({ ...settings, ai: { ...settings.ai, hasKey: true } })).toBe('env-key-in-use');
+  });
+});
 
 describe('applySettingsUpdate', () => {
   it('applies plain fields and turns a key into hasKey without storing it', () => {

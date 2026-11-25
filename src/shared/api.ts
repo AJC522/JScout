@@ -200,6 +200,10 @@ export interface ApiRoutes {
   'GET /api/suggest/locations': { query: SuggestQuery; res: Place[] };
   'GET /api/suggest/skills': { query: SuggestQuery; res: SkillSuggestion[] };
   'GET /api/suggest/companies': { query: SuggestQuery; res: Array<{ name: string; count: number }> };
+  /**
+   * Optional query string `?query=<JSON.stringify(SearchQuery)>` (see JobDetailQuery): score and explain
+   * the job against the search it was opened from; without it, against the profile.
+   */
   'GET /api/jobs/:id': { params: { id: string }; res: JobDetail };
   'POST /api/jobs/:id/view': { params: { id: string }; res: JobUserState };
   'POST /api/jobs/:id/hide': { params: { id: string }; res: JobUserState };
@@ -274,6 +278,15 @@ export type RouteRes<K extends RouteKey> = ApiRoutes[K]['res'];
 export type RouteBody<K extends RouteKey> = ApiRoutes[K] extends { body: infer B } ? B : undefined;
 export type RouteParams<K extends RouteKey> = ApiRoutes[K] extends { params: infer P } ? P : undefined;
 export type RouteQuery<K extends RouteKey> = ApiRoutes[K] extends { query: infer Q } ? Q : undefined;
+
+/** Query-string parameter of GET /api/jobs/:id carrying the search (JSON) to score the job against. */
+export const JOB_DETAIL_QUERY_PARAM = 'query';
+
+/** The optional query string of GET /api/jobs/:id. */
+export interface JobDetailQuery {
+  /** JSON.stringify of the SearchQuery the job was opened from. */
+  [JOB_DETAIL_QUERY_PARAM]?: string;
+}
 
 /** Routes that do not fit the JSON contract above. */
 export const RESUME_UPLOAD_PATH = '/api/profile/resume';

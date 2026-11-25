@@ -36,6 +36,8 @@ const ATS_FEEDS_PER_SOURCE = 2;
 const CHUNK_SIZE = 200;
 /** Concurrent feeds resume in the same event-loop turn, so each slice must stay well under a frame. */
 const SLICE_MS = 10;
+/** Postings written per transaction: a feed is written in such batches, yielding between slices. */
+const WRITE_BATCH = 50;
 const FIRST_PASS_DELAY_MS = 2_000;
 const TICK_MS = 5 * 60_000;
 const MINUTE_MS = 60_000;
@@ -212,6 +214,8 @@ export function sourceContext(
  * event loop before each: normalisation is CPU-heavy (long descriptions take milliseconds
  * each), and feeds answered from cache could otherwise run back to back in microtasks.
  */
+const yieldTurn = (): Promise<void> => new Promise<void>((resolve) => setImmediate(resolve));
+
 async function normalizeAll(raws: RawPosting[], nctx: NormalizeContext, signal: AbortSignal, log: Logger): Promise<NormalizedPosting[]> {
   const out: NormalizedPosting[] = [];
   let skipped = 0;
@@ -260,6 +264,8 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
   const queue: QueueEntry[] = [];
   const queuedKeys = new Set<string>();
   const running = new Map<string, { feed: Feed; controller: AbortController; done: Promise<void> }>();
+  /** Feeds asked for while their cancelled run was still unwinding (value: force), synced again once it ends. */
+  const requeue = new Map<string, boolean>();
   /** Ad-hoc upstream work (tests, searches, detail fetches, sweeps) that stop() must wait for. */
   const adhoc = new Set<Promise<unknown>>();
   const descriptionFetches = new Map<string, Promise<string>>();
@@ -406,6 +412,24 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     });
   }
 
+  /**
+   * An ATS's company boards share one API host, so a Retry-After on one board asks us to stop asking
+   * that host: hold the whole source (under its id, which is no board's feed key) and send its queued
+   * boards back to their settled state until the hold ends.
+   */
+  function holdSource(sourceId: string, hold: FeedHold): void {
+    setHold(sourceId, hold);
+    const dropped: string[] = [];
+    for (let i = queue.length - 1; i >= 0; i--) {
+      const entry = queue[i]!;
+      if (entry.feed.source.def.id !== sourceId || !entry.feed.board) continue;
+      queue.splice(i, 1);
+      queuedKeys.delete(entry.feed.key);
+      dropped.push(entry.feed.key);
+    }
+    settle(dropped);
+  }
+
   /** Forget holds and sweep times of a source's feeds (it was disabled or reconfigured). */
   function forgetSource(sourceId: string): void {
     const belongs = (key: string) => key === sourceId || key.startsWith(`${sourceId}:`);
@@ -518,6 +542,11 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
           publish(() => ({ ...report.event, pendingFeeds: pendingCount() }));
           if (report.changedIndex) indexChanged();
         }
+        const force = requeue.get(feed.key);
+        if (force !== undefined) {
+          requeue.delete(feed.key);
+          requestSync({ feedKeys: [feed.key], force });
+        }
         pump();
       });
     running.set(feed.key, { feed, controller, done });
@@ -560,12 +589,16 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
         // The source or board may have been switched off while this feed was fetching.
         if (!feedState(feed)) return dropRun(feed);
         const complete = def.fullSnapshot && result.complete;
-        stats = jobs.upsertFeed({ feedKey: feed.key, source: def.id }, postings, {
-          complete,
-          now: startedAt,
-          ...(def.closeGraceMinutes ? { closeUnseenBefore: new Date(startedAt.getTime() - def.closeGraceMinutes * MINUTE_MS) } : {}),
-        });
-        if (!complete) closedLater = await closeVanished(feed, state.config, startedAt, signal);
+        const target = { feedKey: feed.key, source: def.id };
+        stats = await writeFeed(target, postings, startedAt, signal, () => feedState(feed) !== undefined);
+        if (!stats) return dropRun(feed);
+        // Only once every posting is written.
+        if (complete) {
+          stats.closed = jobs.closeUnseen(target, postings.map((p) => p.externalId), {
+            now: startedAt,
+            ...(def.closeGraceMinutes ? { closeUnseenBefore: new Date(startedAt.getTime() - def.closeGraceMinutes * MINUTE_MS) } : {}),
+          });
+        } else closedLater = await closeVanished(feed, state.config, startedAt, signal);
       }
     } catch (err) {
       if (signal.aborted) return dropRun(feed);
@@ -591,7 +624,9 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
         durationMs,
         failures,
       });
-      setHold(feed.key, holdFor(failure, feed, state.config, startedAt));
+      const hold = holdFor(failure, feed, state.config, startedAt);
+      setHold(feed.key, hold);
+      if (hold?.kind === 'rate-limited' && feed.board) holdSource(def.id, hold);
       log.warn(`sync: ${feed.key} failed (${failures} in a row)`, { reason: failure instanceof Error ? failure.message : String(failure) });
     }
 
@@ -609,6 +644,39 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
       },
       changedIndex: (stats?.added ?? 0) + (stats?.updated ?? 0) + (stats?.reopened ?? 0) + closed > 0,
     };
+  }
+
+  /**
+   * Write a feed's postings a small transaction at a time, yielding between slices: one transaction for
+   * a feed of thousands blocked every request for seconds. Undefined when the run is cancelled or the
+   * feed switched off part-way (nothing is closed then; a removed feed's rows are already gone).
+   */
+  async function writeFeed(
+    target: { feedKey: string; source: string },
+    postings: NormalizedPosting[],
+    now: Date,
+    signal: AbortSignal,
+    active: () => boolean,
+  ): Promise<UpsertStats | undefined> {
+    const { jobs } = services();
+    // First occurrence wins when a source lists a posting twice, as within one batch.
+    const seen = new Set<string>();
+    const unique = postings.filter((p) => !seen.has(p.externalId) && seen.add(p.externalId));
+    const total: UpsertStats = { added: 0, updated: 0, unchanged: 0, closed: 0, reopened: 0 };
+    let sliceStart = performance.now();
+    for (let i = 0; i < unique.length; i += WRITE_BATCH) {
+      if (i > 0 && performance.now() - sliceStart >= SLICE_MS) {
+        await yieldTurn();
+        if (signal.aborted || !active()) return undefined;
+        sliceStart = performance.now();
+      }
+      const s = jobs.upsertPostings(target, unique.slice(i, i + WRITE_BATCH), now);
+      total.added += s.added;
+      total.updated += s.updated;
+      total.unchanged += s.unchanged;
+      total.reopened += s.reopened;
+    }
+    return total;
   }
 
   function dropRun(feed: Feed): undefined {
@@ -667,7 +735,13 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
       if (wantSources && !wantSources.has(source.def.id)) continue;
       for (const feed of feedsOf(source)) {
         if (wantKeys && !wantKeys.has(feed.key)) continue;
-        if (queuedKeys.has(feed.key) || running.has(feed.key)) continue;
+        if (queuedKeys.has(feed.key)) continue;
+        const run = running.get(feed.key);
+        if (run) {
+          // A cancelled run (its source was just switched off) is still unwinding: sync again once it has.
+          if (run.controller.signal.aborted) requeue.set(feed.key, (requeue.get(feed.key) ?? false) || opts.force === true);
+          continue;
+        }
         candidates.push({ feed, state });
       }
     }
@@ -681,6 +755,9 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     for (const { feed, state } of candidates) {
       const row = rows.get(feed.key);
       const hold = holds[feed.key];
+      // A board's API host asked to wait (see holdSource): even a forced sync honours that.
+      const sourceHold = feed.board ? holds[feed.source.def.id] : undefined;
+      if (sourceHold?.kind === 'rate-limited' && epoch(sourceHold.until) > now) continue;
       if (opts.force) {
         // Even a forced sync honours a server's explicit request to wait.
         if (hold?.kind === 'rate-limited' && epoch(hold.until) > now) continue;
@@ -710,9 +787,9 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     for (const run of running.values()) if (run.feed.source.def.id === sourceId) run.controller.abort();
     // Every feed that ever ran has a sync_state row (it is written when the feed is queued).
     const feedKeys = new Set([sourceId, ...db.all<{ feed_key: string }>('SELECT feed_key FROM sync_state WHERE source = ?', sourceId).map((r) => r.feed_key)]);
+    // Hidden at once, deleted in the background: a big source holds tens of thousands of postings.
     const removed = db.tx(() => {
-      let n = 0;
-      for (const key of feedKeys) n += services().jobs.removeFeed(key);
+      const n = services().jobs.hideFeeds([...feedKeys]);
       db.run('DELETE FROM sync_state WHERE source = ?', sourceId);
       return n;
     });
@@ -918,19 +995,38 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     const last = settings.getJson<string>(MAINTENANCE_KEY);
     if (last && now.getTime() - epoch(last) < DAY_MS) return;
     settings.setJson(MAINTENANCE_KEY, now.toISOString());
-    const purged = jobs.purgeClosed(new Date(now.getTime() - Math.max(0, closedRetentionDays) * DAY_MS));
+    void track(purgeClosed(jobs, new Date(now.getTime() - Math.max(0, closedRetentionDays) * DAY_MS), closedRetentionDays));
+    if (autoSync) void track(sweepRollingFeeds());
+  }
+
+  /** Delete long-closed postings a batch per event-loop turn: thousands can close at once. */
+  async function purgeClosed(jobs: ReturnType<typeof services>['jobs'], cutoff: Date, closedRetentionDays: number): Promise<void> {
+    let purged = 0;
+    try {
+      for (;;) {
+        const n = jobs.purgeClosed(cutoff, WRITE_BATCH * 5);
+        purged += n;
+        if (n < WRITE_BATCH * 5 || stopped) break;
+        await yieldTurn();
+      }
+    } catch (err) {
+      if (!stopped) log.warn('sync: removing long-closed postings failed', { err });
+    }
     if (purged > 0) {
       log.info(`sync: removed ${plural(purged, 'posting')} closed for more than ${closedRetentionDays} days`);
       indexChanged();
     }
-    if (autoSync) void track(sweepRollingFeeds());
   }
 
   async function sweepRollingFeeds(): Promise<void> {
     for (const { source, state } of activeSources()) {
       const def = source.def;
-      if (def.mode !== 'feed' || def.perCompany || def.fullSnapshot || !source.fetchFeed) continue;
       if (stopped) return;
+      if (def.mode === 'search' && source.search) {
+        await sweepSearchSource(source, state);
+        continue;
+      }
+      if (def.mode !== 'feed' || def.perCompany || def.fullSnapshot || !source.fetchFeed) continue;
       if (queuedKeys.has(def.id) || running.has(def.id)) continue;
       const row = getRow(def.id);
       // Only after a successful run: its start time is when its postings were last seen.
@@ -942,6 +1038,20 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
         if (lifecycle.signal.aborted) return;
         log.warn(`sync: daily check of ${def.name} failed`, { err });
       }
+    }
+  }
+
+  /**
+   * Search results are only ever added (a search sees a few postings, not the whole source), so nothing
+   * else notices when one closes: once a day ask the source about postings no search has returned for a
+   * day, or without checkOpen close those unseen for UNSEEN_CLOSE_MS.
+   */
+  async function sweepSearchSource(source: JobSource, state: SourceState): Promise<void> {
+    try {
+      const closed = await closeVanished({ key: source.def.id, source }, state.config, new Date(ctx.now().getTime() - DAY_MS), lifecycle.signal);
+      if (closed > 0) indexChanged();
+    } catch (err) {
+      if (!lifecycle.signal.aborted) log.warn(`sync: daily check of ${source.def.name} failed`, { err });
     }
   }
 

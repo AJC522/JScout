@@ -1,6 +1,6 @@
 /** Plain-English summaries of search queries, for saved searches and anywhere else a query is listed. */
 import { EMPLOYMENT_LABELS, POSTED_WITHIN_OPTIONS, REMOTE_LABELS, REMOTE_MODES, SENIORITY_LABELS } from '../../../shared/constants';
-import type { SearchQuery } from '../../../shared/types';
+import type { RemoteMode, SearchQuery } from '../../../shared/types';
 import { formatSalary } from '../../lib/format';
 
 export const SUMMARY_SEPARATOR = ' · ';
@@ -32,11 +32,25 @@ function describeWhat(q: string): string {
   return listOf(parts, 3, 'or');
 }
 
+/**
+ * True when the work-arrangement filter lets only remote jobs through. With a location set, the
+ * search then finds remote jobs open to that place, not local jobs plus remote ones.
+ */
+export function isRemoteOnly(remote: readonly RemoteMode[] | undefined): boolean {
+  return remote !== undefined && remote.length > 0 && remote.every((m) => m === 'remote');
+}
+
+/** "Remote jobs open to Berlin" (the radius does not apply), or with includeRemote off, remote jobs located there. */
+export function describeRemoteOnlyPlace(place: string, radius: string, includeRemote: boolean | undefined): string {
+  return includeRemote === false ? `Remote jobs in ${place}${radius}` : `Remote jobs open to ${place}`;
+}
+
 function describeWhere(query: SearchQuery): string {
   const location = query.location?.trim();
   const remote = query.remote ?? [];
   if (!location) return 'Anywhere';
   const radius = query.radiusKm && query.radiusKm > 0 ? ` within ${query.radiusKm} km` : '';
+  if (isRemoteOnly(remote)) return describeRemoteOnlyPlace(location, radius, query.includeRemote);
   const remoteAllowed = remote.length === 0 || remote.includes('remote');
   const orRemote = query.includeRemote !== false && remoteAllowed ? ' or remote' : '';
   return `${location}${radius}${orRemote}`;
@@ -45,6 +59,8 @@ function describeWhere(query: SearchQuery): string {
 function describeRemote(query: SearchQuery): string | null {
   const modes = [...new Set(query.remote ?? [])];
   if (modes.length === 0 || modes.length >= REMOTE_MODES.length) return null;
+  // Already said by describeWhere ("Remote jobs open to …").
+  if (query.location?.trim() && isRemoteOnly(modes)) return null;
   const labels = modes.map((m, i) => (i === 0 ? REMOTE_LABELS[m] : lowerFirst(REMOTE_LABELS[m])));
   return listOf(labels, 4, 'or');
 }

@@ -11,7 +11,7 @@ import { useDebouncedValue, useDocumentTitle, useNow } from '../../lib/hooks';
 import { downloadEstimate, industryLabel } from '../onboarding/industries';
 import { AddCompanyDialog } from './AddCompanyDialog';
 import { CompanyRow, ROW_GRID } from './CompanyRow';
-import { ATS_KINDS, ATS_LABELS, COMPANIES_PAGE_SIZE, DEFAULT_FILTERS, hasFilters, pageRange, planBulk, toListQuery, type CompanyFilters, type FollowFilter } from './model';
+import { ATS_LABELS, COMPANIES_PAGE_SIZE, DEFAULT_FILTERS, hasFilters, pageRange, planBulk, syncableAts, toListQuery, type CompanyFilters, type FollowFilter } from './model';
 import { useBulkFollow, useCompanies, useCompanySources, useRemoveCompany, useSetFollowing } from './queries';
 
 const FOLLOW_OPTIONS: Array<{ value: FollowFilter; label: string }> = [
@@ -19,7 +19,6 @@ const FOLLOW_OPTIONS: Array<{ value: FollowFilter; label: string }> = [
   { value: 'following', label: 'Following' },
   { value: 'not-following', label: 'Not following' },
 ];
-const ATS_OPTIONS = [{ value: '', label: 'Any job board' }, ...ATS_KINDS.map((ats) => ({ value: ats, label: ATS_LABELS[ats] }))];
 const INDUSTRY_CHIPS = 10;
 
 export function CompaniesPage() {
@@ -67,6 +66,7 @@ export function CompaniesPage() {
   const data = list.data;
   const filtered = hasFilters(effective);
   const boardJobs = sources.data?.filter((s) => s.perCompany).reduce((sum, s) => sum + s.jobCount, 0);
+  const atsOptions = [{ value: '', label: 'Any job board' }, ...syncableAts(sources.data, filters.ats).map((ats) => ({ value: ats, label: ATS_LABELS[ats] }))];
 
   const runBulk = async (enabled: boolean) => {
     if (!data) return;
@@ -123,7 +123,7 @@ export function CompaniesPage() {
             onClear={() => setSearch('')}
             wrapperClassName="sm:max-w-xs sm:flex-1"
           />
-          <Select aria-label="Job board" options={ATS_OPTIONS} value={filters.ats ?? ''} onChange={(e) => update({ ats: (e.target.value || undefined) as AtsKind | undefined })} wrapperClassName="sm:w-44" />
+          <Select aria-label="Job board" options={atsOptions} value={filters.ats ?? ''} onChange={(e) => update({ ats: (e.target.value || undefined) as AtsKind | undefined })} wrapperClassName="sm:w-44" />
           <SegmentedControl aria-label="Following" options={FOLLOW_OPTIONS} value={filters.follow} onValueChange={(follow) => update({ follow })} />
           <Chip selected={filters.mine} onSelectedChange={(mine) => update({ mine })} className="self-start sm:self-auto">
             Added by you

@@ -19,6 +19,13 @@ describe('describeQuery', () => {
     expect(describeQuery({ q: 'Dev', remote: ['remote', 'hybrid', 'onsite', 'unknown'] })).toBe('Dev · Anywhere');
   });
 
+  it('describes a location with only remote jobs as remote jobs open to it, without the radius', () => {
+    expect(describeQuery({ q: 'Dev', location: 'Berlin, Germany', radiusKm: 50, remote: ['remote'] })).toBe('Dev · Remote jobs open to Berlin, Germany');
+    expect(describeQuery({ q: 'Dev', location: 'Berlin', radiusKm: 50, remote: ['remote'], includeRemote: false })).toBe('Dev · Remote jobs in Berlin within 50 km');
+    expect(describeQuery({ q: 'Dev', location: 'Berlin', radiusKm: 50, remote: ['remote', 'hybrid'] })).toBe('Dev · Berlin within 50 km or remote · Remote or hybrid');
+    expect(describeQuery({ q: 'Dev', remote: ['remote'] })).toBe('Dev · Anywhere · Remote');
+  });
+
   it('describes salary and filters', () => {
     const text = describeQuery({
       q: 'Engineer',

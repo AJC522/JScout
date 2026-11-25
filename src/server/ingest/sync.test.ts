@@ -245,6 +245,31 @@ describe('syncing feeds', () => {
     expect(h.open('alpha')).toBe(1);
   });
 
+  it('stops asking an ATS host for any board once it says to wait', async () => {
+    let limited = true;
+    const asked: string[] = [];
+    const ats: JobSource = {
+      def: atsDef('greenhouse'),
+      fetchFeed: async (_ctx, board) => {
+        asked.push(board!.token);
+        if (limited) throw new SourceError('rate-limited', 'HTTP 429', { status: 429, retryAfter: 600 });
+        return feedOf([`${board!.token}-1`]);
+      },
+    };
+    const h = setup([ats]);
+    h.addBoards('greenhouse', ['a', 'b', 'c', 'd', 'e', 'f']);
+    await h.syncNow();
+    // Only the boards already running when the host answered 429 were asked.
+    expect(asked.length).toBeLessThanOrEqual(2);
+    expect(['c', 'd', 'e', 'f'].map((t) => h.row(`greenhouse:${t}`)?.status)).toEqual(['idle', 'idle', 'idle', 'idle']);
+    limited = false;
+    h.advance(5 * MIN);
+    expect(h.sync.requestSync({ force: true })).toBe(0);
+    h.advance(6 * MIN);
+    await h.syncNow();
+    expect(h.jobs.openCount()).toBe(6);
+  });
+
   it('waits as long as a Retry-After says, even when forced', async () => {
     let limited = true;
     const { source } = feedSource('alpha', () => {
@@ -423,6 +448,25 @@ describe('the runner', () => {
     expect(h.open('alpha')).toBe(450);
   });
 
+  it('writes big feeds in batches, letting the event loop run while the index fills', async () => {
+    const ids = Array.from({ length: 3000 }, (_, i) => String(i));
+    const { source } = feedSource('alpha', () => ids);
+    const h = setup([source]);
+    const seenMidWrite = new Set<number>();
+    let watching = true;
+    const watch = () => {
+      if (!watching) return;
+      seenMidWrite.add(h.jobs.openCount());
+      setImmediate(watch);
+    };
+    setImmediate(watch);
+    await h.syncNow();
+    watching = false;
+    expect(h.open('alpha')).toBe(3000);
+    // Some turns ran with part of the feed written.
+    expect([...seenMidWrite].some((n) => n > 0 && n < 3000)).toBe(true);
+  });
+
   it('respects the concurrency limits and does not starve aggregator feeds', async () => {
     const active = new Map<string, number>();
     const peak = new Map<string, number>();
@@ -536,6 +580,29 @@ describe('sources', () => {
     expect(h.open('alpha')).toBe(2);
   });
 
+  it('syncs a source re-enabled while its cancelled run is still unwinding', async () => {
+    let calls = 0;
+    const slow: JobSource = {
+      def: def('alpha'),
+      async fetchFeed(ctx) {
+        calls++;
+        // Notices the abort only after a while, like a request already on the wire.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        ctx.signal?.throwIfAborted();
+        return feedOf(['1', '2']);
+      },
+    };
+    const h = setup([slow]);
+    h.sync.requestSync();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    h.sync.updateSource('alpha', { enabled: false });
+    h.sync.updateSource('alpha', { enabled: true });
+    await vi.waitFor(() => expect(h.open('alpha')).toBe(2), { timeout: 2_000 });
+    await h.sync.idle();
+    expect(calls).toBe(2);
+    expect(h.row('alpha')).toMatchObject({ status: 'ok' });
+  });
+
   it('rejects unknown sources and config fields', () => {
     const { source } = feedSource('alpha', () => ['1']);
     const h = setup([source]);
@@ -635,6 +702,20 @@ describe('upstream search', () => {
     expect(checkOpen).not.toHaveBeenCalled();
     // Search results never count as a feed sync.
     expect(h.sync.requestSync({ force: true })).toBe(0);
+  });
+
+  it('closes search results that closed upstream in the daily check', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    const checkOpen = vi.fn(async (_ctx: unknown, ids: string[]) => new Map(ids.map((id) => [id, id !== 's1'] as const)));
+    const finder: JobSource = { def: def('finder', { mode: 'search', fullSnapshot: false }), search: async () => [raw('s1'), raw('s2')], checkOpen };
+    const h = setup([finder]);
+    expect(await h.sync.searchUpstream({ keywords: ['engineer'], limit: 20 })).toEqual({ added: 2 });
+    h.advance(2 * DAY);
+    h.sync.start();
+    await vi.advanceTimersByTimeAsync(3_000);
+    await vi.waitFor(() => expect(h.posting('finder', 'finder', 's1')?.closedAt).toBeDefined());
+    expect([...(checkOpen.mock.calls[0]?.[1] ?? [])].sort()).toEqual(['s1', 's2']);
+    expect(h.posting('finder', 'finder', 's2')?.closedAt).toBeUndefined();
   });
 
   it('stops asking a search source that is rate limiting or rejecting the key', async () => {

@@ -26,11 +26,53 @@ const MIN_PREFIX_LENGTH = 4;
 
 /**
  * ftsString() whose last word also matches longer words starting with it ("teacher" -> "teachers"),
- * for the unstemmed title index, where plurals are not folded together by a stemmer.
+ * for the unstemmed title index, where plurals are not folded together by a stemmer. A plural last
+ * word is searched in its singular too ("nurses" -> "nurse"*), or a typed plural finds nothing.
  */
 export function ftsPrefixString(text: string): string {
-  const last = text.trim().split(/[^\p{L}\p{N}+#]+/u).filter(Boolean).at(-1) ?? '';
-  return last.length >= MIN_PREFIX_LENGTH && /^[\p{L}\p{N}]+$/u.test(last) ? `${ftsString(text)}*` : ftsString(text);
+  const tokens = text.trim().split(/[^\p{L}\p{N}+#]+/u).filter(Boolean);
+  const last = tokens.at(-1) ?? '';
+  if (last.length < MIN_PREFIX_LENGTH || !/^[\p{L}\p{N}]+$/u.test(last)) return ftsString(text);
+  const forms = numberForms(last.toLowerCase()).filter((f) => f.length >= MIN_PREFIX_LENGTH);
+  // A form that starts with another one is already found by that prefix ("nurse"* finds "nurses").
+  const prefixes = forms.filter((f) => !forms.some((g) => g !== f && f.startsWith(g)));
+  return ftsOr(prefixes.map((f) => `${ftsString([...tokens.slice(0, -1), f].join(' '))}*`))!;
+}
+
+/** The singular of a plural word ("engineers" -> "engineer", "technologies" -> "technology"); other words as they are. */
+export function singularWord(word: string): string {
+  return numberForms(word).find((f) => f.length < word.length) ?? word;
+}
+
+/**
+ * The word as typed plus its plural or singular ("intern" -> intern, interns; "nurses" -> nurses,
+ * nurse), for unstemmed indexes, which do not fold them together. Only plain words of 3+ letters.
+ */
+export function numberForms(word: string): string[] {
+  if (!/^\p{L}{3,}$/u.test(word)) return [word];
+  const forms = [word];
+  if (/[^aeiou]y$/.test(word)) forms.push(`${word.slice(0, -1)}ies`);
+  else if (/(?:ss|x|z|ch|sh)$/.test(word)) forms.push(`${word}es`);
+  else if (!word.endsWith('s')) forms.push(`${word}s`);
+  if (word.length > 4 && word.endsWith('ies')) forms.push(`${word.slice(0, -3)}y`);
+  else if (/(?:ss|x|z|ch|sh)es$/.test(word)) forms.push(word.slice(0, -2));
+  else if (word.length > 3 && word.endsWith('s') && !word.endsWith('ss')) forms.push(word.slice(0, -1));
+  return [...new Set(forms)];
+}
+
+/** ftsString() of `tokens` as a phrase, in every number form of its last word. */
+export function ftsPhraseForms(tokens: readonly string[]): string | undefined {
+  const last = tokens.at(-1);
+  if (last === undefined) return undefined;
+  return ftsOr(numberForms(last).map((f) => ftsString([...tokens.slice(0, -1), f].join(' '))));
+}
+
+/**
+ * For indexes with detail=none (jobs_words), which have no phrases: every token as its own string,
+ * ANDed, the last in each number form. `tokens` must be single index tokens (tokenize() output).
+ */
+export function ftsWordsAll(tokens: readonly string[]): string | undefined {
+  return ftsAnd(tokens.map((t, i) => (i === tokens.length - 1 ? ftsOr(numberForms(t).map(ftsString)) : ftsString(t))));
 }
 
 const group = (parts: string[], op: 'AND' | 'OR'): string | undefined => {

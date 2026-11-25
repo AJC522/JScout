@@ -12,7 +12,8 @@ import { daysAgo } from '../lib/dates';
 import { distanceKm, matchPlace } from '../lib/location';
 import { formatSalary } from '../lib/salary';
 import { foldText, normalizeText } from '../lib/text';
-import { containsPhrase, type TitleTarget, type Understanding } from './understand';
+import { SAME_CITY_KM } from './location-filter';
+import { containsPhrase, isAcronym, type TitleTarget, type Understanding } from './understand';
 
 export interface ScoreInput {
   title: string;
@@ -33,6 +34,8 @@ export interface ScoreInput {
 
 export interface LocationTarget {
   place: Place;
+  /** Further places the search accepts (several were given); the best match counts. */
+  others?: Place[];
   radiusKm: number;
   includeRemote: boolean;
 }
@@ -54,6 +57,8 @@ export interface ScoreContext {
  */
 const MAX = { title: 40, text: 15, skills: 15, location: 15, seniority: 5, recency: 10, salary: 3 } as const;
 const REMOTE_LOCATION_SHARE = 0.5;
+/** An on-site region ("EMEA") that includes the searched country, or overlaps the searched region. */
+const REGION_OVERLAP_SHARE = 0.6;
 /**
  * For title searches bm25 only sees the title column, so it mostly repeats the title tier (biased by
  * how rare each synonym is): it only breaks ties there, and must not lift a synonym over the exact title.
@@ -105,7 +110,20 @@ export function titleTier(input: Pick<ScoreInput, 'title' | 'titleCore' | 'roleI
   if ((t = find(typed, (p) => p === core))) return tier('exact', 40, t);
   if ((t = find(typed, (p) => containsPhrase(core, p)))) return tier('exact', 36, t);
   if ((t = find(synonyms, (p) => p === core))) return tier('synonym', 34, t);
-  if ((t = find(synonyms, (p) => containsPhrase(core, p)))) return tier('synonym', 30, t);
+  // A title containing a specific synonym ("Staff Nurse", "RN") beats one containing only a generic
+  // one-word synonym: "Nurse Practitioner" contains "nurse" but is not a registered nurse job, and
+  // when the title is recognised as another role it ranks well below.
+  const contained = synonyms.filter((x) => containsPhrase(core, singular(x.phrase)));
+  if (contained.length) {
+    const specific = contained.find((x) => x.phrase.includes(' ') || isAcronym(x.phrase));
+    if (specific) return tier('synonym', 30, specific);
+    // The same role is scored as such just below.
+    if (input.roleId === undefined) return tier('synonym', 26, contained[0]);
+    if (!typed.concat(synonyms).some((x) => x.roleId === input.roleId)) {
+      const relatedRole = find(related, (p, x) => containsPhrase(core, p) || x.roleId === input.roleId);
+      return relatedRole ? tier('related', 22, relatedRole) : tier('synonym', 18, contained[0]);
+    }
+  }
   if (input.roleId && (t = find([...typed, ...synonyms], (_, x) => x.roleId === input.roleId))) return tier('synonym', 28, t);
   if ((t = find(related, (p, x) => containsPhrase(core, p) || x.roleId === input.roleId))) return tier('related', 22, t);
   const titleWords = new Set(singular(normalizeText(input.title)).split(' '));
@@ -162,6 +180,24 @@ function nearestCity(location: JobLocation, target: Place): { place: Place; km: 
   return best;
 }
 
+/**
+ * Places the search's location filter accepts that matchPlace does not (see location-filter.ts): a city
+ * within SAME_CITY_KM of the searched one, and a region ("EMEA", "North America") sharing a country with
+ * the searched country or region. Explained as what they are, not as "Not in …".
+ */
+function filterOnlyPart(location: JobLocation, target: Place, part: (label: string, points: number) => Part): Part | undefined {
+  if (target.kind === 'city') {
+    const near = nearestCity({ ...location, places: location.places.filter((p) => p.kind === 'city') }, target);
+    if (near && near.km <= SAME_CITY_KM) return part(`In ${near.place.label} (${Math.round(near.km)} km)`, MAX.location);
+    return undefined;
+  }
+  const countries = target.kind === 'country' ? (target.country ? [target.country] : []) : target.kind === 'region' ? (target.countries ?? []) : [];
+  const region = location.places.find((p) => p.kind === 'region' && p.countries?.some((c) => countries.includes(c)));
+  if (!region) return undefined;
+  const relation = target.kind === 'country' ? 'includes' : 'overlaps';
+  return part(`In ${region.label}, which ${relation} ${target.label}`, MAX.location * REGION_OVERLAP_SHARE);
+}
+
 function locationPart(location: JobLocation, target: LocationTarget): Part {
   const m = matchPlace(location, target.place, { radiusKm: target.radiusKm, includeRemote: target.includeRemote });
   const part = (label: string, points: number): Part => ({ key: 'location', label, points, max: MAX.location });
@@ -180,8 +216,18 @@ function locationPart(location: JobLocation, target: LocationTarget): Part {
     case 'remote':
       return part(`Remote, open to ${target.place.label}`, MAX.location * REMOTE_LOCATION_SHARE);
     default:
-      return part(`Not in ${target.place.label}`, 0);
+      return filterOnlyPart(location, target.place, part) ?? part(`Not in ${target.place.label}`, 0);
   }
+}
+
+/** With several searched places, the one the posting matches best. */
+function bestLocationPart(location: JobLocation, target: LocationTarget): Part {
+  let best = locationPart(location, target);
+  for (const place of target.others ?? []) {
+    const part = locationPart(location, { ...target, place, others: undefined });
+    if (part.points > best.points) best = part;
+  }
+  return best;
 }
 
 export function ageLabel(days: number): string {
@@ -240,7 +286,7 @@ export function scorePosting(input: ScoreInput, ctx: ScoreContext, opts: { expla
     skillsMatched = s.matched;
     skillsMissing = s.missing;
   }
-  if (ctx.location) parts.push(locationPart(input.location, ctx.location));
+  if (ctx.location) parts.push(bestLocationPart(input.location, ctx.location));
   const seniority = seniorityPart(input.seniority, ctx.preferredSeniority);
   if (seniority) parts.push(seniority);
   const days = daysAgo(input.ts, ctx.now);

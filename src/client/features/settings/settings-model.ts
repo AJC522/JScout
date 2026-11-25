@@ -11,6 +11,15 @@ export function applySettingsUpdate(settings: AppSettings, update: AppSettingsUp
   return next;
 }
 
+/**
+ * What removing the saved key did, judged from the settings the server returned. With no key
+ * saved, the server falls back to the ANTHROPIC_API_KEY environment variable, so a key can still
+ * be in use afterwards; saying "removed" then would be wrong.
+ */
+export function keyRemovalResult(saved: AppSettings): 'removed' | 'env-key-in-use' {
+  return saved.ai.hasKey ? 'env-key-in-use' : 'removed';
+}
+
 /** Choices for a "days" setting, always including the current value so it is never shown wrongly. */
 export function dayOptions(presets: readonly number[], current: number, zeroLabel: string): Array<{ value: string; label: string }> {
   return [...new Set([...presets, current])]

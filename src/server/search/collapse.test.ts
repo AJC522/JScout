@@ -23,6 +23,8 @@ describe('isBetterRepresentative', () => {
   });
 });
 
+const sum = (facet: Array<{ count: number }>): number => facet.reduce((n, f) => n + f.count, 0);
+
 describe('collapse', () => {
   const rows = [
     row({ clusterKey: 'a', source: 'remotive', remote: 'remote' }),
@@ -57,6 +59,16 @@ describe('collapse', () => {
     expect(countPassing(rows, plan)).toBe(1);
   });
 
+  it('counts a cross-posted job under the selected source it is shown from', () => {
+    const plan = buildPlan({ q: '', sources: ['remotive'] }, env);
+    const { reps, facets } = collapse(rows, plan, labels);
+    expect(reps.map((r) => [r.clusterKey, r.source])).toEqual([['a', 'remotive']]);
+    expect(facets.source.find((f) => f.value === 'remotive')?.count).toBe(1);
+    // Clusters not shown are counted under their other copies.
+    expect(facets.source.find((f) => f.value === 'greenhouse')?.count).toBe(2);
+    expect(sum(facets.source)).toBe(3);
+  });
+
   it('lists selected values even when nothing matches them', () => {
     const { facets } = collapse(rows, buildPlan({ q: '', employmentTypes: ['internship'], companies: ['Initech'] }, env), labels);
     expect(facets.employmentType).toContainEqual({ value: 'internship', label: 'Internship', count: 0 });
@@ -65,12 +77,13 @@ describe('collapse', () => {
 });
 
 describe('bySalary', () => {
-  it('orders the search currency first, then other currencies, then no salary', () => {
+  it('orders the search currency first, then other currencies (converted), then no salary', () => {
     const r = (amount: number | null, currency: string | null) => row({ clusterKey: `${amount}${currency}`, salary: { amount, currency } });
     const sorted = bySalary([r(null, null), r(9_000_000, 'JPY'), r(120_000, 'USD'), r(150_000, 'USD'), r(80_000, 'EUR')], 'USD');
+    // ¥9M is about $60k, €80k about $88k.
     expect(sorted.map((x) => x.salary)).toEqual([
       { amount: 150_000, currency: 'USD' }, { amount: 120_000, currency: 'USD' },
-      { amount: 9_000_000, currency: 'JPY' }, { amount: 80_000, currency: 'EUR' }, { amount: null, currency: null },
+      { amount: 80_000, currency: 'EUR' }, { amount: 9_000_000, currency: 'JPY' }, { amount: null, currency: null },
     ]);
   });
 });

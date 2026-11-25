@@ -240,6 +240,19 @@ describe('cluster keys', () => {
     for (const o of others) expect(o.clusterKey, `${o.title} ${o.locationText}`).not.toBe(denver.clusterKey);
   });
 
+  it('keeps one board\'s per-country remote requisitions apart, and their re-listings together', () => {
+    const japan = normalize({ title: 'Business Development Representative, Japan', locations: ['Remote'], remote: 'remote' });
+    const germany = normalize({ title: 'Business Development Representative - Germany', locations: ['Remote'], remote: 'remote' });
+    const brazil = normalize({ title: 'Business Development Representative (Brazil)', locations: ['Remote'], remote: 'remote' });
+    expect(new Set([japan.clusterKey, germany.clusterKey, brazil.clusterKey]).size).toBe(3);
+    const relisted = normalize({ title: 'Business Development Representative, Japan', company: 'Acme LLC', locations: ['Japan'], remote: 'remote' }, RO_CTX);
+    expect(relisted.clusterKey).toBe(japan.clusterKey);
+    // Titles without a place still merge whatever the scope says.
+    const a = normalize({ title: 'Software Engineer', locations: ['Remote - US'], remote: 'remote' });
+    const b = normalize({ title: 'Software Engineer', company: 'Acme LLC', locations: ['USA'], remote: 'remote' }, RO_CTX);
+    expect(b.clusterKey).toBe(a.clusterKey);
+  });
+
   it('builds the location part from the first usable place, then the raw text', () => {
     const smallville: Place = { kind: 'admin1', raw: 'Smallville, KS', city: 'Smallville', admin1: 'KS', country: 'US', label: 'Smallville, KS' };
     const kansas: Place = { kind: 'admin1', raw: 'Kansas', admin1: 'KS', country: 'US', label: 'Kansas' };
@@ -373,6 +386,11 @@ describe('normalising every adapter fixture', () => {
     expect(all.filter((n) => n.posting.postedAt).length / all.length).toBeGreaterThan(0.95);
   });
 
+  it('keeps a monthly salary the source states, however small, and never reads it as hourly', () => {
+    const fresh = all.find((n) => n.feed.source.def.id === 'jobicy' && n.raw.externalId === '156758');
+    expect(fresh?.posting.salary).toMatchObject({ min: 400, max: 400, currency: 'USD', period: 'month', annualMin: 4_800 });
+  });
+
   it('keeps salaries plausible', () => {
     each(({ posting: { salary: s } }) => {
       if (!s) return [];
@@ -383,7 +401,8 @@ describe('normalising every adapter fixture', () => {
       for (const v of [s.annualMin, s.annualMax]) {
         if (v === undefined) continue;
         // lib/salary's own plausibility bounds for these currencies; others vary too widely to bound here.
-        const [lo, hi] = s.currency && MAJOR_CURRENCIES.has(s.currency) ? [5_000, 5_000_000] : [1, 1e10];
+        // A period the source states itself may go lower ($400 a month in the Philippines).
+        const [lo, hi] = s.currency && MAJOR_CURRENCIES.has(s.currency) ? [s.period === 'year' ? 5_000 : 1_000, 5_000_000] : [1, 1e10];
         if (!(v >= lo && v <= hi)) problems.push(`annual ${v} ${s.currency ?? ''} out of range`);
       }
       return problems;

@@ -4,6 +4,9 @@ import { DatabaseSync, type SQLInputValue, type StatementSync } from 'node:sqlit
 import { MIGRATIONS } from './schema';
 
 export type SqlValue = SQLInputValue;
+
+/** Bytes the write-ahead log is cut back to after a checkpoint. */
+export const WAL_SIZE_LIMIT = 32 * 1024 * 1024;
 export type Row = Record<string, unknown>;
 
 /**
@@ -22,9 +25,15 @@ export class Db {
   constructor(filename: string) {
     this.raw = new DatabaseSync(filename);
     this.raw.exec('PRAGMA foreign_keys = ON');
+    // Zero deleted rows inside their pages, so removed personal data and keys do not linger in the file.
+    // FAST skips zeroing whole freed pages (costly on big index deletes); scrub({ vacuum: true }) drops those.
+    this.raw.exec('PRAGMA secure_delete = FAST');
     if (filename !== ':memory:') {
       this.raw.exec('PRAGMA journal_mode = WAL');
       this.raw.exec('PRAGMA synchronous = NORMAL');
+      // A big sync grows the WAL to tens of MB; without a limit it keeps that size on disk for good.
+      // With one, it is truncated back to this whenever a checkpoint empties it.
+      this.raw.exec(`PRAGMA journal_size_limit = ${WAL_SIZE_LIMIT}`);
     }
     this.raw.exec('PRAGMA busy_timeout = 5000');
     this.raw.exec('PRAGMA temp_store = MEMORY');
@@ -85,6 +94,21 @@ export class Db {
       else this.raw.exec(`ROLLBACK TO ${name}; RELEASE ${name}`);
       throw err;
     }
+  }
+
+  /**
+   * Make deleted data unrecoverable from the database files: copy the WAL into the main file and
+   * truncate it (old page images live on in WAL frames), and with `vacuum` also rebuild the file so
+   * freed pages are dropped. Runs outside transactions only; inside one it does nothing and returns false.
+   */
+  scrub(opts: { vacuum?: boolean } = {}): boolean {
+    if (this.depth > 0 || this.raw.isTransaction) return false;
+    this.raw.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    if (opts.vacuum) {
+      this.raw.exec('VACUUM');
+      this.raw.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    }
+    return true;
   }
 
   close(): void {

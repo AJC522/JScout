@@ -3,6 +3,7 @@ import type { Profile, SearchQuery } from '../../shared/types';
 import { resolvePlace } from '../lib/location';
 import { expandTitle } from '../lib/titles';
 import type { UpstreamQuery } from '../sources/types';
+import { LOCATION_SEPARATOR, locationPieces } from './location-filter';
 import { alternativeText, parseQuery } from './query-parse';
 import { understandQuery } from './understand';
 
@@ -17,9 +18,10 @@ export function queryFromPreferences(profile: Profile): SearchQuery {
   // Commas separate alternatives in q, so a comma inside one title would split it.
   const titles = p.targetTitles.map((t) => t.replace(/[,|"]/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, PROFILE_TITLES);
   const query: SearchQuery = { q: titles.join(', ') };
-  const location = p.locations.find((l) => l.trim());
-  if (location) {
-    query.location = location.trim();
+  // Every saved place, so jobs in any of the user's cities come up (not only the first one's).
+  const locations = p.locations.map((l) => l.replaceAll(LOCATION_SEPARATOR, ' ').trim()).filter(Boolean);
+  if (locations.length) {
+    query.location = locations.join(`${LOCATION_SEPARATOR} `);
     query.radiusKm = p.radiusKm;
   }
   if (p.remote.length) query.remote = [...p.remote];
@@ -41,7 +43,8 @@ export function upstreamQuery(query: SearchQuery): UpstreamQuery {
     for (const alt of keywords.slice()) keywords.push(...expandTitle(alt).synonyms.slice(0, UPSTREAM_SYNONYMS));
   }
   const out: UpstreamQuery = { keywords: [...new Set(keywords)].slice(0, UPSTREAM_KEYWORDS), limit: UPSTREAM_LIMIT };
-  const text = query.location?.trim();
+  // Upstream sources take one place.
+  const text = locationPieces(query.location)[0];
   if (text) {
     out.locationText = text;
     const place = resolvePlace(text);

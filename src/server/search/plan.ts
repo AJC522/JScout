@@ -8,11 +8,12 @@
  * Building a plan touches no database, so it is cheap to build many (broaden suggestions do).
  */
 import { APPLICATION_STATUSES, SEARCH_DEFAULTS } from '../../shared/constants';
+import { atsKindSchema } from '../../shared/schemas';
 import type { EmploymentType, RemoteMode, SearchQuery, SearchSort, Seniority } from '../../shared/types';
 import { companyKey } from '../lib/text';
 import { ftsAnd } from './fts';
 import { type LocationFilter, locationFilter, type SqlCond } from './location-filter';
-import { type Understanding, understandQuery } from './understand';
+import { type Exclusion, type Understanding, understandQuery } from './understand';
 
 export type { SqlCond } from './location-filter';
 
@@ -49,6 +50,8 @@ export interface PlanEnv {
   maxPostingAgeDays: number;
   /** Currency for salaryMin when the query does not name one. */
   defaultCurrency: string;
+  /** A disabled source's or board's postings are still being deleted: leave them out (see JobStore.hideFeeds). */
+  hideRemovedFeeds?: boolean;
 }
 
 export interface SearchOptions {
@@ -74,8 +77,10 @@ export interface SearchPlan {
   match?: string;
   /** Title searches: expression the unstemmed jobs_title index must match too (see Understanding.exact). */
   titleExact?: string;
-  /** FTS expression of excluded terms. */
-  exclude?: string;
+  /** Title searches with acronym titles: how they must be written (see Understanding.acronyms). */
+  titleAcronyms?: Understanding['acronyms'];
+  /** Excluded terms (see Understanding.exclusions). */
+  exclusions: Exclusion[];
   base: SqlCond[];
   dims: Partial<Record<FacetDim, DimFilter>>;
   /** Currency salaryMin is compared in (and salary sorting prefers). */
@@ -132,7 +137,7 @@ function dimFilters(query: SearchQuery, ageCutoff: string | undefined): Partial<
  * postings paid in another currency: without it a €50k job passes a "$120k or more" filter as
  * "not comparable". Rates move, so a posting within ~10% of the minimum may land on either side.
  */
-const USD_PER_UNIT: Readonly<Record<string, number>> = {
+export const USD_PER_UNIT: Readonly<Record<string, number>> = {
   USD: 1, EUR: 1.1, GBP: 1.28, CHF: 1.15, CAD: 0.73, AUD: 0.66, NZD: 0.6, SGD: 0.75, HKD: 0.128, JPY: 0.0067,
   CNY: 0.14, INR: 0.012, KRW: 0.00073, SEK: 0.095, NOK: 0.093, DKK: 0.147, PLN: 0.25, CZK: 0.044, HUF: 0.0028,
   RON: 0.22, ILS: 0.27, AED: 0.272, TRY: 0.03, ZAR: 0.055, BRL: 0.18, MXN: 0.055, PHP: 0.017,
@@ -157,12 +162,39 @@ function salaryUnknown(currency: string): SqlCond {
   return { sql: `(${amount} IS NULL OR (${USD_RATE_SQL}) IS NULL)`, params: [] };
 }
 
+const ATS_SOURCES_JSON = JSON.stringify(atsKindSchema.options);
+const IN_ATS = 'source IN (SELECT value FROM json_each(?))';
+const CLOSED_ATS_CLUSTERS = `SELECT cluster_key FROM jobs WHERE closed_at IS NOT NULL AND ${IN_ATS}`;
+
+/**
+ * Re-listed copies of a job its employer has taken down: the employer's board (a complete snapshot)
+ * closed its copy, so an aggregator's still-open copy must not show the job as open. A cluster with
+ * another open board copy (the job re-posted) is still open; that copy passes on its own.
+ */
+const CLOSED_BY_EMPLOYER: SqlCond = {
+  sql: `(j.${IN_ATS} OR +j.cluster_key NOT IN (${CLOSED_ATS_CLUSTERS} AND cluster_key NOT IN (
+    SELECT cluster_key FROM jobs WHERE closed_at IS NULL AND cluster_key IN (${CLOSED_ATS_CLUSTERS}) AND ${IN_ATS})))`,
+  params: [ATS_SOURCES_JSON, ATS_SOURCES_JSON, ATS_SOURCES_JSON, ATS_SOURCES_JSON],
+};
+
 /** Statuses at or past "applied". */
 const APPLIED_OR_LATER = APPLICATION_STATUSES.slice(APPLICATION_STATUSES.indexOf('applied'));
 
-function baseFilters(query: SearchQuery, opts: SearchOptions, location: LocationFilter, salaryCurrency: string): SqlCond[] {
+function baseFilters(
+  query: SearchQuery,
+  opts: SearchOptions,
+  location: LocationFilter,
+  salaryCurrency: string,
+  understanding: Understanding,
+): SqlCond[] {
   const base: SqlCond[] = [];
-  if (!opts.includeClosed) base.push({ sql: 'j.closed_at IS NULL', params: [] });
+  // "remote software engineer": the arrangement typed with the title, unless the facet says otherwise.
+  const { remote, employmentTypes } = understanding.filters;
+  if (remote?.length && !query.remote?.length) base.push({ sql: 'j.remote IN (SELECT value FROM json_each(?))', params: [json(remote)] });
+  if (employmentTypes?.length && !query.employmentTypes?.length) {
+    base.push({ sql: 'j.employment_type IN (SELECT value FROM json_each(?))', params: [json(employmentTypes)] });
+  }
+  if (!opts.includeClosed) base.push({ sql: 'j.closed_at IS NULL', params: [] }, CLOSED_BY_EMPLOYER);
   if (!opts.includeHidden) base.push({ sql: 'j.cluster_key NOT IN (SELECT cluster_key FROM hidden_jobs)', params: [] });
   if (!opts.includeApplied) {
     base.push({
@@ -201,8 +233,13 @@ export function buildPlan(query: SearchQuery, env: PlanEnv): SearchPlan {
     location,
     match: ftsAnd([understanding.match, location.fts]),
     titleExact: understanding.exact,
-    exclude: understanding.exclude,
-    base: baseFilters(query, opts, location, salaryCurrency),
+    ...(understanding.acronyms ? { titleAcronyms: understanding.acronyms } : {}),
+    exclusions: understanding.exclusions,
+    base: [
+      ...baseFilters(query, opts, location, salaryCurrency, understanding),
+      // Not on the covering index, so only while a removal is pending.
+      ...(env.hideRemovedFeeds ? [{ sql: 'j.feed_key NOT IN (SELECT feed_key FROM removed_feeds)', params: [] }] : []),
+    ],
     dims: dimFilters(query, ageCutoff),
     salaryCurrency,
     ageCutoff,

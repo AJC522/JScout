@@ -8,7 +8,7 @@
 import type { Salary } from '../../shared/types';
 import { parseJson } from '../db';
 import type { ScoringRow } from './engine';
-import type { CandidateRow, SearchPlan } from './plan';
+import { type CandidateRow, type SearchPlan, USD_PER_UNIT } from './plan';
 import { recency, type ScoreContext, type ScoreInput, scorePosting, textRelevance } from './rank';
 
 export const RESCORE_CAP = 2000;
@@ -21,10 +21,20 @@ export function bestRank(rows: readonly CandidateRow[]): number | null {
   return best;
 }
 
-/** Highest annual pay first: the search's currency, then other currencies, then no salary. */
+/**
+ * Highest annual pay first: the search's currency, then other currencies compared in US dollars
+ * (¥25M is not more than $445k), then currencies without a rate, then no salary.
+ */
 export function bySalary(rows: CandidateRow[], currency: string): CandidateRow[] {
-  const tier = (r: CandidateRow): number => (r.salary?.amount == null ? 2 : r.salary.currency === currency ? 0 : 1);
-  return [...rows].sort((a, b) => tier(a) - tier(b) || (b.salary?.amount ?? 0) - (a.salary?.amount ?? 0) || newestFirst(a, b));
+  const keyed = rows.map((r) => {
+    const amount = r.salary?.amount;
+    const rate = r.salary?.currency ? USD_PER_UNIT[r.salary.currency] : undefined;
+    if (amount == null) return { r, tier: 3, value: 0 };
+    if (r.salary?.currency === currency) return { r, tier: 0, value: amount };
+    return rate === undefined ? { r, tier: 2, value: amount } : { r, tier: 1, value: amount * rate };
+  });
+  keyed.sort((a, b) => a.tier - b.tier || b.value - a.value || newestFirst(a.r, b.r));
+  return keyed.map((k) => k.r);
 }
 
 function salaryOf(r: Pick<ScoringRow, 'salary_currency' | 'salary_annual_min' | 'salary_annual_max'>): Salary | undefined {

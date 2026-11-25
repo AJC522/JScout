@@ -112,6 +112,15 @@ export function createSettingsService(ctx: AppContext): SettingsService {
     else cache.set(key, undefined);
   }
 
+  /** After a key is removed or replaced: drop the old value from the database files (best effort). */
+  function scrub(): void {
+    try {
+      db.scrub();
+    } catch (err) {
+      ctx.log.warn('Could not compact the database after removing a key', { err });
+    }
+  }
+
   function getSecret(key: 'ai.apiKey'): string | undefined {
     if (key !== 'ai.apiKey') return undefined;
     const stored = read(AI_KEY_KEY);
@@ -161,11 +170,13 @@ export function createSettingsService(ctx: AppContext): SettingsService {
         apiKey = patch.ai.apiKey?.trim() || null;
       }
     }
+    const previousKey = apiKey === undefined ? undefined : read(AI_KEY_KEY);
     db.tx(() => {
       write(APP_KEY, next);
       if (apiKey === null) remove(AI_KEY_KEY);
       else if (apiKey !== undefined) write(AI_KEY_KEY, apiKey);
     });
+    if (previousKey !== undefined && previousKey !== apiKey) scrub();
     return getApp();
   }
 
@@ -187,14 +198,18 @@ export function createSettingsService(ctx: AppContext): SettingsService {
       }
       next.ttlMinutes = Math.round(ttl);
     }
+    let replaced = false;
     for (const [field, value] of Object.entries(patch.config ?? {})) {
       if (value !== null && typeof value !== 'string') throw badRequest(`config.${field} must be a string or null`);
       const trimmed = value?.trim() ?? '';
       if (trimmed.length > MAX_CONFIG_VALUE) throw badRequest(`config.${field} is too long`);
+      if (next.config[field] !== undefined && next.config[field] !== trimmed) replaced = true;
       if (trimmed) next.config[field] = trimmed;
       else delete next.config[field];
     }
     write(sourceKey(sourceId), next);
+    // Source config holds API keys: a removed or replaced one must not stay readable in the WAL.
+    if (replaced) scrub();
     return getSourceState(sourceId);
   }
 

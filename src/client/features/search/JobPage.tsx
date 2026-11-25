@@ -4,6 +4,7 @@ import { Page } from '../../components/layout/Page';
 import { PageHeader, Skeleton } from '../../components/ui';
 import { useDocumentTitle } from '../../lib/hooks';
 import { JobDetailView } from './JobDetailView';
+import { searchBackLink } from './last-search';
 import { useJobDetail } from './queries';
 import { useJobActions } from './use-job-actions';
 
@@ -18,7 +19,7 @@ export function JobPage() {
   return (
     <Page>
       <PageHeader
-        back={{ to: '/', label: 'Search' }}
+        back={{ to: searchBackLink(), label: 'Search' }}
         title={job ? job.title : detail.isError ? 'Job details' : <Skeleton className="h-7 w-80 max-w-full" />}
         description={job ? [job.company, job.locationText].filter(Boolean).join(' · ') : undefined}
       />

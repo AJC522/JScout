@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FILTERS, hasFilters, isDetectable, pageRange, planBulk, toListQuery } from './model';
+import { DEFAULT_FILTERS, hasFilters, isDetectable, pageRange, planBulk, syncableAts, toListQuery } from './model';
 
 describe('companies model', () => {
   it('turns filters into a list request without empty values', () => {
@@ -13,6 +13,19 @@ describe('companies model', () => {
       limit: 50,
       offset: 100,
     });
+  });
+
+  it('offers only job boards JScout can sync in the filter', () => {
+    const sources = [
+      { id: 'remotive', perCompany: false },
+      { id: 'greenhouse', perCompany: true },
+      { id: 'lever', perCompany: true },
+      { id: 'ashby', perCompany: true },
+    ];
+    expect(syncableAts(sources)).toEqual(['greenhouse', 'lever', 'ashby']);
+    expect(syncableAts(sources)).not.toContain('smartrecruiters');
+    expect(syncableAts(undefined)).toEqual([]);
+    expect(syncableAts([{ id: 'lever', perCompany: true }], 'workable')).toEqual(['lever', 'workable']);
   });
 
   it('knows when filters are in use', () => {

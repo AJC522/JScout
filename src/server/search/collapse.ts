@@ -91,7 +91,8 @@ export interface FacetLabels {
  * Collapse rows to cluster representatives and count facets. Each cluster counts once per
  * facet, under its representative's value, so a facet's counts add up to the number of
  * results it would show without its own filter. (A cluster whose copies disagree — one
- * source says hybrid, another remote — is counted under the representative's value only.)
+ * source says hybrid, another remote — is counted under the value it is shown with when it
+ * passes the filter, else under its best other copy's value.)
  */
 export function collapse(rows: CandidateRow[], plan: SearchPlan, labels: FacetLabels): Collapsed {
   const failMask = maskFn(plan);
@@ -126,17 +127,16 @@ export function collapse(rows: CandidateRow[], plan: SearchPlan, labels: FacetLa
       counts[d] = mainCounts[d];
       continue;
     }
+    // Only clusters not already shown are added. A shown cluster stays under its shown value, or a
+    // selected source would read 0 while its (cross-posted) jobs are on screen.
     const over = new Map<string, CandidateRow>();
     for (const row of extra) {
-      const current = over.get(row.clusterKey) ?? main.get(row.clusterKey)?.rep;
+      if (main.has(row.clusterKey)) continue;
+      const current = over.get(row.clusterKey);
       if (!current || isBetterRepresentative(row, current)) over.set(row.clusterKey, row);
     }
     const adjusted = new Map(mainCounts[d]);
-    for (const [cluster, row] of over) {
-      const replaced = main.get(cluster)?.rep;
-      if (replaced) bump(adjusted, valueOf[d](replaced), -1);
-      bump(adjusted, valueOf[d](row), 1);
-    }
+    for (const row of over.values()) bump(adjusted, valueOf[d](row), 1);
     counts[d] = adjusted;
   }
 

@@ -158,6 +158,8 @@ export interface JobSourceLink {
   url: string;
   applyUrl?: string;
   postedAt?: IsoDate;
+  /** Set when this copy is closed (gone from its source); the employer's own board closing means the job is gone. */
+  closedAt?: IsoDate;
 }
 
 /** What the user has done with a job (keyed by cluster, so duplicates share state). */

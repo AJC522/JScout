@@ -1,5 +1,15 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { openDb } from './index';
+import { migrate, openDb, WAL_SIZE_LIMIT } from './index';
+
+/** Every byte of the database's files on disk, as latin1 text for substring checks. */
+function fileBytes(dbPath: string): string {
+  return ['', '-wal', '-journal']
+    .map((suffix) => (fs.existsSync(dbPath + suffix) ? fs.readFileSync(dbPath + suffix).toString('latin1') : ''))
+    .join('');
+}
 
 describe('db', () => {
   it('migrates a fresh database and supports FTS5 with bm25', () => {
@@ -50,6 +60,49 @@ describe('db', () => {
       }
     });
     expect(db.all<{ key: string }>(`SELECT key FROM settings ORDER BY key`).map((r) => r.key)).toEqual(['a', 'b']);
+    db.close();
+  });
+
+  it('scrub() leaves no trace of deleted rows in the database files', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jscout-db-'));
+    try {
+      const file = path.join(dir, 'jscout.db');
+      const db = openDb(file);
+      expect(db.scalar('PRAGMA secure_delete')).toBe(2);
+      expect(db.scalar('PRAGMA journal_size_limit')).toBe(WAL_SIZE_LIMIT);
+      db.run(`INSERT INTO settings (key, value) VALUES ('secret', '"sk-ant-SCRUBME123"')`);
+      db.run(`INSERT INTO settings (key, value) VALUES ('notes', ?)`, 'Spoke to recruiter Zebedee Quiltwhistle'.repeat(500));
+      db.exec('PRAGMA wal_checkpoint(PASSIVE)');
+      db.run(`DELETE FROM settings`);
+      expect(fileBytes(file)).toContain('sk-ant-SCRUBME123');
+      expect(db.scrub({ vacuum: true })).toBe(true);
+      const bytes = fileBytes(file);
+      expect(bytes).not.toContain('sk-ant-SCRUBME123');
+      expect(bytes).not.toContain('Zebedee Quiltwhistle');
+      db.close();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('scrub() does nothing inside a transaction', () => {
+    const db = openDb(':memory:');
+    expect(db.tx(() => db.scrub({ vacuum: true }))).toBe(false);
+    db.close();
+  });
+
+  it('migration 4 indexes the words of postings stored before it', () => {
+    const db = openDb(':memory:');
+    db.run(
+      `INSERT INTO jobs (id, source, feed_key, external_id, url, title, title_core, company, company_key, cluster_key, location_text, description_html, first_seen_at, last_seen_at, content_hash)
+       VALUES ('j1', 's', 's', 'e1', 'u', 'Business Intern', 'business intern', 'Acme', 'acme', 'c1', 'Berlin', '<p>International team</p>', 'x', 'x', 'h')`,
+    );
+    db.exec(`DROP TABLE jobs_words; DROP TABLE removed_feeds; PRAGMA user_version = 3`);
+    migrate(db);
+    const words = (expr: string) => db.all(`SELECT rowid FROM jobs_words WHERE jobs_words MATCH ?`, expr).length;
+    expect(words('"intern"')).toBe(1);
+    expect(words('"international"')).toBe(1);
+    expect(words('"internal"')).toBe(0);
     db.close();
   });
 });

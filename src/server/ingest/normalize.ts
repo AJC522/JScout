@@ -119,9 +119,22 @@ function placeKeyPart(p: Place): string | undefined {
   return undefined;
 }
 
+/** Countries and regions a title names ("Business Development Representative, Japan"), as key parts. */
+function titlePlaceKey(title: string): string {
+  const parts = new Set<string>();
+  for (const p of parseJobLocation({ locations: [title] }).location.places) {
+    const part = p.kind === 'region' ? (p.region && normalizeText(p.region)) : p.country;
+    if (part) parts.add(part);
+  }
+  return [...parts].sort().join(',');
+}
+
 /** The location part of the cluster key; see clusterKeyFor. */
-export function clusterLocationKey(location: JobLocation, rawLocations: readonly string[]): string {
-  if (location.remote === 'remote') return 'remote';
+export function clusterLocationKey(location: JobLocation, rawLocations: readonly string[], title = ''): string {
+  if (location.remote === 'remote') {
+    const named = title ? titlePlaceKey(title) : '';
+    return named ? `remote:${named}` : 'remote';
+  }
   for (const p of location.places) {
     const key = placeKeyPart(p);
     if (key) return key;
@@ -199,7 +212,7 @@ export function normalizePosting(raw: RawPosting, ctx: NormalizeContext): Normal
     companyKey: compKey,
     titleCore,
     seniority,
-    locationKey: clusterLocationKey(parsed.location, locations),
+    locationKey: clusterLocationKey(parsed.location, locations, title),
   });
 
   return {
@@ -227,7 +240,9 @@ export function normalizePosting(raw: RawPosting, ctx: NormalizeContext): Normal
  * The location key must make "Registered Nurse at Acme in Denver" and the same
  * title in Boston different jobs, while the Greenhouse copy ("Remote - US") and
  * the Remotive copy ("USA", remote) of one remote job stay the same job:
- *  - remote jobs: "remote" (scope ignored: sources describe it inconsistently)
+ *  - remote jobs: "remote" (scope ignored: sources describe it inconsistently), plus the countries or
+ *    regions the title names: one board's "BDR, Japan" and "BDR, Germany" are different requisitions,
+ *    although their title cores ("business development representative") are equal
  *  - otherwise the first resolved place, as city (or admin1, or country) key
  *  - nothing resolved: the normalised first raw location string, or "" when none
  */

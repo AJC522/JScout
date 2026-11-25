@@ -122,6 +122,19 @@ describe('jobs', () => {
     }
   });
 
+  it('scores a job against the search it was opened from, when given', async () => {
+    const id = idOf('acme-swe-austin');
+    const plain = await call('GET', `/api/jobs/${id}`);
+    const withQuery = await call('GET', `/api/jobs/${id}?query=${encodeURIComponent(JSON.stringify({ q: 'software engineer', location: 'Austin, TX' }))}`);
+    expect(withQuery.status).toBe(200);
+    expect(withQuery.body.match.titleMatch).toBe('exact');
+    const location = (body: { match: { reasons: Array<{ key: string; label: string }> } }) => body.match.reasons.find((r) => r.key === 'location')?.label;
+    expect(location(withQuery.body)).toBe('In Austin, TX');
+    expect(location(plain.body)).toBeUndefined();
+    expect((await call('GET', `/api/jobs/${id}?query=not-json`)).status).toBe(400);
+    expect((await call('GET', `/api/jobs/${id}?query=${encodeURIComponent(JSON.stringify({ q: 1 }))}`)).status).toBe(400);
+  });
+
   it('fetches a missing description before answering', async () => {
     const id = idOf('acme-swe-austin');
     built.ctx.services.jobs.setDescription(id, '', '');

@@ -8,6 +8,7 @@ import {
   contentValues,
   ftsDoc,
   type FtsDoc,
+  ftsWords,
   isAtsSource,
   placeRows,
   POSTING_SELECT,
@@ -26,13 +27,14 @@ interface Feed {
 interface ExistingRow {
   rid: number;
   external_id: string;
+  cluster_key: string;
   content_hash: string;
   closed_at: string | null;
   last_seen_at: string;
   has_description: number;
 }
 
-const EXISTING_SELECT = `SELECT rid, external_id, content_hash, closed_at, last_seen_at,
+const EXISTING_SELECT = `SELECT rid, external_id, cluster_key, content_hash, closed_at, last_seen_at,
   description_html != '' AS has_description FROM jobs`;
 
 const INSERT_JOB = `INSERT INTO jobs (id, source, feed_key, external_id, first_seen_at, last_seen_at, ${CONTENT_COLUMNS.join(', ')})
@@ -42,11 +44,17 @@ const UPDATE_JOB = `UPDATE jobs SET ${CONTENT_COLUMNS.map((c) => `${c} = ?`).joi
 const INSERT_PLACE = `INSERT INTO job_places (job_rid, kind, city, admin1, country, lat, lon) VALUES (?, ?, ?, ?, ?, ?, ?)`;
 const INSERT_FTS = `INSERT INTO jobs_fts (rowid, title, company, location, tags, body) VALUES (?, ?, ?, ?, ?, ?)`;
 const DELETE_FTS = `DELETE FROM jobs_fts WHERE rowid = ?`;
+const INSERT_WORDS = `INSERT INTO jobs_words (rowid, text) VALUES (?, ?)`;
+const DELETE_WORDS = `DELETE FROM jobs_words WHERE rowid = ?`;
 
 /** Id lists are passed as one JSON array parameter, so each statement is prepared once whatever the list length. */
 const IN_JSON = `IN (SELECT value FROM json_each(?))`;
 
 const emptyStats = (): UpsertStats => ({ added: 0, updated: 0, unchanged: 0, closed: 0, reopened: 0 });
+
+/** Postings the background removal deletes per transaction: each stays in the tens of milliseconds. */
+const PURGE_BATCH = 250;
+const NOT_REMOVED = `feed_key NOT IN (SELECT feed_key FROM removed_feeds)`;
 
 /**
  * Other services are available on `ctx.services` but may not exist yet while
@@ -54,9 +62,53 @@ const emptyStats = (): UpsertStats => ({ added: 0, updated: 0, unchanged: 0, clo
  */
 export function createJobStore(ctx: AppContext): JobStore {
   const db = ctx.db;
+  /** Hidden feeds still have postings to delete; counts and search filter them out meanwhile. */
+  let removing = db.scalar('SELECT 1 FROM removed_feeds LIMIT 1') !== undefined;
+  let purge: Promise<void> | undefined;
+  /** ` AND <not in a removed feed>` while a removal is pending, else nothing (keeps queries on their indexes). */
+  const visible = (): string => (removing ? ` AND ${NOT_REMOVED}` : '');
+
+  /** Writing to a feed again (its source or board re-enabled) cancels its pending removal. */
+  function keepFeed(feedKey: string): void {
+    if (removing && db.run(`DELETE FROM removed_feeds WHERE feed_key = ?`, feedKey).changes > 0) {
+      removing = db.scalar('SELECT 1 FROM removed_feeds LIMIT 1') !== undefined;
+    }
+  }
+
+  /** Delete hidden feeds' postings a batch per event-loop turn, so requests keep being served. */
+  function startPurge(): Promise<void> {
+    purge ??= (async () => {
+      try {
+        for (;;) {
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          const feedKey = db.scalar<string>('SELECT feed_key FROM removed_feeds LIMIT 1');
+          if (feedKey === undefined) break;
+          db.tx(() => {
+            const rids = db.all<{ rid: number }>(`SELECT rid FROM jobs WHERE feed_key = ? LIMIT ${PURGE_BATCH}`, feedKey).map((r) => r.rid);
+            if (rids.length > 0) deleteJobs(`rid ${IN_JSON}`, JSON.stringify(rids));
+            else db.run(`DELETE FROM removed_feeds WHERE feed_key = ?`, feedKey);
+          });
+        }
+        removing = false;
+      } catch (err) {
+        // Typically the database closing at shutdown; the next start resumes from removed_feeds.
+        ctx.log?.debug('jobs: background removal stopped', { err });
+      } finally {
+        purge = undefined;
+      }
+    })();
+    return purge;
+  }
+  if (removing) void startPurge();
 
   function writeFts(rid: number, doc: FtsDoc): void {
     db.run(INSERT_FTS, rid, doc.title, doc.company, doc.location, doc.tags, doc.body);
+    db.run(INSERT_WORDS, rid, ftsWords(doc));
+  }
+
+  function deleteFts(rid: number): void {
+    db.run(DELETE_FTS, rid);
+    db.run(DELETE_WORDS, rid);
   }
 
   function writeRelated(rid: number, p: NormalizedPosting): void {
@@ -72,9 +124,22 @@ export function createJobStore(ctx: AppContext): JobStore {
   function updatePosting(ex: ExistingRow, incoming: NormalizedPosting, nowIso: string): void {
     const p = ex.has_description && incoming.descriptionHtml === '' ? keepStoredDescription(ex.rid, incoming) : incoming;
     db.run(UPDATE_JOB, ...contentValues(p), nowIso, ex.rid);
+    if (ex.cluster_key !== p.clusterKey) carryUserState(ex.cluster_key, p.clusterKey, p.id);
     db.run(`DELETE FROM job_places WHERE job_rid = ?`, ex.rid);
-    db.run(DELETE_FTS, ex.rid);
+    deleteFts(ex.rid);
     writeRelated(ex.rid, p);
+  }
+
+  /**
+   * User state is keyed by cluster. When a posting moves to another cluster (its title or place
+   * changed, or the clustering rules did), what the user did with it moves along: hidden stays
+   * hidden, viewed stays viewed, and its tracker card keeps pointing at it. The old cluster keeps its
+   * state for any copies still in it.
+   */
+  function carryUserState(from: string, to: string, jobId: string): void {
+    db.run(`INSERT OR IGNORE INTO hidden_jobs (cluster_key, job_id, hidden_at) SELECT ?, job_id, hidden_at FROM hidden_jobs WHERE cluster_key = ?`, to, from);
+    db.run(`INSERT OR IGNORE INTO job_views (cluster_key, job_id, viewed_at) SELECT ?, job_id, viewed_at FROM job_views WHERE cluster_key = ?`, to, from);
+    db.run(`UPDATE applications SET cluster_key = ? WHERE cluster_key = ? AND job_id = ?`, to, from, jobId);
   }
 
   /**
@@ -158,6 +223,7 @@ export function createJobStore(ctx: AppContext): JobStore {
   /** Deletes the FTS rows of the jobs matching `where`, then the jobs (job_places cascade). */
   function deleteJobs(where: string, ...params: Array<string>): number {
     db.run(`DELETE FROM jobs_fts WHERE rowid IN (SELECT rid FROM jobs WHERE ${where})`, ...params);
+    db.run(`DELETE FROM jobs_words WHERE rowid IN (SELECT rid FROM jobs WHERE ${where})`, ...params);
     return db.run(`DELETE FROM jobs WHERE ${where}`, ...params).changes;
   }
 
@@ -167,6 +233,7 @@ export function createJobStore(ctx: AppContext): JobStore {
       // Without a grace cut-off every absent posting closes.
       const cutoffIso = opts.closeUnseenBefore?.toISOString();
       return db.tx(() => {
+        keepFeed(feed.feedKey);
         const batch = uniqueBatch(feed, postings);
         const existing = loadExisting(feed);
         const stats = writeBatch(batch, feed, existing, nowIso);
@@ -183,6 +250,7 @@ export function createJobStore(ctx: AppContext): JobStore {
 
     upsertPostings(feed, postings, now) {
       return db.tx(() => {
+        keepFeed(feed.feedKey);
         const batch = uniqueBatch(feed, postings);
         if (batch.length === 0) return emptyStats();
         const existing = loadExisting(feed, batch.map((p) => p.externalId));
@@ -257,7 +325,7 @@ export function createJobStore(ctx: AppContext): JobStore {
           JSON.stringify(skills),
           row.rid,
         );
-        db.run(DELETE_FTS, row.rid);
+        deleteFts(row.rid);
         writeFts(row.rid, doc);
       });
     },
@@ -281,6 +349,7 @@ export function createJobStore(ctx: AppContext): JobStore {
           url: r.url,
           applyUrl: r.apply_url ?? undefined,
           postedAt: r.posted_at ?? undefined,
+          ...(r.closed_at !== null ? { closedAt: r.closed_at } : {}),
         }),
       );
     },
@@ -334,17 +403,52 @@ export function createJobStore(ctx: AppContext): JobStore {
       return db.tx(() => deleteJobs('feed_key = ?', feedKey));
     },
 
-    purgeClosed(olderThan) {
-      return db.tx(() => deleteJobs('closed_at < ?', olderThan.toISOString()));
+    hideFeeds(feedKeys) {
+      if (feedKeys.length === 0) return 0;
+      const keys = JSON.stringify(feedKeys);
+      const hidden = db.tx(() => {
+        const n = db.scalar<number>(`SELECT COUNT(*) FROM jobs WHERE closed_at IS NULL AND feed_key ${IN_JSON}${visible()}`, keys) ?? 0;
+        db.run(`INSERT OR IGNORE INTO removed_feeds (feed_key) SELECT value FROM json_each(?)`, keys);
+        return n;
+      });
+      removing = true;
+      void startPurge();
+      return hidden;
+    },
+
+    removingFeeds: () => removing,
+
+    purgePending: () => purge ?? Promise.resolve(),
+
+    closeUnseen(feed, seenExternalIds, opts) {
+      // Without a grace cut-off every absent posting closes.
+      const cutoff = opts.closeUnseenBefore?.toISOString() ?? '\uffff';
+      return db.run(
+        `UPDATE jobs SET closed_at = ? WHERE source = ? AND feed_key = ? AND closed_at IS NULL AND last_seen_at < ?
+           AND external_id NOT ${IN_JSON}`,
+        opts.now.toISOString(),
+        feed.source,
+        feed.feedKey,
+        cutoff,
+        JSON.stringify(seenExternalIds),
+      ).changes;
+    },
+
+    purgeClosed(olderThan, limit) {
+      if (limit === undefined) return db.tx(() => deleteJobs('closed_at < ?', olderThan.toISOString()));
+      return db.tx(() => {
+        const rids = db.all<{ rid: number }>(`SELECT rid FROM jobs WHERE closed_at < ? LIMIT ?`, olderThan.toISOString(), Math.max(0, Math.floor(limit)));
+        return rids.length ? deleteJobs(`rid ${IN_JSON}`, JSON.stringify(rids.map((r) => r.rid))) : 0;
+      });
     },
 
     openCount() {
-      return db.scalar<number>(`SELECT COUNT(*) FROM jobs WHERE closed_at IS NULL`) ?? 0;
+      return db.scalar<number>(`SELECT COUNT(*) FROM jobs WHERE closed_at IS NULL${visible()}`) ?? 0;
     },
 
     openCountBySource() {
       const rows = db.all<{ source: string; n: number }>(
-        `SELECT source, COUNT(*) AS n FROM jobs WHERE closed_at IS NULL GROUP BY source`,
+        `SELECT source, COUNT(*) AS n FROM jobs WHERE closed_at IS NULL${visible()} GROUP BY source`,
       );
       return new Map(rows.map((r) => [r.source, r.n]));
     },
@@ -352,7 +456,7 @@ export function createJobStore(ctx: AppContext): JobStore {
     openCountByFeed(feedKeys) {
       if (feedKeys === undefined) {
         const rows = db.all<{ feed_key: string; n: number }>(
-          `SELECT feed_key, COUNT(*) AS n FROM jobs WHERE closed_at IS NULL GROUP BY feed_key`,
+          `SELECT feed_key, COUNT(*) AS n FROM jobs WHERE closed_at IS NULL${visible()} GROUP BY feed_key`,
         );
         return new Map(rows.map((r) => [r.feed_key, r.n]));
       }
@@ -360,7 +464,7 @@ export function createJobStore(ctx: AppContext): JobStore {
       const counts = new Map(feedKeys.map((k) => [k, 0]));
       if (feedKeys.length === 0) return counts;
       const rows = db.all<{ feed_key: string; n: number }>(
-        `SELECT feed_key, COUNT(*) AS n FROM jobs WHERE closed_at IS NULL AND feed_key ${IN_JSON} GROUP BY feed_key`,
+        `SELECT feed_key, COUNT(*) AS n FROM jobs WHERE closed_at IS NULL AND feed_key ${IN_JSON}${visible()} GROUP BY feed_key`,
         JSON.stringify(feedKeys),
       );
       for (const r of rows) counts.set(r.feed_key, r.n);
@@ -368,15 +472,18 @@ export function createJobStore(ctx: AppContext): JobStore {
     },
 
     companyCount() {
-      return db.scalar<number>(`SELECT COUNT(DISTINCT company_key) FROM jobs WHERE closed_at IS NULL`) ?? 0;
+      return db.scalar<number>(`SELECT COUNT(DISTINCT company_key) FROM jobs WHERE closed_at IS NULL${visible()}`) ?? 0;
     },
 
     clear() {
       db.tx(() => {
         db.run(`INSERT INTO jobs_fts (jobs_fts) VALUES ('delete-all')`);
+        db.run(`INSERT INTO jobs_words (jobs_words) VALUES ('delete-all')`);
         db.run(`DELETE FROM job_places`);
         db.run(`DELETE FROM jobs`);
+        db.run(`DELETE FROM removed_feeds`);
       });
+      removing = false;
     },
   };
 }

@@ -16,6 +16,38 @@ export interface WiderSearchProps {
   onChange: (next: SearchQuery, label?: string) => void;
 }
 
+/**
+ * The line under "No jobs match": it points at the suggestions only when there are some. Without
+ * any, nothing in the index comes close (dropping the location or filters would not help either).
+ */
+export function zeroResultsHint(hasSuggestions: boolean, hasExternalLinks: boolean): string {
+  const elsewhere = hasExternalLinks ? ', or run the same search on another site' : '';
+  if (hasSuggestions) return `Try one of these${elsewhere}.`;
+  return `Nothing close to it is in your index yet. Check the spelling or try other words${elsewhere}.`;
+}
+
+/** A compact row of links that run the same search on other job sites, for searches with plenty of results. */
+export function AlsoSearchOn({ links }: { links: readonly ExternalSearchLink[] }) {
+  if (links.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="group" aria-label="Run this search on other sites">
+      <span className="text-xs text-subtle">Also search on</span>
+      {links.map((link) => (
+        <a
+          key={link.id}
+          href={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-0.5 rounded-sm text-xs text-muted transition-colors hover:text-fg hover:underline focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none"
+        >
+          {link.name}
+          <ArrowUpRight className="size-3 text-subtle" aria-hidden="true" />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export function WiderSearch({ query, total, suggestions, externalLinks, onChange }: WiderSearchProps) {
   // Related roles are offered here too: with few results they are the most useful widening.
   const options = [...suggestions.filter((s) => s.kind === 'related-role' && isUseful(s)), ...broadenChips(suggestions)]
@@ -34,7 +66,7 @@ export function WiderSearch({ query, total, suggestions, externalLinks, onChange
             <h2 id="wider-title" className="text-base font-semibold text-fg">
               No jobs match all of that yet
             </h2>
-            <p className="mt-0.5 text-sm text-muted">Try one of these, or run the same search on another site.</p>
+            <p className="mt-0.5 text-sm text-muted">{zeroResultsHint(options.length > 0, externalLinks.length > 0)}</p>
           </div>
         </div>
       ) : (

@@ -137,6 +137,11 @@ export function ftsDoc(src: FtsSource, body: string): FtsDoc {
   };
 }
 
+/** The jobs_words document: every jobs_fts column's text, unstemmed and unpositioned (migration 4). */
+export function ftsWords(doc: FtsDoc): string {
+  return [doc.title, doc.company, doc.location, doc.tags, doc.body].join('\n');
+}
+
 // --- reading rows ---------------------------------------------------------------------
 
 /** Columns selected to build a JobPosting (the description itself is not loaded). */

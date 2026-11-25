@@ -3,7 +3,7 @@
  * list and (on wide screens) the job detail beside it. The URL holds the whole state.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUp, BookmarkPlus, Keyboard, MousePointerClick, SlidersHorizontal } from 'lucide-react';
 import type { JobDetail, SearchQuery, SearchResultItem, SearchSort } from '../../../shared/types';
@@ -21,6 +21,7 @@ import { FiltersPanel } from './FiltersPanel';
 import { IndexStatus } from './IndexStatus';
 import { BroadenChips, InterpretationBar } from './InterpretationBar';
 import { JobDetailView } from './JobDetailView';
+import { rememberSearch } from './last-search';
 import { flattenPages, useSearchResults } from './queries';
 import { ResultsList, ResultsSkeleton, type ResultsListHandle } from './ResultsList';
 import { SaveSearchDialog } from './SaveSearchDialog';
@@ -33,7 +34,7 @@ import { useJobActions, type JobRef } from './use-job-actions';
 import { useSearchUrl } from './use-search-url';
 import { useStableCallback } from './use-stable-callback';
 import { useVisitBoundary } from './use-visit-boundary';
-import { WiderSearch } from './WiderSearch';
+import { AlsoSearchOn, WiderSearch } from './WiderSearch';
 
 /** Below this many results the broaden suggestions become part of the main content. */
 const FEW_RESULTS = 10;
@@ -111,6 +112,11 @@ export function SearchPage() {
   const blank = isBlankQuery(query);
   const resolving = Boolean(from || savedId);
   const enabled = !blank && !resolving;
+  // A job's full page links back here, query and filters included.
+  const location = useLocation();
+  useEffect(() => {
+    if (enabled) rememberSearch(location.pathname, location.search);
+  }, [enabled, location.pathname, location.search]);
   const results = useSearchResults(query, enabled);
   const response = enabled ? results.data?.pages[0] : undefined;
   const updating = results.isPlaceholderData || (results.isFetching && !results.isFetchingNextPage && !results.isPending);
@@ -282,7 +288,13 @@ export function SearchPage() {
         <>
           <div className={cn('mt-3 space-y-2 transition-opacity', updating && 'opacity-60')}>
             <InterpretationBar query={query} response={response} onChange={onChange} />
-            {response && response.total >= FEW_RESULTS ? <BroadenChips query={query} suggestions={response.suggestions} onChange={onChange} /> : null}
+            {response && response.total >= FEW_RESULTS ? (
+              <>
+                <BroadenChips query={query} suggestions={response.suggestions} onChange={onChange} />
+                {/* With few results the links sit in WiderSearch instead, more prominently. */}
+                <AlsoSearchOn links={response.externalLinks} />
+              </>
+            ) : null}
           </div>
 
           <div

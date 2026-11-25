@@ -56,6 +56,34 @@ async function readBody(res: Response, maxBytes: number): Promise<string> {
  * minimum gap, timeouts, bounded retries with backoff, response size limits,
  * conditional requests, and failures mapped to SourceError.
  */
+/** Wait `ms`, or fail with SourceError('aborted') (and clear the timer) as soon as `signal` aborts. */
+function pause(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  if (!signal) return sleep(ms);
+  return sleep(ms, undefined, { signal }).catch((err: unknown) => {
+    throw signal.aborted ? new SourceError('aborted', 'Request aborted') : err;
+  });
+}
+
+/** `promise`, or a SourceError('aborted') as soon as `signal` aborts (the promise itself carries on). */
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(new SourceError('aborted', 'Request aborted'));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new SourceError('aborted', 'Request aborted'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (err: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(err);
+      },
+    );
+  });
+}
+
 export function createHttpClient(options: HttpClientOptions): HttpClient {
   const fetchImpl = options.fetchImpl ?? fetch;
   const defaultTimeout = options.defaultTimeoutMs ?? 30_000;
@@ -66,7 +94,11 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
   const hostTail = new Map<string, Promise<void>>();
   const hostNextAt = new Map<string, number>();
 
-  async function paced<T>(host: string, minIntervalMs: number, fn: () => Promise<T>): Promise<T> {
+  /**
+   * Run `fn` in the host's queue. A request cancelled while it waits for its turn is never sent: it
+   * leaves the queue at once (requests behind it still wait for the ones ahead) and takes no gap.
+   */
+  async function paced<T>(host: string, minIntervalMs: number, signal: AbortSignal | undefined, fn: () => Promise<T>): Promise<T> {
     const previous = hostTail.get(host) ?? Promise.resolve();
     let release!: () => void;
     const mine = new Promise<void>((resolve) => {
@@ -76,18 +108,22 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
       host,
       previous.then(() => mine),
     );
-    await previous;
+    let sent = false;
     try {
+      await untilAborted(previous, signal);
       const wait = (hostNextAt.get(host) ?? 0) - Date.now();
-      if (wait > 0) await sleep(wait);
+      if (wait > 0) await pause(wait, signal);
+      sent = true;
       return await fn();
     } finally {
-      hostNextAt.set(host, Date.now() + minIntervalMs);
+      if (sent) hostNextAt.set(host, Date.now() + minIntervalMs);
       release();
     }
   }
 
   async function once(url: string, opts: HttpRequestOptions): Promise<{ res: Response; text: string }> {
+    // A listener added to an already-aborted signal never fires: check first.
+    if (opts.signal?.aborted) throw new SourceError('aborted', 'Request aborted');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(new Error('timeout')), opts.timeoutMs ?? defaultTimeout);
     const onAbort = () => controller.abort(opts.signal?.reason);
@@ -131,9 +167,9 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       if (opts.signal?.aborted) throw new SourceError('aborted', 'Request aborted');
-      if (attempt > 0) await sleep(Math.min(8_000, 600 * 2 ** (attempt - 1)));
+      if (attempt > 0) await pause(Math.min(8_000, 600 * 2 ** (attempt - 1)), opts.signal);
       try {
-        const { res, text } = await paced(host, opts.minIntervalMs ?? defaultInterval, () => once(full, opts));
+        const { res, text } = await paced(host, opts.minIntervalMs ?? defaultInterval, opts.signal, () => once(full, opts));
         if (res.ok || allow.has(res.status)) return { res, text };
 
         const retryAfter = parseRetryAfter(res.headers.get('retry-after'), Date.now());
@@ -143,7 +179,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
             retryAfter,
           });
           if (retryAfter !== undefined && retryAfter > maxRetryAfter) throw lastError;
-          if (retryAfter) await sleep(retryAfter * 1000);
+          if (retryAfter) await pause(retryAfter * 1000, opts.signal);
           continue;
         }
         if (res.status === 404 || res.status === 410) {

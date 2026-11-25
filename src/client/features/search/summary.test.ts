@@ -36,6 +36,16 @@ describe('interpretation summary', () => {
     expect(describePlace(base, { q: '' })).toBe('Anywhere');
   });
 
+  it('says a place with only remote jobs means remote jobs open to it, not local ones too', () => {
+    const interpretation = { ...base, place: austin };
+    expect(describePlace(interpretation, { q: '', location: 'Austin', radiusKm: 50, remote: ['remote'] })).toBe('Remote jobs open to Austin, TX, United States');
+    expect(describePlace(interpretation, { q: '', location: 'Austin', radiusKm: 50, remote: ['remote'], includeRemote: false })).toBe(
+      'Remote jobs in Austin, TX, United States within 50 km',
+    );
+    expect(describePlace(interpretation, { q: '', location: 'Austin', radiusKm: 50, remote: ['remote', 'hybrid'] })).toBe('Austin, TX, United States within 50 km + remote');
+    expect(describePlace(interpretation, { q: '', location: 'Austin', remote: ['onsite'] })).toBe('Austin, TX, United States');
+  });
+
   it('joins the parts with the total first', () => {
     expect(summaryParts(1, { ...base, excluded: ['sales'] }, { q: 'software engineer' })).toEqual([
       '1 job',

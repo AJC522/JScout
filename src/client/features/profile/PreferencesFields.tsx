@@ -11,7 +11,7 @@ import {
 import type { EmploymentType, RemoteMode, SearchPreferences, Seniority } from '../../../shared/types';
 import { Chip, Field, Input, Select, TagInput } from '../../components/ui';
 import { suggest } from './profile-api';
-import { CURRENCIES, MAX_SALARY, formatSalaryInput, preferencesErrors, radiusLabel, toggle } from './preferences-model';
+import { CURRENCIES, MAX_SALARY, arrangementHint, formatSalaryInput, preferencesErrors, radiusLabel, toggle } from './preferences-model';
 import { parseOptionalNumber } from './validation';
 
 export type PreferencesValue = Pick<
@@ -75,7 +75,7 @@ export function PreferencesFields<V extends PreferencesValue>({ value, onChange,
         </Field>
       </div>
 
-      <ChipGroup label="Work arrangement" hint="Pick none to see every kind.">
+      <ChipGroup label="Work arrangement" hint={arrangementHint(value)}>
         {ARRANGEMENTS.map((mode) => (
           <Chip key={mode} selected={value.remote.includes(mode)} onSelectedChange={() => set('remote', toggle(value.remote, mode))}>
             {REMOTE_LABELS[mode]}
