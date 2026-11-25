@@ -21,6 +21,7 @@ import { clamp, uniqueFolded } from '../../lib/text';
 export const LIMITS = {
   targetTitles: 60,
   skills: 300,
+  certifications: 60,
   locations: 50,
   excludeCompanies: 200,
   excludeTerms: 100,
@@ -213,6 +214,7 @@ function normalizePreferences(p: SearchPreferences): SearchPreferences {
   return {
     targetTitles: textList(p.targetTitles, LIMITS.targetTitles, 120),
     skills: skills.length ? normalizeSkillList(skills).slice(0, LIMITS.skills) : [],
+    certifications: normalizeSkillList(textList(p.certifications, LIMITS.certifications, 120)).slice(0, LIMITS.certifications),
     locations: textList(p.locations, LIMITS.locations),
     radiusKm: radius === null ? 50 : clamp(Math.round(radius), 0, 500),
     remote: enumList<RemoteMode>(p.remote, REMOTE_MODES),

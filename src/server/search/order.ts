@@ -2,13 +2,16 @@
  * Result ordering. 'date' and 'salary' sort on first-pass columns. 'relevance' sorts every
  * result by a cheap score (text relevance + recency), rescores the top RESCORE_CAP with the full
  * scorer, and keeps the rest in cheap order behind them — so nothing is dropped when the cap
- * binds; results past it are just ordered less precisely. Page items are scored again with
- * explanations by the caller (same score).
+ * binds; results past it are just ordered less precisely. 'match' computes the profile match,
+ * location fit and pay of every result (see profile-match.ts) and sorts by match tier, then
+ * location, then pay; it falls back to 'relevance' when there is no profile to compare. Page
+ * items are scored again with explanations by the caller (same score).
  */
-import type { Salary } from '../../shared/types';
+import type { JobLocation, Salary } from '../../shared/types';
 import { parseJson } from '../db';
-import type { ScoringRow } from './engine';
+import type { MatchRow, ScoringRow } from './engine';
 import { type CandidateRow, type SearchPlan, USD_PER_UNIT } from './plan';
+import { annualPay, compareFit, type LocationPrefs, locationFit, type MatchProfile, profileMatch } from './profile-match';
 import { recency, type ScoreContext, type ScoreInput, scorePosting, textRelevance } from './rank';
 
 export const RESCORE_CAP = 2000;
@@ -63,6 +66,65 @@ export function scoreInputFromRow(row: CandidateRow, s: ScoringRow): ScoreInput 
   };
 }
 
+/** What "Best match" ordering compares a posting with. */
+export interface FitContext {
+  profile: MatchProfile;
+  location: LocationPrefs;
+  /** Currency pay is compared in. */
+  currency: string;
+}
+
+/** Text relevance + recency, 0–1: the order before (or without) full scoring. */
+function cheapScores(reps: readonly CandidateRow[], plan: SearchPlan, score: ScoreContext): Float64Array {
+  const cheap = new Float64Array(reps.length);
+  for (let i = 0; i < reps.length; i++) {
+    const r = reps[i]!;
+    const fresh = recency(r.ts, plan.now);
+    cheap[i] = r.rank === null ? fresh : 0.75 * textRelevance(r.rank, score.bestRank) + 0.25 * fresh;
+  }
+  return cheap;
+}
+
+export function matchLocation(row: Pick<MatchRow, 'places' | 'remoteScope'>, remote: CandidateRow['remote']): JobLocation {
+  const list = <T>(json: string): T[] => (json === '[]' ? [] : parseJson<T[]>(json, []));
+  return { places: list(row.places), remote, remoteScope: list<string>(row.remoteScope) };
+}
+
+/** What "Best match" sorts a posting by. */
+export interface FitKey {
+  percent: number | null;
+  locationRank: number;
+  pay: number | undefined;
+}
+
+const MISSING: FitKey = { percent: null, locationRank: Number.MAX_SAFE_INTEGER, pay: undefined };
+
+/** The sort key of one posting (labels are skipped: only the numbers matter here). */
+export function fitKey(r: CandidateRow, m: MatchRow | undefined, fit: FitContext): FitKey {
+  if (!m) return MISSING;
+  const skills = m.skills === '[]' ? [] : parseJson<string[]>(m.skills, []);
+  const match = profileMatch({ title: m.title, titleCore: m.titleCore, roleId: m.roleId ?? undefined, skills, seniority: r.seniority }, fit.profile, { explain: false });
+  const location = locationFit(matchLocation(m, r.remote), fit.location, { explain: false });
+  const salary = { currency: m.salaryCurrency ?? undefined, annualMin: m.salaryAnnualMin ?? undefined, annualMax: m.salaryAnnualMax ?? undefined };
+  return { percent: match.percent, locationRank: location.rank, pay: annualPay(salary, fit.currency) };
+}
+
+/**
+ * Every result by match tier, then location fit, then pay, then exact match; ties keep the cheap
+ * relevance order. Closed postings (only present when asked for) go last.
+ */
+function byMatch(reps: CandidateRow[], cheap: Float64Array, keys: FitKey[]): CandidateRow[] {
+  const n = reps.length;
+  const order = Uint32Array.from({ length: n }, (_, i) => i).sort(
+    (a, b) =>
+      Number(reps[a]!.closed) - Number(reps[b]!.closed) ||
+      compareFit(keys[a]!, keys[b]!) ||
+      cheap[b]! - cheap[a]! ||
+      newestFirst(reps[a]!, reps[b]!),
+  );
+  return Array.from(order, (i) => reps[i]!);
+}
+
 export interface Ordered {
   rows: CandidateRow[];
   /** Results ordered by the cheap score only (0 unless the cap bound). */
@@ -74,18 +136,16 @@ export function orderResults(
   plan: SearchPlan,
   score: ScoreContext,
   loadScoring: (rids: number[]) => Map<number, ScoringRow>,
+  /** For 'match': the sort key of each result, in order (see fitKey). */
+  fitKeys?: (reps: CandidateRow[]) => FitKey[],
 ): Ordered {
   if (plan.opts.sort === 'date') return { rows: [...reps].sort(newestFirst), beyondCap: 0 };
   if (plan.opts.sort === 'salary') return { rows: bySalary(reps, plan.salaryCurrency), beyondCap: 0 };
 
   // Typed arrays and index sorting: this runs over every result (tens of thousands when browsing).
   const n = reps.length;
-  const cheap = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    const r = reps[i]!;
-    const fresh = recency(r.ts, plan.now);
-    cheap[i] = r.rank === null ? fresh : 0.75 * textRelevance(r.rank, score.bestRank) + 0.25 * fresh;
-  }
+  const cheap = cheapScores(reps, plan, score);
+  if (plan.opts.sort === 'match' && fitKeys) return { rows: byMatch(reps, cheap, fitKeys(reps)), beyondCap: 0 };
   const order = Uint32Array.from({ length: n }, (_, i) => i).sort((a, b) => cheap[b]! - cheap[a]! || newestFirst(reps[a]!, reps[b]!));
   const byCheap = Array.from(order, (i) => reps[i]!);
   const head = byCheap.slice(0, RESCORE_CAP);

@@ -27,6 +27,9 @@ const suggestQuerySchema = z.object({
   limit: queryInt(1, 20).default(8),
 });
 
+const CERTIFICATION_CATEGORY = 'certification-license';
+const CERTIFICATION_SCAN = 500;
+
 /** The same upstream search is not repeated within this window; new postings arrive via 'index-changed'. */
 const UPSTREAM_REPEAT_MS = 30 * 60_000;
 /** How long opening a job waits for a missing description before showing what it has. */
@@ -100,6 +103,12 @@ export function registerSearchRoutes(app: FastifyInstance, ctx: AppContext): voi
   app.get('/api/suggest/skills', async (request) => {
     const { q, limit } = parse(suggestQuerySchema, request.query);
     return s.search.suggestSkills(q, limit);
+  });
+
+  app.get('/api/suggest/certifications', async (request) => {
+    const { q, limit } = parse(suggestQuerySchema, request.query);
+    // The dictionary has about a hundred; ask for plenty and keep the certifications.
+    return s.search.suggestSkills(q, CERTIFICATION_SCAN).filter((x) => x.category === CERTIFICATION_CATEGORY).slice(0, limit);
   });
 
   app.get('/api/suggest/companies', async (request) => {

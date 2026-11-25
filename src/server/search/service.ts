@@ -5,7 +5,7 @@
  * Other services are available on `ctx.services` but may not exist yet while this factory
  * runs: they are read lazily inside methods, never at construction.
  */
-import type { JobDetail, JobPosting, Place, Profile, SearchInterpretation, SearchQuery, SearchResponse, SearchResultItem } from '../../shared/types';
+import type { JobDetail, JobPosting, Place, Profile, ProfileFit, SearchInterpretation, SearchQuery, SearchResponse, SearchResultItem } from '../../shared/types';
 import type { Db } from '../db';
 import { POSTING_SELECT, type PostingRow, rowToPosting } from '../ingest/store-rows';
 import { resolvePlace, suggestPlaces } from '../lib/location';
@@ -14,12 +14,13 @@ import { foldText } from '../lib/text';
 import type { AppContext, SearchService } from '../services';
 import { broadenCandidates, rankSuggestions } from './broaden';
 import { collapse, countPassing } from './collapse';
-import { countClusters, countNewClusters, fetchCandidates, fetchScoringRows } from './engine';
+import { countClusters, countNewClusters, fetchCandidates, fetchMatchRows, fetchScoringRows } from './engine';
 import { externalLinks } from './external';
 import { createSearchHistory } from './history';
-import { bestRank, orderResults } from './order';
+import { bestRank, type FitContext, type FitKey, fitKey, orderResults } from './order';
 import { locationPieces } from './location-filter';
 import { buildPlan, type CandidateRow, type PlanEnv, type SearchPlan } from './plan';
+import { annualPay, buildMatchProfile, locationFit, locationPrefs, type MatchProfile, profileFit, profileMatch } from './profile-match';
 import { queryFromPreferences, upstreamQuery } from './profile-query';
 import { type LocationTarget, type ScoreContext, type ScoreInput, scorePosting } from './rank';
 import { companyNames, companySuggestions, titleSuggestions } from './suggest';
@@ -27,6 +28,8 @@ import { companyNames, companySuggestions, titleSuggestions } from './suggest';
 /** Query fields that only narrow by facet: a patch touching only these keeps the base rows valid. */
 const FACET_FIELDS = new Set<keyof SearchQuery>(['remote', 'employmentTypes', 'seniority', 'sources', 'companies', 'postedWithinDays']);
 const DEFAULT_SUGGEST_LIMIT = 8;
+/** Cached "Best match" sort keys before the cache starts over (several times a full index). */
+const FIT_CACHE_MAX = 250_000;
 
 type PageRow = PostingRow & { rid: number; title_core: string };
 
@@ -68,9 +71,60 @@ function interpretation(plan: SearchPlan): SearchInterpretation {
   return out;
 }
 
+/** The profile match of one posting, explained. */
+function fitFor(job: JobPosting, titleCore: string, fit: FitContext): ProfileFit {
+  const match = profileMatch({ title: job.title, titleCore, roleId: job.roleId, skills: job.skills, seniority: job.seniority }, fit.profile);
+  return profileFit(match, locationFit(job.location, fit.location), annualPay(job.salary, fit.currency), fit.currency);
+}
+
 export function createSearchService(ctx: AppContext): SearchService {
   const { db } = ctx;
   const history = createSearchHistory(db, () => ctx.now());
+  // The user's side of the profile match, rebuilt when the profile changes (it reads the résumé).
+  let matchProfile: { key: string; value: MatchProfile } | undefined;
+  // "Best match" sort keys by posting, for one profile and location context: browsing every posting
+  // computes tens of thousands, and each filter change searches again. Postings can change content
+  // in place when a feed syncs, so syncs that change the index clear it.
+  let fitKeyCache: { context: string; keys: Map<number, FitKey> } | undefined;
+  ctx.events?.subscribe((event) => {
+    const changed = event.type === 'index-changed' || event.type === 'sync-finished' || (event.type === 'feed-finished' && event.added + event.updated > 0);
+    if (changed) fitKeyCache = undefined;
+  });
+
+  function getMatchProfile(profile: Profile): { key: string; value: MatchProfile } {
+    const skills = ctx.services.profile.effectiveSkills();
+    const key = `${profile.updatedAt}\u0000${skills.join('\u0000')}`;
+    if (matchProfile?.key !== key) matchProfile = { key, value: buildMatchProfile(profile, skills, ctx.now()) };
+    return matchProfile;
+  }
+
+  function fitKeys(reps: CandidateRow[], fit: FitContext): FitKey[] {
+    const loc = fit.location;
+    const context = JSON.stringify([matchProfile?.key, loc.places.map((p) => p.label), loc.radiusKm, loc.acceptsRemote, [...loc.countries], fit.currency]);
+    if (fitKeyCache?.context !== context || fitKeyCache.keys.size > FIT_CACHE_MAX) fitKeyCache = { context, keys: new Map() };
+    const { keys } = fitKeyCache;
+    const missing = reps.filter((r) => !keys.has(r.rid));
+    if (missing.length) {
+      const rows = fetchMatchRows(db, missing.map((r) => r.rid));
+      for (const r of missing) keys.set(r.rid, fitKey(r, rows.get(r.rid), fit));
+    }
+    return reps.map((r) => keys.get(r.rid)!);
+  }
+
+  /** What "Best match" compares with; undefined when the profile is off for this search or holds nothing to compare. */
+  function fitContext(plan: SearchPlan, profile: Profile): FitContext | undefined {
+    if (!plan.opts.useProfile) return undefined;
+    const mp = getMatchProfile(profile).value;
+    if (!mp.usable) return undefined;
+    const location = locationPrefs({
+      searchPlaces: plan.location.places,
+      searchRadiusKm: plan.opts.radiusKm,
+      searchRemote: plan.query.remote,
+      profile,
+      useSavedPlaces: !plan.location.placeUnresolved,
+    });
+    return { profile: mp, location, currency: plan.salaryCurrency };
+  }
 
   function env(profile: Profile): PlanEnv {
     return {
@@ -103,7 +157,7 @@ export function createSearchService(ctx: AppContext): SearchService {
     };
   }
 
-  function items(page: CandidateRow[], score: ScoreContext): SearchResultItem[] {
+  function items(page: CandidateRow[], score: ScoreContext, fit: FitContext | undefined): SearchResultItem[] {
     const rows = loadPage(db, page.map((r) => r.rid));
     const states = ctx.services.userState.forClusters(page.map((r) => r.clusterKey));
     const out: SearchResultItem[] = [];
@@ -116,6 +170,7 @@ export function createSearchService(ctx: AppContext): SearchService {
         job,
         score: s.score,
         match: s.match,
+        ...(fit ? { fit: fitFor(job, row.title_core, fit) } : {}),
         duplicates: ctx.services.jobs.clusterLinks(job.clusterKey).filter((l) => l.jobId !== job.id),
         userState: states.get(job.clusterKey) ?? { hidden: false },
       });
@@ -132,7 +187,8 @@ export function createSearchService(ctx: AppContext): SearchService {
     const { reps, facets } = collapse(rows, plan, { companyNames: (keys) => companyNames(db, keys) });
     const total = reps.length;
     const score = scoreContext(plan, profile, bestRank(reps));
-    const ordered = orderResults(reps, plan, score, (rids) => fetchScoringRows(db, rids));
+    const fit = fitContext(plan, profile);
+    const ordered = orderResults(reps, plan, score, (rids) => fetchScoringRows(db, rids), fit ? (r) => fitKeys(r, fit) : undefined);
     if (ordered.beyondCap > 0) ctx.log.debug('search: rescoring cap reached', { results: total, orderedByCheapScore: ordered.beyondCap });
     const page = ordered.rows.slice(plan.opts.offset, plan.opts.offset + plan.opts.limit);
 
@@ -145,7 +201,7 @@ export function createSearchService(ctx: AppContext): SearchService {
     const response: Omit<SearchResponse, 'tookMs'> = {
       query,
       total,
-      items: items(page, score),
+      items: items(page, score, fit),
       interpretation: interpretation(plan),
       facets,
       suggestions: rankSuggestions(broadenCandidates(query, plan, planEnv.maxPostingAgeDays), total, countPatched),
@@ -170,10 +226,12 @@ export function createSearchService(ctx: AppContext): SearchService {
       const plan = buildPlan(query ?? queryFromPreferences(profile), env(profile));
       const titleCore = db.scalar<string>('SELECT title_core FROM jobs WHERE id = ?', id) ?? '';
       const scored = scorePosting(scoreInputFromPosting(job, titleCore, null), scoreContext(plan, profile, null));
+      const fit = fitContext(plan, profile);
       const detail: JobDetail = {
         job,
         score: scored.score,
         match: scored.match,
+        ...(fit ? { fit: fitFor(job, titleCore, fit) } : {}),
         duplicates: ctx.services.jobs.clusterLinks(job.clusterKey).filter((l) => l.jobId !== job.id),
         userState: ctx.services.userState.forCluster(job.clusterKey),
         descriptionHtml: ctx.services.jobs.getDescriptionHtml(id),

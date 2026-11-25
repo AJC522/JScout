@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUp, BookmarkPlus, Keyboard, MousePointerClick, SlidersHorizontal } from 'lucide-react';
 import type { JobDetail, SearchQuery, SearchResultItem, SearchSort } from '../../../shared/types';
+import { SEARCH_DEFAULTS } from '../../../shared/constants';
 import { api, errorMessage } from '../../api/client';
 import { Page } from '../../components/layout/Page';
 import { Badge, Button, Drawer, ErrorState, IconButton, Kbd, PageHeader, Select, Spinner, useToast } from '../../components/ui';
@@ -41,7 +42,8 @@ const FEW_RESULTS = 10;
 const SPLIT_QUERY = '(min-width: 1200px)';
 const INLINE_FILTERS_QUERY = '(min-width: 1360px)';
 const SORT_OPTIONS: Array<{ value: SearchSort; label: string }> = [
-  { value: 'relevance', label: 'Best match' },
+  { value: 'match', label: 'Best match' },
+  { value: 'relevance', label: 'Relevance' },
   { value: 'date', label: 'Newest' },
   { value: 'salary', label: 'Highest salary' },
 ];
@@ -329,7 +331,7 @@ export function SearchPage() {
                   aria-label="Sort by"
                   size="sm"
                   options={SORT_OPTIONS}
-                  value={query.sort ?? 'relevance'}
+                  value={query.sort ?? SEARCH_DEFAULTS.sort}
                   onChange={(e) => setQuery({ ...query, sort: e.target.value as SearchSort })}
                   wrapperClassName="w-36"
                 />

@@ -23,6 +23,7 @@ export const CONTACT_LABELS: Record<ContactField, string> = {
 export interface ResumeSelection {
   contact: Partial<Record<ContactField, string>>;
   skills: string[];
+  certifications: string[];
   titles: string[];
   /** Typed text; parsed when applied. */
   years: string;
@@ -44,6 +45,7 @@ export function initialSelection(analysis: ResumeAnalysis, profile: Profile): Re
   return {
     contact,
     skills: mergeUnique([], analysis.skills),
+    certifications: mergeUnique([], analysis.certifications),
     titles: targets.length > 0 ? alreadyTargeted : analysis.suggestedTitles.slice(0, DEFAULT_TITLE_PICKS),
     years: analysis.yearsExperience === null ? '' : String(analysis.yearsExperience),
     addExperience: profile.experience.length === 0 && analysis.experience.length > 0,
@@ -81,9 +83,11 @@ export function buildResumePatch(selection: ResumeSelection, analysis: ResumeAna
   if (Object.keys(personal).length > 0) patch.personal = personal;
 
   const skills = mergeUnique(profile.preferences.skills, selection.skills);
+  const certifications = mergeUnique(profile.preferences.certifications, selection.certifications);
   const titles = mergeUnique(profile.preferences.targetTitles, selection.titles);
-  if (skills.length !== profile.preferences.skills.length || titles.length !== profile.preferences.targetTitles.length) {
-    patch.preferences = { skills, targetTitles: titles };
+  const prefs = profile.preferences;
+  if (skills.length !== prefs.skills.length || titles.length !== prefs.targetTitles.length || certifications.length !== prefs.certifications.length) {
+    patch.preferences = { skills, targetTitles: titles, certifications };
   }
 
   const added = selection.addExperience ? newExperience(profile.experience, analysis.experience) : [];

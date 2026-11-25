@@ -66,7 +66,7 @@ export const searchQuerySchema = z.strictObject({
   includeHidden: z.boolean().optional(),
   includeApplied: z.boolean().optional(),
   includeClosed: z.boolean().optional(),
-  sort: z.enum(['relevance', 'date', 'salary']).optional(),
+  sort: z.enum(['match', 'relevance', 'date', 'salary']).optional(),
   offset: z.number().int().min(0).max(100_000).optional(),
   limit: z.number().int().min(1).max(SEARCH_MAX_LIMIT).optional(),
 });

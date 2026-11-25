@@ -28,8 +28,11 @@ const SKILLS: Array<[string, string[]]> = [
   ['GAAP', []],
   ['SAP', []],
   ['Financial reporting', []],
+  ['CompTIA Security+', ['Security+']],
+  ['PMP', []],
 ];
-const CASE_SENSITIVE = new Set(['Go', 'Epic', 'Excel']);
+const CASE_SENSITIVE = new Set(['Go', 'Epic', 'Excel', 'PMP']);
+const CERTIFICATIONS = new Set(['CompTIA Security+', 'PMP']);
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -67,7 +70,7 @@ export const skillsModule = {
     return out;
   },
   suggestSkills: (): SkillSuggestion[] => [],
-  skillCategory: (): string | undefined => undefined,
+  skillCategory: (name: string): string | undefined => (CERTIFICATIONS.has(name) ? 'certification-license' : undefined),
 };
 
 const role = (id: string, title: string, aliases: string[] = [], skills: string[] = []): RoleRef => ({

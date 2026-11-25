@@ -126,6 +126,8 @@ export const suggest = {
     quietly(api('GET /api/suggest/locations', { query: { q, limit: SUGGESTION_LIMIT }, signal }).then((r) => r.map((p) => p.label))),
   skills: (q: string, signal: AbortSignal) =>
     quietly(api('GET /api/suggest/skills', { query: { q, limit: SUGGESTION_LIMIT }, signal }).then((r) => r.map((s) => s.name))),
+  certifications: (q: string, signal: AbortSignal) =>
+    quietly(api('GET /api/suggest/certifications', { query: { q, limit: SUGGESTION_LIMIT }, signal }).then((r) => r.map((s) => s.name))),
   companies: (q: string, signal: AbortSignal) =>
     quietly(api('GET /api/suggest/companies', { query: { q, limit: SUGGESTION_LIMIT }, signal }).then((r) => r.map((c) => c.name))),
 };

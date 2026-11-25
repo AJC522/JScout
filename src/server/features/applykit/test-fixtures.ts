@@ -61,6 +61,7 @@ export const fakeSkills = {
   canonicalSkill(name: string): string | undefined {
     return SKILLS.find(([n, aliases]) => [n, ...aliases].some((x) => foldText(x) === foldText(name)))?.[0];
   },
+  skillCategory: (): string | undefined => undefined,
 };
 
 const role = (id: string, title: string, aliases: string[], related: string[]): RoleRef => ({

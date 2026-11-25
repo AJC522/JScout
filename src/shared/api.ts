@@ -204,6 +204,8 @@ export interface ApiRoutes {
   'GET /api/suggest/titles': { query: SuggestQuery; res: TitleSuggestion[] };
   'GET /api/suggest/locations': { query: SuggestQuery; res: Place[] };
   'GET /api/suggest/skills': { query: SuggestQuery; res: SkillSuggestion[] };
+  /** Skills of the certification-license category only ("Sec" -> CompTIA Security+). */
+  'GET /api/suggest/certifications': { query: SuggestQuery; res: SkillSuggestion[] };
   'GET /api/suggest/companies': { query: SuggestQuery; res: Array<{ name: string; count: number }> };
   /**
    * Optional query string `?query=<JSON.stringify(SearchQuery)>` (see JobDetailQuery): score and explain

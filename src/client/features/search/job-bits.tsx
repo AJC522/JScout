@@ -2,9 +2,10 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { STATUS_LABELS } from '../../../shared/constants';
-import type { ApplicationStatus, MatchExplanation, RemoteMode } from '../../../shared/types';
+import type { ApplicationStatus, LocationFit, MatchExplanation, ProfileFit, RemoteMode } from '../../../shared/types';
 import { Badge, ScoreRing, Tooltip, type Tone } from '../../components/ui';
 import { cn } from '../../lib/cn';
+import { formatSalary } from '../../lib/format';
 
 const STATUS_TONE: Record<ApplicationStatus, Tone> = {
   saved: 'primary',
@@ -47,8 +48,77 @@ export function topReasons(match: MatchExplanation, limit = 3) {
   return match.reasons.filter((r) => r.points > 0).toSorted((a, b) => b.points - a.points).slice(0, limit);
 }
 
-/** Compact score ring whose tooltip (hover or keyboard focus) lists the main reasons for the score. */
-export function MatchScore({ score, match, className }: { score: number; match: MatchExplanation; className?: string }) {
+/** A profile match with a percentage to show (the profile had something to compare). */
+export function hasPercent(fit: ProfileFit | undefined): fit is ProfileFit & { percent: number } {
+  return fit !== undefined && fit.percent !== null;
+}
+
+/** "$145k/yr" for the yearly pay used in ordering (the middle of the posted range). */
+export function payLabel(fit: ProfileFit): string | undefined {
+  if (!fit.pay) return undefined;
+  const { annual, currency } = fit.pay;
+  return formatSalary({ min: annual, max: annual, currency, period: 'year' });
+}
+
+/**
+ * A short word on where the job is relative to the user, for result cards: the location text already
+ * names the place and remote jobs have a badge, so only distance and "not where you are" are worth adding.
+ */
+export function locationNote(location: LocationFit): string | undefined {
+  switch (location.kind) {
+    case 'local':
+      return location.distanceKm ? `${location.distanceKm} km away` : undefined;
+    case 'area':
+    case 'country':
+    case 'abroad':
+    case 'remote-elsewhere':
+      return location.label;
+    default:
+      return undefined;
+  }
+}
+
+/** Score ring for the profile match: the percentage, with the parts, location and pay in its tooltip. */
+function ProfileMatchScore({ fit, className }: { fit: ProfileFit & { percent: number }; className?: string }) {
+  const pay = payLabel(fit);
+  const summary = `${fit.percent}% match: ${fit.parts.map((p) => p.label).join('; ')}`;
+  return (
+    <Tooltip
+      side="left"
+      content={
+        <div className="max-w-64 space-y-1 py-0.5">
+          <p className="font-medium">
+            {fit.percent}% match <span className="font-normal opacity-80">· {fit.band}</span>
+          </p>
+          <ul className="space-y-0.5">
+            {fit.parts.map((p) => (
+              <li key={p.key}>{p.label}</li>
+            ))}
+          </ul>
+          <p className="opacity-80">
+            {fit.location.label}
+            {pay ? ` · ${pay}` : ''}
+          </p>
+        </div>
+      }
+    >
+      <button
+        type="button"
+        aria-label={summary}
+        className={cn('shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none', className)}
+      >
+        <ScoreRing value={fit.percent} size="sm" label={`${fit.percent}% match`} />
+      </button>
+    </Tooltip>
+  );
+}
+
+/**
+ * Compact score ring whose tooltip (hover or keyboard focus) lists the main reasons for the score:
+ * the profile match when there is one, else the search relevance.
+ */
+export function MatchScore({ score, match, fit, className }: { score: number; match: MatchExplanation; fit?: ProfileFit; className?: string }) {
+  if (hasPercent(fit)) return <ProfileMatchScore fit={fit} className={className} />;
   const reasons = topReasons(match);
   const rounded = Math.round(score);
   return (

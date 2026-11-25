@@ -131,7 +131,7 @@ export async function createSearchTestEnv(opts: { fixtures?: boolean } = {}): Pr
   services.settings = { getApp: () => ({ maxPostingAgeDays: settings.maxPostingAgeDays }) as AppSettings } as Services['settings'];
   services.profile = {
     get: () => profile,
-    effectiveSkills: () => [...profile.preferences.skills],
+    effectiveSkills: () => [...profile.preferences.skills, ...profile.preferences.certifications],
   } as unknown as Services['profile'];
   services.applications = {
     stateByCluster: (keys: string[]) =>

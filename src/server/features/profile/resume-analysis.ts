@@ -1,6 +1,6 @@
 /** Deterministic résumé analysis: suggestions the user confirms, never invented data. */
 import type { ResumeAnalysis } from '../../../shared/types';
-import { extractSkills } from '../../lib/skills';
+import { extractSkills, skillCategory } from '../../lib/skills';
 import { findRole, rolesForSkills } from '../../lib/titles';
 import { foldText } from '../../lib/text';
 import { yearsCovered } from './resume-dates';
@@ -26,6 +26,7 @@ export const WARNINGS = {
 const emptyAnalysis = (warnings: string[]): ResumeAnalysis => ({
   contact: {},
   skills: [],
+  certifications: [],
   titles: [],
   suggestedTitles: [],
   experience: [],
@@ -60,7 +61,10 @@ export function analyzeResumeText(text: string, opts: { now: Date; mimeType?: st
   if (substantial && !experienceSections.length) warnings.push(WARNINGS.noExperienceSection);
   else if (substantial && !parsed.length) warnings.push(WARNINGS.noDatedJobs);
 
-  const skills = extractSkills(text).slice(0, MAX_SKILLS);
+  const found = extractSkills(text);
+  const isCert = (s: string) => skillCategory(s) === 'certification-license';
+  const skills = found.filter((s) => !isCert(s)).slice(0, MAX_SKILLS);
+  const certifications = found.filter(isCert);
 
   const seen = new Set<string>();
   const titles: ResumeAnalysis['titles'] = [];
@@ -83,6 +87,7 @@ export function analyzeResumeText(text: string, opts: { now: Date; mimeType?: st
   return {
     contact: extractContact(sections, text),
     skills,
+    certifications,
     titles,
     suggestedTitles: [...suggested.values()],
     experience: parsed.map((p) => p.entry),

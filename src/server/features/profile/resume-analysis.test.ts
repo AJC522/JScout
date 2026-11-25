@@ -271,6 +271,13 @@ describe('education', () => {
 });
 
 describe('titles, skills and years', () => {
+  it('lists certifications apart from skills', () => {
+    const result = analyze(`${ENGINEER}\nCERTIFICATIONS\nCompTIA Security+ (2023), PMP\n`);
+    expect(result.certifications).toEqual(['CompTIA Security+', 'PMP']);
+    expect(result.skills).not.toContain('PMP');
+    expect(result.skills).toContain('TypeScript');
+  });
+
   it('maps titles to roles and suggests targets, most recent first', () => {
     const result = analyze(ENGINEER);
     expect(result.titles).toEqual([

@@ -14,7 +14,7 @@ afterEach(() => db.close());
 
 describe('normalizeForHistory', () => {
   it('drops paging, blanks and defaults, and sorts lists so equivalent searches match', () => {
-    const a = normalizeForHistory({ q: ' nurse ', offset: 30, limit: 10, remote: ['remote', 'hybrid'], includeRemote: true, sort: 'relevance', location: '' });
+    const a = normalizeForHistory({ q: ' nurse ', offset: 30, limit: 10, remote: ['remote', 'hybrid'], includeRemote: true, sort: 'match', location: '' });
     expect(a).toEqual({ q: 'nurse', remote: ['hybrid', 'remote'] });
     const b = normalizeForHistory({ remote: ['hybrid', 'remote', 'remote'], q: 'nurse' });
     expect(historySignature(a!)).toBe(historySignature(b!));

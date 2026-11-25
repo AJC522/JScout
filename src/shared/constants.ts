@@ -113,7 +113,7 @@ export const SEARCH_DEFAULTS = {
   includeHidden: false,
   includeApplied: true,
   includeClosed: false,
-  sort: 'relevance',
+  sort: 'match',
   offset: 0,
   limit: SEARCH_PAGE_SIZE,
 } as const satisfies Partial<SearchQuery>;
@@ -156,6 +156,7 @@ export function emptyProfile(now: string): Profile {
     preferences: {
       targetTitles: [],
       skills: [],
+      certifications: [],
       locations: [],
       radiusKm: 50,
       remote: [],

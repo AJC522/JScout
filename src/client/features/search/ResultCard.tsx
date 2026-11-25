@@ -6,7 +6,7 @@ import type { SearchResultItem } from '../../../shared/types';
 import { Badge, Button, IconButton } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatRelativeTime, formatSalary } from '../../lib/format';
-import { IconLink, MatchScore, RemoteBadge, sourceLine, StatusBadge } from './job-bits';
+import { IconLink, locationNote, MatchScore, RemoteBadge, sourceLine, StatusBadge } from './job-bits';
 import type { JobRef } from './use-job-actions';
 
 const MAX_SKILLS = 4;
@@ -30,12 +30,14 @@ function isModifiedClick(event: MouseEvent): boolean {
 }
 
 export const ResultCard = memo(function ResultCard({ item, isNew, selected, focused, saving, now, onSelect, onSave, onHide }: ResultCardProps) {
-  const { job, userState, match, duplicates } = item;
+  const { job, userState, match, duplicates, fit } = item;
   const salary = formatSalary(job.salary);
   const posted = job.postedAt ?? job.firstSeenAt;
   const status = userState.applicationStatus;
   const viewed = Boolean(userState.viewedAt) && !selected;
-  const skills = match.skillsMatched.slice(0, MAX_SKILLS);
+  // With a profile match, certifications you hold come first: they are rarer than skills.
+  const skills = (fit ? [...fit.certsMatched, ...fit.skillsMatched] : match.skillsMatched).slice(0, MAX_SKILLS);
+  const where = fit ? locationNote(fit.location) : undefined;
 
   // The whole card selects the job; buttons and links inside it keep their own behaviour.
   const onCardClick = (event: MouseEvent<HTMLElement>) => {
@@ -83,11 +85,12 @@ export const ResultCard = memo(function ResultCard({ item, isNew, selected, focu
             {job.locationText ? <span> · {job.locationText}</span> : null}
           </p>
         </div>
-        <MatchScore score={item.score} match={match} />
+        <MatchScore score={item.score} match={match} fit={fit} />
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
         <RemoteBadge mode={job.location.remote} />
+        {where ? <span className={fit?.location.kind === 'local' ? 'text-fg/90' : undefined}>{where}</span> : null}
         {salary ? <span className="font-medium text-fg/90 tabular-nums">{salary}</span> : null}
         <span title={posted}>{formatRelativeTime(posted, now)}</span>
         <span className="truncate text-subtle">{sourceLine(job.sourceName, duplicates.length)}</span>

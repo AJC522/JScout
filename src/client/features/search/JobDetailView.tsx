@@ -25,7 +25,7 @@ import {
   X,
 } from 'lucide-react';
 import { EMPLOYMENT_LABELS, SENIORITY_LABELS } from '../../../shared/constants';
-import type { JobDetail, LivenessResult, MatchExplanation, SearchResultItem, TitleMatchKind } from '../../../shared/types';
+import type { JobDetail, LivenessResult, MatchExplanation, ProfileFit, SearchResultItem, TitleMatchKind } from '../../../shared/types';
 import { ApiRequestError, errorMessage } from '../../api/client';
 import {
   Badge,
@@ -50,7 +50,7 @@ import {
 import { useCopyToClipboard } from '../../lib/hooks';
 import { formatDate, formatRelativeTime, formatSalary, initials } from '../../lib/format';
 import { ApplyKitPanel } from '../applykit';
-import { IconLink, RemoteBadge, StatusBadge } from './job-bits';
+import { hasPercent, IconLink, payLabel, RemoteBadge, StatusBadge } from './job-bits';
 import { useCheckLiveness, useJobDetail, useSources } from './queries';
 import type { JobActions } from './use-job-actions';
 
@@ -135,7 +135,8 @@ export function JobDetailView({ jobId, placeholder, actions, variant, onClose }:
           <TabsTrigger value="kit">Apply kit</TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="space-y-5 pt-4">
-          <WhyThisJob score={explained.score} match={explained.match} />
+          {hasPercent(explained.fit) ? <YourMatch fit={explained.fit} /> : null}
+          <WhyThisJob score={explained.score} match={explained.match} showSkills={!hasPercent(explained.fit)} />
           <Description data={data} loading={descriptionLoading} failed={detail.isError} onRetry={() => void detail.refetch()} />
         </TabsContent>
         <TabsContent value="kit" className="pt-4">
@@ -333,7 +334,56 @@ function SourceLine({ data, onCheck, checking }: { data: JobDetail; onCheck: () 
   );
 }
 
-function WhyThisJob({ score, match }: { score: number; match: MatchExplanation }) {
+const PART_TITLES: Record<ProfileFit['parts'][number]['key'], string> = {
+  skills: 'Skills',
+  certifications: 'Certifications',
+  role: 'Background',
+  level: 'Experience level',
+};
+
+/** How well the user's résumé, skills, certifications and background fit the job, part by part. */
+function YourMatch({ fit }: { fit: ProfileFit & { percent: number } }) {
+  const pay = payLabel(fit);
+  return (
+    <section aria-labelledby="your-match-title" className="rounded-card border border-border bg-surface-2/50 p-4">
+      <div className="flex items-center gap-3">
+        <ScoreRing value={fit.percent} size="md" label={`${fit.percent}% match`} />
+        <div>
+          <h3 id="your-match-title" className="text-sm font-semibold text-fg">
+            {fit.percent}% match with your profile
+          </h3>
+          <p className="text-xs text-muted">
+            {fit.band} · {fit.location.label}
+            {pay ? ` · ${pay}` : ''}
+          </p>
+        </div>
+      </div>
+      <ul className="mt-3 space-y-2 text-sm">
+        {fit.parts.map((p) => (
+          <li key={p.key}>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-fg">
+                <span className="text-muted">{PART_TITLES[p.key]}:</span> {p.label}
+              </span>
+              <span className="shrink-0 text-xs text-subtle tabular-nums" title={`Worth ${p.weight} of 100 points`}>
+                {p.score}%
+              </span>
+            </div>
+            <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-3" aria-hidden="true">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${p.score}%` }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+      {fit.certsMatched.length > 0 ? <SkillList title="Certifications you hold that it lists" skills={fit.certsMatched} tone="success" /> : null}
+      {fit.certsMissing.length > 0 ? <SkillList title="Certifications it lists that you don't have" skills={fit.certsMissing} tone="warning" /> : null}
+      {fit.skillsMatched.length > 0 ? <SkillList title="Your skills it asks for" skills={fit.skillsMatched} tone="success" /> : null}
+      {fit.skillsMissing.length > 0 ? <SkillList title="Skills it mentions that aren't in your profile or résumé" skills={fit.skillsMissing} tone="warning" /> : null}
+    </section>
+  );
+}
+
+function WhyThisJob({ score, match, showSkills }: { score: number; match: MatchExplanation; showSkills: boolean }) {
   const reasons = match.reasons.toSorted((a, b) => Math.abs(b.points) - Math.abs(a.points));
   return (
     <section aria-labelledby="why-title" className="rounded-card border border-border bg-surface-2/50 p-4">
@@ -343,7 +393,10 @@ function WhyThisJob({ score, match }: { score: number; match: MatchExplanation }
           <h3 id="why-title" className="text-sm font-semibold text-fg">
             Why this job
           </h3>
-          <p className="text-xs text-muted">{TITLE_MATCH[match.titleMatch]}</p>
+          <p className="text-xs text-muted">
+            {TITLE_MATCH[match.titleMatch]}
+            {showSkills ? '' : ' · how well it fits this search'}
+          </p>
         </div>
       </div>
       {reasons.length > 0 ? (
@@ -359,8 +412,8 @@ function WhyThisJob({ score, match }: { score: number; match: MatchExplanation }
           ))}
         </ul>
       ) : null}
-      {match.skillsMatched.length > 0 ? <SkillList title="Your skills it asks for" skills={match.skillsMatched} tone="success" /> : null}
-      {match.skillsMissing.length > 0 ? <SkillList title="Skills it mentions that aren't in your profile" skills={match.skillsMissing} tone="warning" /> : null}
+      {showSkills && match.skillsMatched.length > 0 ? <SkillList title="Your skills it asks for" skills={match.skillsMatched} tone="success" /> : null}
+      {showSkills && match.skillsMissing.length > 0 ? <SkillList title="Skills it mentions that aren't in your profile" skills={match.skillsMissing} tone="warning" /> : null}
     </section>
   );
 }

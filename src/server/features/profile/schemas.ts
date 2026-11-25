@@ -55,6 +55,7 @@ const workFields = {
 const preferenceFields = {
   targetTitles: list(LIMITS.targetTitles, 120),
   skills: list(LIMITS.skills, 80),
+  certifications: list(LIMITS.certifications, 120),
   locations: list(LIMITS.locations, 200),
   radiusKm: z.number().min(0).max(500),
   remote: z.array(remoteModeSchema).max(4),

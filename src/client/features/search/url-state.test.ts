@@ -54,11 +54,12 @@ describe('URL <-> SearchQuery', () => {
       includeApplied: true,
       includeClosed: false,
       useProfile: true,
-      sort: 'relevance',
+      sort: 'match',
       offset: 30,
       limit: 30,
     });
     expect(params.toString()).toBe('q=designer');
+    expect(queryToParams({ q: 'designer', sort: 'relevance' }).toString()).toBe('q=designer&sort=relevance');
   });
 
   it('keeps commas inside free-text list values', () => {

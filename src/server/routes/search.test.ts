@@ -100,6 +100,9 @@ describe('suggestions and profile query', () => {
     expect((await call('GET', '/api/suggest/companies?q=acme')).body).toEqual([{ name: 'Acme Robotics', count: 8 }]);
     expect((await call('GET', '/api/suggest/locations?q=austin')).body[0]).toMatchObject({ city: 'Austin' });
     expect((await call('GET', '/api/suggest/skills?q=python')).body[0]).toMatchObject({ name: 'Python' });
+    const certs = (await call('GET', '/api/suggest/certifications?q=security')).body as Array<{ name: string; category: string }>;
+    expect(certs.map((c) => c.name)).toContain('CompTIA Security+');
+    expect(certs.every((c) => c.category === 'certification-license')).toBe(true);
     for (const url of ['/api/suggest/titles', '/api/suggest/titles?q=', '/api/suggest/skills?q=x&limit=21', '/api/suggest/companies?q=x&limit=abc']) {
       expect((await call('GET', url)).status, url).toBe(400);
     }

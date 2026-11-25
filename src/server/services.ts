@@ -98,8 +98,8 @@ export interface ProfileService {
   replace(profile: Profile): Profile;
   completeness(): ProfileCompleteness;
   /**
-   * The user's skills as canonical names: preferences.skills plus skills found
-   * in the résumé text, de-duplicated, preference order first.
+   * The user's skills as canonical names: preferences.skills, preferences.certifications and
+   * skills found in the résumé text, de-duplicated, preference order first.
    */
   effectiveSkills(): string[];
   /** Résumé text, or '' when none. */

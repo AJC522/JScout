@@ -115,8 +115,10 @@ export function createProfileService(ctx: AppContext): ProfileService {
       if (effective?.profile !== profile) {
         const text = profile.resume?.text ?? '';
         if (resumeSkills?.text !== text) resumeSkills = { text, skills: text ? extractSkills(text) : [] };
-        // Both lists are canonical already: preferences are canonicalised on write, extractSkills returns canonical names.
-        effective = { profile, skills: uniqueFolded([...profile.preferences.skills, ...resumeSkills.skills]) };
+        // All lists are canonical already: preferences are canonicalised on write, extractSkills returns canonical names.
+        // Certifications count as skills too: postings list them among their skills ("CompTIA Security+", "PMP").
+        const { skills, certifications } = profile.preferences;
+        effective = { profile, skills: uniqueFolded([...skills, ...certifications, ...resumeSkills.skills]) };
       }
       return [...effective.skills];
     },
