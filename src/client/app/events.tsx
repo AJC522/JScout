@@ -51,11 +51,14 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     [queryClient],
   );
 
-  const [subscribe] = useState<Subscribe>(() => (handler) => {
-    listeners.current.add(handler);
-    return () => {
-      listeners.current.delete(handler);
+  const [subscribe] = useState(() => {
+    const add: Subscribe = (handler) => {
+      listeners.current.add(handler);
+      return () => {
+        listeners.current.delete(handler);
+      };
     };
+    return add;
   });
 
   return <EventsContext.Provider value={subscribe}>{children}</EventsContext.Provider>;

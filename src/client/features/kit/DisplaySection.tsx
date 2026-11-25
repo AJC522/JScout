@@ -106,7 +106,7 @@ export function DisplaySection() {
 
       <KitSection id="cards" title="Cards & tabs">
         <Demo label="Cards" stack>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid items-start gap-4 lg:grid-cols-2">
             <Card interactive padded className="flex gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-control bg-surface-2 text-subtle">
                 <Building className="size-5" aria-hidden="true" />

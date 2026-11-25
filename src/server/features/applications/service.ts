@@ -261,21 +261,26 @@ export function createApplicationsService(ctx: AppContext): ApplicationsService 
       updatedAt,
       item.sortOrder,
     );
-    for (const e of item.events) {
+    // Oldest first, so rows sharing a timestamp keep their order (reads tie-break on rowid).
+    const events = [...item.events].reverse().map((e) => ({ ...e, at: toIso(e.at, 'event.at') }));
+    events.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+    for (const e of events) {
       db.run(
         `INSERT INTO application_events (id, application_id, at, type, title, detail) VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET application_id = excluded.application_id, at = excluded.at,
            type = excluded.type, title = excluded.title, detail = excluded.detail`,
         e.id,
         item.id,
-        toIso(e.at, 'event.at'),
+        e.at,
         e.type,
         e.title,
         e.detail,
       );
     }
-    for (const d of item.documents) {
-      const docCreated = toIso(d.createdAt, 'document.createdAt');
+    const documents = [...item.documents].reverse().map((d) => ({ ...d, createdAt: toIso(d.createdAt, 'document.createdAt') }));
+    documents.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+    for (const d of documents) {
+      const docCreated = d.createdAt;
       db.run(
         `INSERT INTO documents (id, application_id, kind, title, content, generated_by, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)

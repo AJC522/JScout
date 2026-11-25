@@ -129,7 +129,7 @@ export function FormsSection() {
           <Textarea autoGrow maxRows={8} value={notes} onChange={(event) => setNotes(event.target.value)} />
         </Field>
       </Demo>
-      <Demo label="Select">
+      <Demo label="Select" className="items-start">
         <Field label="Seniority" className="w-56">
           <Select
             value={seniority}

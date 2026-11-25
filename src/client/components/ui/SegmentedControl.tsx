@@ -55,7 +55,8 @@ export function SegmentedControl<V extends string = string>({ options, value, on
             className={cn(
               'inline-flex h-full items-center justify-center gap-1.5 rounded-[0.375rem] font-medium whitespace-nowrap text-muted transition-colors',
               'hover:text-fg disabled:cursor-not-allowed disabled:opacity-50',
-              'data-[state=on]:bg-surface data-[state=on]:text-fg data-[state=on]:shadow-[0_1px_2px_rgb(0_0_0/0.08),0_0_0_1px_var(--border)]',
+              // Styled from aria-checked, not data-state: a Tooltip around an item overrides data-state with its own.
+              'aria-checked:bg-surface aria-checked:text-fg aria-checked:shadow-[0_1px_2px_rgb(0_0_0/0.08),0_0_0_1px_var(--border-strong)]',
               size === 'sm' ? 'px-2 text-sm [&_svg]:size-3.5' : 'px-2.5 text-base [&_svg]:size-4',
               option.iconOnly && (size === 'sm' ? 'w-7 px-0' : 'w-8 px-0'),
               fullWidth && 'flex-1',

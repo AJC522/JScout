@@ -11,7 +11,7 @@ export const MANUAL_SOURCE_NAME = 'Added manually';
 const PERIOD_SUFFIX: Record<SalaryPeriod, string> = { year: '/yr', month: '/mo', week: '/wk', day: '/day', hour: '/hr' };
 
 function formatAmount(amount: number, currency: string | undefined): string {
-  const compact = { notation: 'compact', maximumFractionDigits: 1 } as const;
+  const compact = { notation: 'compact', minimumFractionDigits: 0, maximumFractionDigits: 1 } as const;
   if (currency) {
     try {
       return new Intl.NumberFormat('en-US', { ...compact, style: 'currency', currency }).format(amount);
