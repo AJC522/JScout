@@ -1,0 +1,4 @@
+# The launchers need their platform's line endings whatever git's autocrlf setting is.
+*.bat text eol=crlf
+*.command text eol=lf
+*.sh text eol=lf

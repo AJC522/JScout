@@ -4,6 +4,7 @@ import path from 'node:path';
 import { buildApp } from './app';
 import { type AppConfig, loadConfig } from './config';
 import { adoptLegacyData, describeMove } from './data-dir';
+import { isJScoutRunning } from './running-instance';
 import { databaseProblem } from './startup-errors';
 
 const [major = 0, minor = 0] = process.versions.node.split('.').map(Number);
@@ -42,7 +43,16 @@ function settleDataDir(config: AppConfig): AppConfig {
 }
 
 async function main(): Promise<void> {
-  const config = settleDataDir(loadConfig());
+  const loaded = loadConfig();
+  const url = `http://${loaded.host === '127.0.0.1' ? 'localhost' : loaded.host}:${loaded.port}`;
+  // Started a second time (the launcher double-clicked again): show the copy that is running.
+  if (await isJScoutRunning(loaded.host, loaded.port)) {
+    console.log(`\n  JScout is already running at ${url}${loaded.openBrowser ? '; opening it in your browser.' : '.'}\n`);
+    if (loaded.openBrowser) openInBrowser(url);
+    return;
+  }
+
+  const config = settleDataDir(loaded);
   let built: Awaited<ReturnType<typeof buildApp>>;
   try {
     built = await buildApp({ config });
@@ -71,22 +81,19 @@ async function main(): Promise<void> {
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === 'EADDRINUSE') {
-      console.error(
-        `Port ${config.port} is already in use. JScout may already be running at http://${config.host}:${config.port} — ` +
-          `or start it on another port with JSCOUT_PORT=4311.`,
-      );
+      // A running JScout was ruled out above, so it is something else.
+      console.error(`Port ${config.port} is in use by another program. Start JScout on another port with JSCOUT_PORT=4311.`);
     } else {
       console.error(err);
     }
     process.exit(1);
   }
 
-  const url = `http://${config.host === '127.0.0.1' ? 'localhost' : config.host}:${config.port}`;
   built.ctx.services.companies.seedIfEmpty();
   built.ctx.services.sync.start();
 
   if (config.clientDir) {
-    console.log(`\n  JScout is running at ${url}\n  Your data is stored in ${config.dataDir}\n  Press Ctrl+C to stop.\n`);
+    console.log(`\n  JScout is running at ${url}\n  Your data is stored in ${config.dataDir}\n  Press Ctrl+C or close this window to stop.\n`);
     if (config.openBrowser) openInBrowser(url);
   } else {
     console.log(`\n  JScout API listening at ${url} (web interface served by Vite in dev mode)\n`);

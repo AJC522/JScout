@@ -21,20 +21,25 @@ A job search tool that runs on your own computer. It gathers postings from publi
 
 ## Getting started
 
-```bash
-git clone https://github.com/AJC522/JScout.git
-cd JScout
-npm install
-npm start
-```
+1. Install [Node.js](https://nodejs.org/) if you don't have it.
+2. Get JScout: `git clone https://github.com/AJC522/JScout.git`, or download the ZIP from GitHub (**Code → Download ZIP**) and extract it.
+3. Start it with the launcher in the JScout folder:
 
-`npm start` builds the app the first time (and again after updates, installing any new dependencies), then opens it at <http://localhost:4310>. A short setup asks for your résumé, what you are looking for, and which industries' employers to follow; every step can be skipped. JScout then fetches jobs in the background: the job boards give you around 9,000 postings within a couple of minutes, USAJOBS adds every open U.S. federal job (about 9,500) a couple of minutes later, and the employers and agencies you follow are added as they sync.
+| System | Launcher |
+|---|---|
+| Windows | Double-click `JScout.bat` |
+| macOS | Double-click `JScout.command` |
+| Linux | Run `./jscout.sh` in a terminal, or right-click it in the file manager and choose **Run as a Program** |
 
-Stop it with `Ctrl+C` in the terminal. Run `npm start` again whenever you want to use it.
+The launcher sets JScout up the first time (it downloads what JScout needs and builds it, which takes a few minutes), and again after updates, then opens it at <http://localhost:4310>. A short setup asks for your résumé, what you are looking for, and which industries' employers to follow; every step can be skipped. JScout then fetches jobs in the background: the job boards give you around 9,000 postings within a couple of minutes, USAJOBS adds every open U.S. federal job (about 9,500) a couple of minutes later, and the employers and agencies you follow are added as they sync.
+
+JScout runs for as long as the launcher's window is open. Close the window, or press `Ctrl+C` in it, to stop JScout; start the launcher again whenever you want to use it. If JScout is already running, the launcher just opens it in your browser. On Windows, right-click `JScout.bat` and choose **Send to → Desktop (create shortcut)** to start it from your desktop.
+
+From a terminal, `npm start` in the JScout folder does the same as the launchers.
 
 ### Options
 
-Set these environment variables before `npm start` if you need them:
+Set these environment variables before starting JScout if you need them:
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -62,7 +67,7 @@ Sites that do not allow automated access (such as LinkedIn and Indeed) are not i
 
 ## Privacy
 
-- Everything you enter — profile, résumé, applications, saved searches, API keys — is stored only in a data folder on your computer: `%LOCALAPPDATA%\JScout` on Windows, `~/Library/Application Support/JScout` on macOS and `~/.local/share/jscout` on Linux (or `$XDG_DATA_HOME/jscout`). `npm start` prints its location. Because it is outside the app's folder, updates and new copies of JScout keep using it. Versions before this one kept data in a `data` folder inside the app's folder; it is moved to the new location the first time you start this version. Back it up or move it to another computer with **Settings → Your data → Export**.
+- Everything you enter — profile, résumé, applications, saved searches, API keys — is stored only in a data folder on your computer: `%LOCALAPPDATA%\JScout` on Windows, `~/Library/Application Support/JScout` on macOS and `~/.local/share/jscout` on Linux (or `$XDG_DATA_HOME/jscout`). JScout prints its location when it starts. Because it is outside the app's folder, updates and new copies of JScout keep using it. Versions before this one kept data in a `data` folder inside the app's folder; it is moved to the new location the first time you start this version. Back it up or move it to another computer with **Settings → Your data → Export**.
 - JScout only accepts connections from your own computer. It has no password, though: while it runs, anyone else signed in to the same computer (another user account) could read your data through it, so on a shared computer stop it when you are done.
 - Requests to job sources never include your personal information.
 - Nothing is sent to an AI provider unless you add a key **and** press a "with AI" button (such as **Rewrite with AI** on a résumé).
@@ -83,7 +88,9 @@ Code layout: `src/shared` holds the types and API contract shared by both sides;
 
 ## Troubleshooting
 
-- **"Port 4310 is already in use"** — JScout may already be running; open <http://localhost:4310>. Or start it on another port: `JSCOUT_PORT=4311 npm start` (PowerShell: `$env:JSCOUT_PORT=4311; npm start`).
+- **"JScout needs Node.js"** — install the LTS version from <https://nodejs.org/>, then start the launcher again.
+- **macOS won't open `JScout.command`** — this can happen when JScout was downloaded as a ZIP. Right-click the file and choose **Open**, or allow it under System Settings → Privacy & Security. Running `sh jscout.sh` in Terminal from the JScout folder always works.
+- **"Port 4310 is in use by another program"** — start JScout on another port: `JSCOUT_PORT=4311 npm start` (PowerShell: `$env:JSCOUT_PORT=4311; npm start`).
 - **No jobs appear** — check Settings → Job sources for errors. Behind a company proxy, set `HTTPS_PROXY`; this needs Node.js 22.21 or newer (older versions ignore the proxy).
 - **A scanned PDF résumé shows no text** — paste the text instead (Profile → Résumé).
 
