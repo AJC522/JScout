@@ -210,8 +210,8 @@ export function createCompaniesService(ctx: AppContext, options: CompaniesOption
     enabledBoards(ats?: AtsKind): BoardRef[] {
       const rows =
         ats === undefined
-          ? db.all<CompanyRow>('SELECT ats, token, name FROM companies WHERE enabled = 1 ORDER BY name, id')
-          : db.all<CompanyRow>('SELECT ats, token, name FROM companies WHERE enabled = 1 AND ats = ? ORDER BY name, id', ats);
+          ? db.all<CompanyRow>('SELECT ats, token, name FROM companies WHERE enabled = 1 ORDER BY name COLLATE NOCASE, id')
+          : db.all<CompanyRow>('SELECT ats, token, name FROM companies WHERE enabled = 1 AND ats = ? ORDER BY name COLLATE NOCASE, id', ats);
       return rows.map((r) => ({ ats: r.ats, token: r.token, name: r.name }));
     },
 
@@ -304,7 +304,7 @@ export function createCompaniesService(ctx: AppContext, options: CompaniesOption
     exportUser() {
       // Boards the user added, plus bundled boards they switched off: both are choices worth keeping.
       return db
-        .all<CompanyRow>(`SELECT * FROM companies WHERE origin = 'user' OR enabled = 0 ORDER BY name, id`)
+        .all<CompanyRow>(`SELECT * FROM companies WHERE origin = 'user' OR enabled = 0 ORDER BY name COLLATE NOCASE, id`)
         .map((r) => ({ name: r.name, ats: r.ats, token: r.token, ...(r.industry ? { industry: r.industry } : {}), enabled: r.enabled === 1 }));
     },
 

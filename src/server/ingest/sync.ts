@@ -11,7 +11,7 @@
  */
 import { createHash } from 'node:crypto';
 import type { SourcePatch, SourceTestResult } from '../../shared/api';
-import type { IndexSummary, LivenessResult, ServerEvent, SourceInfo, SourceSyncSummary, SyncStatus } from '../../shared/types';
+import type { IndexSummary, JobPosting, LivenessResult, ServerEvent, SourceInfo, SourceSyncSummary, SyncStatus } from '../../shared/types';
 import type { SqlValue } from '../db';
 import { badRequest, notFound } from '../errors';
 import type { AppContext, Logger, SourceState, SyncService } from '../services';
@@ -34,6 +34,8 @@ const MAX_CONCURRENT = 4;
 /** Company boards of one ATS live on one API host; the HTTP client paces that host as well. */
 const ATS_FEEDS_PER_SOURCE = 2;
 const CHUNK_SIZE = 200;
+/** Concurrent feeds resume in the same event-loop turn, so each slice must stay well under a frame. */
+const SLICE_MS = 10;
 const FIRST_PASS_DELAY_MS = 2_000;
 const TICK_MS = 5 * 60_000;
 const MINUTE_MS = 60_000;
@@ -86,6 +88,13 @@ interface Feed {
   key: string;
   source: JobSource;
   board?: BoardRef;
+}
+
+type FeedFinished = Extract<ServerEvent, { type: 'feed-finished' }>;
+
+interface FeedReport {
+  event: Omit<FeedFinished, 'pendingFeeds'>;
+  changedIndex: boolean;
 }
 
 interface QueueEntry {
@@ -171,11 +180,10 @@ function holdFor(err: unknown, feed: Feed, config: Record<string, string>, at: D
 
 /** HTTP client that applies the source's pacing and abort signal to every request an adapter makes. */
 function pacedHttp(http: HttpClient, minIntervalMs: number, signal: AbortSignal | undefined): HttpClient {
-  const withDefaults = (o: HttpRequestOptions = {}): HttpRequestOptions => ({
-    ...o,
-    minIntervalMs: o.minIntervalMs ?? minIntervalMs,
-    ...(o.signal ?? signal ? { signal: o.signal ?? signal } : {}),
-  });
+  const withDefaults = (o: HttpRequestOptions = {}): HttpRequestOptions => {
+    const requestSignal = o.signal ?? signal;
+    return { ...o, minIntervalMs: o.minIntervalMs ?? minIntervalMs, ...(requestSignal ? { signal: requestSignal } : {}) };
+  };
   return {
     getJson: <T>(url: string, o?: HttpRequestOptions) => http.getJson<T>(url, withDefaults(o)),
     getText: (url: string, o?: HttpRequestOptions) => http.getText(url, withDefaults(o)),
@@ -199,25 +207,32 @@ export function sourceContext(
   };
 }
 
-/** Normalise in chunks, yielding to the event loop between them: normalisation is CPU-heavy. */
+/**
+ * Normalise in chunks of up to CHUNK_SIZE postings or SLICE_MS of work, yielding to the
+ * event loop before each: normalisation is CPU-heavy (long descriptions take milliseconds
+ * each), and feeds answered from cache could otherwise run back to back in microtasks.
+ */
 async function normalizeAll(raws: RawPosting[], nctx: NormalizeContext, signal: AbortSignal, log: Logger): Promise<NormalizedPosting[]> {
   const out: NormalizedPosting[] = [];
   let skipped = 0;
-  for (let i = 0; i < raws.length; i += CHUNK_SIZE) {
-    if (i > 0) {
+  let sliceStart = 0;
+  let inChunk = CHUNK_SIZE;
+  for (const raw of raws) {
+    if (inChunk >= CHUNK_SIZE || performance.now() - sliceStart >= SLICE_MS) {
       await new Promise<void>((resolve) => setImmediate(resolve));
       signal.throwIfAborted();
+      sliceStart = performance.now();
+      inChunk = 0;
     }
-    for (const raw of raws.slice(i, i + CHUNK_SIZE)) {
-      let posting: NormalizedPosting | null = null;
-      try {
-        posting = normalizePosting(raw, nctx);
-      } catch (err) {
-        log.debug('sync: a posting could not be normalised', { feedKey: nctx.feedKey, err });
-      }
-      if (posting) out.push(posting);
-      else skipped++;
+    inChunk++;
+    let posting: NormalizedPosting | null = null;
+    try {
+      posting = normalizePosting(raw, nctx);
+    } catch (err) {
+      log.debug('sync: a posting could not be normalised', { feedKey: nctx.feedKey, err });
     }
+    if (posting) out.push(posting);
+    else skipped++;
   }
   if (skipped > 0) log.info(`sync: skipped ${skipped} of ${raws.length} postings without the required fields`, { feedKey: nctx.feedKey });
   return out;
@@ -494,9 +509,15 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
         } catch {
           /* the database may already be closed during shutdown */
         }
+        return undefined;
       })
-      .finally(() => {
+      .then((report) => {
         running.delete(feed.key);
+        if (report) {
+          if (currentRun) currentRun.added += report.event.added;
+          publish(() => ({ ...report.event, pendingFeeds: pendingCount() }));
+          if (report.changedIndex) indexChanged();
+        }
         pump();
       });
     running.set(feed.key, { feed, controller, done });
@@ -513,9 +534,10 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     for (const resolve of waiters) resolve();
   }
 
-  async function runFeed(feed: Feed, signal: AbortSignal): Promise<void> {
+  /** Sync one feed and record the outcome. Resolves with what to report, or undefined when the run was dropped. */
+  async function runFeed(feed: Feed, signal: AbortSignal): Promise<FeedReport | undefined> {
     const state = feedState(feed);
-    if (!state) return settle([feed.key]);
+    if (!state) return dropRun(feed);
     const def = feed.source.def;
     const { jobs } = services();
     const startedAt = ctx.now();
@@ -536,20 +558,20 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
         const postings = await normalizeAll(result.postings, { source: def, feedKey: feed.key, board: feed.board, now: startedAt }, signal, log);
         signal.throwIfAborted();
         // The source or board may have been switched off while this feed was fetching.
-        if (!feedState(feed)) return settle([feed.key]);
+        if (!feedState(feed)) return dropRun(feed);
         const complete = def.fullSnapshot && result.complete;
         stats = jobs.upsertFeed({ feedKey: feed.key, source: def.id }, postings, {
           complete,
           now: startedAt,
-          closeUnseenBefore: new Date(startedAt.getTime() - (def.closeGraceMinutes ?? 0) * MINUTE_MS),
+          ...(def.closeGraceMinutes ? { closeUnseenBefore: new Date(startedAt.getTime() - def.closeGraceMinutes * MINUTE_MS) } : {}),
         });
         if (!complete) closedLater = await closeVanished(feed, state.config, startedAt, signal);
       }
     } catch (err) {
-      if (signal.aborted) return settle([feed.key]);
+      if (signal.aborted) return dropRun(feed);
       failure = err;
     }
-    if (signal.aborted || !feedState(feed)) return settle([feed.key]);
+    if (signal.aborted || !feedState(feed)) return dropRun(feed);
 
     const durationMs = Math.round(performance.now() - t0);
     const error = failure === undefined ? undefined : describeError(failure, def.name, feed.board);
@@ -573,22 +595,25 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
       log.warn(`sync: ${feed.key} failed (${failures} in a row)`, { reason: failure instanceof Error ? failure.message : String(failure) });
     }
 
-    const added = stats?.added ?? 0;
     const closed = (stats?.closed ?? 0) + closedLater;
-    if (currentRun) currentRun.added += added;
-    publish(() => ({
-      type: 'feed-finished',
-      feedKey: feed.key,
-      source: def.id,
-      ok: failure === undefined,
-      added,
-      updated: stats?.updated ?? 0,
-      closed,
-      ...(error ? { error } : {}),
-      // This feed still counts as running until the runner removes it.
-      pendingFeeds: pendingCount() - 1,
-    }));
-    if (added + (stats?.updated ?? 0) + closed + (stats?.reopened ?? 0) > 0) indexChanged();
+    return {
+      event: {
+        type: 'feed-finished',
+        feedKey: feed.key,
+        source: def.id,
+        ok: failure === undefined,
+        added: stats?.added ?? 0,
+        updated: stats?.updated ?? 0,
+        closed,
+        ...(error ? { error } : {}),
+      },
+      changedIndex: (stats?.added ?? 0) + (stats?.updated ?? 0) + (stats?.reopened ?? 0) + closed > 0,
+    };
+  }
+
+  function dropRun(feed: Feed): undefined {
+    settle([feed.key]);
+    return undefined;
   }
 
   /**
@@ -720,6 +745,14 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     return work;
   }
 
+  /** A search source that asked us to wait, or rejected the current key, is skipped rather than asked again. */
+  function searchHeld(sourceId: string, state: SourceState): boolean {
+    const hold = readMap<FeedHold>(HOLDS_KEY)[sourceId];
+    if (!hold) return false;
+    if (hold.kind === 'auth') return hold.config === configFingerprint(state.config);
+    return epoch(hold.until) > ctx.now().getTime();
+  }
+
   async function searchOne(source: JobSource, state: SourceState, query: Parameters<SyncService['searchUpstream']>[0]): Promise<number> {
     const def = source.def;
     const startedAt = ctx.now();
@@ -731,6 +764,7 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
       if (!activeState(source)) return 0;
       const stats = services().jobs.upsertPostings({ feedKey: def.id, source: def.id }, postings, startedAt);
       writeRow({ feedKey: def.id, source: def.id, ok: true, attemptAt: startedAt, successAt: ctx.now().toISOString(), error: null, cursor: undefined, durationMs: Math.round(performance.now() - t0), failures: 0 });
+      setHold(def.id, undefined);
       if (stats.added + stats.updated + stats.reopened > 0) indexChanged();
       return stats.added;
     } catch (err) {
@@ -748,6 +782,7 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
           durationMs: Math.round(performance.now() - t0),
           failures: (prev?.consecutive_failures ?? 0) + 1,
         });
+        setHold(def.id, holdFor(err, { key: def.id, source }, state.config, startedAt));
       }
       return 0;
     }
@@ -756,18 +791,17 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
   // --- posting details ------------------------------------------------------------------------
 
   interface DetailTarget {
-    posting: { id: string; externalId: string; url: string; title: string; company: string; closedAt?: string };
+    posting: JobPosting;
     source: JobSource;
     board?: BoardRef;
   }
 
-  function detailTarget(jobId: string): DetailTarget | undefined {
-    const posting = services().jobs.getPosting(jobId);
-    const source = posting ? findSource(posting.source) : undefined;
-    if (!posting || !source) return undefined;
+  function detailTarget(posting: JobPosting): DetailTarget | undefined {
+    const source = findSource(posting.source);
+    if (!source) return undefined;
     if (!source.def.perCompany) return { posting, source };
     // JobPosting does not carry its feed key, and the board token is only in there.
-    const feedKey = db.scalar<string>('SELECT feed_key FROM jobs WHERE id = ?', jobId);
+    const feedKey = db.scalar<string>('SELECT feed_key FROM jobs WHERE id = ?', posting.id);
     const prefix = `${source.def.id}:`;
     if (!source.def.ats || !feedKey?.startsWith(prefix)) return { posting, source };
     const token = feedKey.slice(prefix.length);
@@ -806,7 +840,8 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     const { jobs } = services();
     const existing = jobs.getDescriptionHtml(jobId);
     if (existing) return existing;
-    const target = detailTarget(jobId);
+    const posting = jobs.getPosting(jobId);
+    const target = posting ? detailTarget(posting) : undefined;
     if (!target?.source.fetchDetail) return '';
     try {
       const detail = await fetchDetail(target);
@@ -820,6 +855,57 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     } catch (err) {
       log.warn(`sync: fetching a ${target.source.def.name} description failed`, { jobId, reason: err instanceof Error ? err.message : String(err) });
       return '';
+    }
+  }
+
+  async function checkLiveness(jobId: string): Promise<LivenessResult> {
+    const { jobs } = services();
+    const posting = jobs.getPosting(jobId);
+    if (!posting) throw notFound('Job');
+    const target = detailTarget(posting);
+    const name = target?.source.def.name ?? posting.sourceName;
+    const checkedAt = () => ctx.now().toISOString();
+    let result: LivenessResult;
+    if (!target?.source.fetchDetail) {
+      result = { status: 'unknown', checkedAt: checkedAt(), detail: `Postings from ${name} cannot be checked automatically` };
+    } else {
+      try {
+        const detail = await fetchDetail(target);
+        result =
+          detail === null
+            ? { status: 'closed', checkedAt: checkedAt(), detail: `No longer listed on ${name}` }
+            : { status: 'open', checkedAt: checkedAt(), detail: `Still listed on ${name}` };
+        if (detail && !jobs.getDescriptionHtml(jobId)) storeDescription(target, detail);
+      } catch (err) {
+        // Network trouble says nothing about the posting: report unknown rather than guess.
+        result = { status: 'unknown', checkedAt: checkedAt(), detail: describeError(err, name, target.board) };
+      }
+    }
+    jobs.setLiveness(jobId, result);
+    const wasClosed = posting.closedAt !== undefined;
+    if ((result.status === 'closed' && !wasClosed) || (result.status === 'open' && wasClosed)) indexChanged();
+    return result;
+  }
+
+  async function testSource(id: string): Promise<SourceTestResult> {
+    const source = findSource(id);
+    if (!source) throw notFound('Source');
+    const def = source.def;
+    const state = services().settings.getSourceState(id);
+    const missing = def.configFields.filter((f) => f.required && !state.config[f.key]?.trim());
+    if (missing.length > 0) return { ok: false, message: `Enter your ${missing.map((f) => f.label).join(' and ')} first` };
+    const board = def.perCompany && def.ats ? services().companies.enabledBoards(def.ats)[0] : undefined;
+    if (def.perCompany && !board) return { ok: false, message: `Enable at least one ${def.name} company board to test it` };
+    try {
+      const count = await withDeadline(TEST_TIMEOUT_MS, async (signal) => {
+        const sctx = sourceContext(ctx, def, state.config, signal);
+        if (def.mode === 'search' && source.search) return (await source.search(sctx, { keywords: ['engineer'], limit: 5 })).length;
+        if (def.mode === 'feed' && source.fetchFeed) return (await source.fetchFeed(sctx, board)).postings.length;
+        throw new Error('this source has no way to fetch postings');
+      });
+      return { ok: true, message: `Connected: ${plural(count, 'posting')}${board ? ` from ${board.name}` : ''}`, sample: count };
+    } catch (err) {
+      return { ok: false, message: describeError(err, def.name, board) };
     }
   }
 
@@ -1026,39 +1112,16 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     requestSync,
 
     testSource(id: string) {
-      const source = findSource(id);
-      if (!source) throw notFound('Source');
-      const def = source.def;
-      const state = services().settings.getSourceState(id);
-      const missing = def.configFields.filter((f) => f.required && !state.config[f.key]?.trim());
-      if (missing.length > 0) {
-        return Promise.resolve<SourceTestResult>({ ok: false, message: `Enter your ${missing.map((f) => f.label).join(' and ')} first` });
-      }
-      const board = def.perCompany && def.ats ? services().companies.enabledBoards(def.ats)[0] : undefined;
-      if (def.perCompany && !board) {
-        return Promise.resolve<SourceTestResult>({ ok: false, message: `Enable at least one ${def.name} company board to test it` });
-      }
-      const work = async (): Promise<SourceTestResult> => {
-        try {
-          const count = await withDeadline(TEST_TIMEOUT_MS, async (signal) => {
-            const sctx = sourceContext(ctx, def, state.config, signal);
-            if (def.mode === 'search' && source.search) return (await source.search(sctx, { keywords: ['engineer'], limit: 5 })).length;
-            if (def.mode === 'feed' && source.fetchFeed) return (await source.fetchFeed(sctx, board)).postings.length;
-            throw new Error('this source has no way to fetch postings');
-          });
-          return { ok: true, message: `Connected: ${plural(count, 'posting')}${board ? ` from ${board.name}` : ''}`, sample: count };
-        } catch (err) {
-          return { ok: false, message: describeError(err, def.name, board) };
-        }
-      };
-      return track(work());
+      return track(testSource(id));
     },
 
     searchUpstream(query) {
       if (stopped) return Promise.resolve({ added: 0 });
       const work = async () => {
         try {
-          const targets = activeSources().filter(({ source }) => source.def.mode === 'search' && source.search);
+          const targets = activeSources().filter(
+            ({ source, state }) => source.def.mode === 'search' && source.search && !searchHeld(source.def.id, state),
+          );
           const added = await Promise.all(targets.map(({ source, state }) => searchOne(source, state, query)));
           return { added: added.reduce((sum, n) => sum + n, 0) };
         } catch (err) {
@@ -1078,34 +1141,7 @@ export function createSyncService(ctx: AppContext, options: SyncOptions = {}): S
     },
 
     checkLiveness(jobId: string) {
-      const target = detailTarget(jobId);
-      if (!target) {
-        if (!services().jobs.getPosting(jobId)) throw notFound('Job');
-      }
-      const work = async (): Promise<LivenessResult> => {
-        const { jobs } = services();
-        const name = target?.source.def.name ?? 'its source';
-        let result: LivenessResult;
-        if (!target?.source.fetchDetail) {
-          result = { status: 'unknown', checkedAt: ctx.now().toISOString(), detail: `Postings from ${name} cannot be checked automatically` };
-        } else {
-          try {
-            const detail = await fetchDetail(target);
-            result =
-              detail === null
-                ? { status: 'closed', checkedAt: ctx.now().toISOString(), detail: `No longer listed on ${name}` }
-                : { status: 'open', checkedAt: ctx.now().toISOString(), detail: `Still listed on ${name}` };
-            if (detail && !jobs.getDescriptionHtml(jobId)) storeDescription(target, detail);
-          } catch (err) {
-            result = { status: 'unknown', checkedAt: ctx.now().toISOString(), detail: describeError(err, name, target.board) };
-          }
-        }
-        jobs.setLiveness(jobId, result);
-        const wasClosed = target?.posting.closedAt !== undefined;
-        if ((result.status === 'closed' && !wasClosed) || (result.status === 'open' && wasClosed)) indexChanged();
-        return result;
-      };
-      return track(work());
+      return track(checkLiveness(jobId));
     },
 
     idle() {
