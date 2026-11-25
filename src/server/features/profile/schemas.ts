@@ -11,6 +11,7 @@ import {
 } from '../../../shared/schemas';
 import { applicationImportSchema } from '../applications/schemas';
 import { LIMITS, isValidEmail, normalizeLink } from './normalize';
+import { MAX_RESUME_TEXT_CHARS } from './resume-file';
 
 const text = (max: number) => z.string().trim().max(max);
 const list = (max: number, itemMax: number) => z.array(z.string().trim().max(itemMax)).max(max);
@@ -142,7 +143,7 @@ const importedPersonal = z
 const importedResume = z.object({
   fileName: text(200).default('Résumé'),
   mimeType: text(120).default('text/plain'),
-  text: z.string().max(400_000).default(''),
+  text: z.string().max(MAX_RESUME_TEXT_CHARS).default(''),
   updatedAt: isoDateSchema.optional(),
   sizeBytes: z.number().int().min(0).max(MAX_RESUME_BYTES).catch(0),
   hasFile: z.boolean().catch(false),
@@ -166,9 +167,9 @@ const importedSavedSearch = z.object({
   query: searchQuerySchema,
   pinned: z.boolean().default(false),
   createdAt: isoDateSchema,
-  updatedAt: isoDateSchema,
+  updatedAt: isoDateSchema.optional(),
   lastViewedAt: isoDateSchema.nullish().transform((v) => v ?? undefined),
-});
+}).transform((item) => ({ ...item, updatedAt: item.updatedAt ?? item.createdAt }));
 
 const importedCompany = z.object({
   name: z.string().trim().min(1).max(200),
@@ -194,5 +195,3 @@ export const dataImportSchema = z.object({
   userCompanies: z.array(importedCompany).max(5000).default([]),
   hiddenJobs: z.array(importedHiddenJob).max(100_000).default([]),
 });
-
-export type ImportedProfile = z.infer<typeof importedProfileSchema>;
