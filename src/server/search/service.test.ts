@@ -39,6 +39,19 @@ describe('finding the right titles', () => {
     expect(ids(r)).not.toContain('acme-swe-remote-us');
   });
 
+  it('title words keep their spelling: "accountant" does not find "Account Executive", plurals still match', () => {
+    const accountant = run({ q: 'accountant' });
+    expect(ids(accountant)).toContain('remotive-accountant');
+    expect(ids(accountant)).not.toContain('remotive-account-exec');
+    expect(env.search.count({ q: 'accountant' })).toBe(accountant.total);
+    expect(ids(run({ q: 'account executive' }))).toContain('remotive-account-exec');
+    const teacher = run({ q: 'teacher' });
+    expect(ids(teacher)).toContain('remotive-teachers');
+    expect(teacher.items.every((i) => i.match.titleMatch === 'exact')).toBe(true);
+    // Acronyms match as typed: "SWE" must not find "Swedish".
+    expect(ids(run({ q: 'swe', synonyms: false }))).toEqual(['acme-swe-remote-us']);
+  });
+
   it('a leading minus excludes a word', () => {
     const r = run({ q: 'software engineer -senior', location: 'Austin, TX', radiusKm: 50 });
     expect(ids(r)).toContain('acme-swe-austin');
@@ -135,6 +148,15 @@ describe('filters', () => {
     const lenient = run({ q: '', location: 'Austin, TX', salaryMin: 100_000, salaryCurrency: 'USD' });
     expect(ids(lenient)).toContain('acme-senior-swe');
     expect(ids(lenient)).not.toContain('acme-qa-austin');
+  });
+
+  it('salaryMin compares other currencies roughly instead of treating them as unknown', () => {
+    for (const includeNoSalary of [false, true]) {
+      const r = run({ q: 'data engineer', salaryMin: 100_000, salaryCurrency: 'USD', includeNoSalary });
+      expect(ids(r)).toContain('remotive-eur-high');
+      expect(ids(r)).not.toContain('remotive-eur-low');
+    }
+    expect(ids(run({ q: 'data engineer', salaryMin: 70_000, salaryCurrency: 'EUR', includeNoSalary: false }))).toContain('remotive-eur-low');
   });
 
   it('hidden clusters disappear unless asked for', () => {

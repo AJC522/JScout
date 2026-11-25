@@ -96,6 +96,12 @@ function indexPosting(sources: JobSource[], ats: AtsKind, token: string, externa
   db.run(`INSERT OR REPLACE INTO sync_state (feed_key, source, status, last_success_at) VALUES (?, ?, 'ok', ?)`, feedKey, ats, T0.toISOString());
 }
 
+/** Seed the bundled boards and follow all of them, as onboarding does when every industry is picked. */
+function seedFollowed() {
+  companies.seedIfEmpty();
+  db.run(`UPDATE companies SET enabled = 1 WHERE origin = 'seed'`);
+}
+
 beforeEach(() => {
   requestSync.mockClear();
   data.present = true;
@@ -111,11 +117,12 @@ beforeEach(() => {
 afterEach(() => db.close());
 
 describe('seeding', () => {
-  it('loads the bundled boards once, skipping ones that cannot be synced', () => {
+  it('loads the bundled boards once, unfollowed, skipping ones that cannot be synced', () => {
     build();
     expect(companies.seedIfEmpty()).toBe(3);
     expect(companies.seedIfEmpty()).toBe(0);
-    expect(companies.get('ashby:initech')).toMatchObject({ name: 'Initech', origin: 'seed', enabled: true, addedAt: T0.toISOString() });
+    expect(companies.get('ashby:initech')).toMatchObject({ name: 'Initech', origin: 'seed', enabled: false, addedAt: T0.toISOString() });
+    expect(companies.enabledBoards()).toEqual([]);
     expect(requestSync).not.toHaveBeenCalled();
   });
 
@@ -130,7 +137,7 @@ describe('seeding', () => {
 describe('listing', () => {
   it('filters, facets, orders and pages boards with job counts and sync status', () => {
     const sources = build();
-    companies.seedIfEmpty();
+    seedFollowed();
     companies.add({ ats: 'greenhouse', token: 'zeta', name: 'Zeta Labs', industry: 'ai' });
     companies.patch('greenhouse:globex', { enabled: false });
     indexPosting(sources, 'lever', 'acme');
@@ -181,7 +188,7 @@ describe('adding and editing', () => {
 
   it('re-enables a known board instead of duplicating it, keeping its origin', () => {
     build();
-    companies.seedIfEmpty();
+    seedFollowed();
     companies.patch('lever:acme', { enabled: false });
     requestSync.mockClear();
     const board = companies.add({ ats: 'lever', token: 'ACME', name: 'Acme Corp' });
@@ -192,7 +199,7 @@ describe('adding and editing', () => {
 
   it('removes a disabled board’s postings and sync state, and queues it again when re-enabled', () => {
     const sources = build();
-    companies.seedIfEmpty();
+    seedFollowed();
     indexPosting(sources, 'greenhouse', 'globex');
     expect(ctx.services.jobs.openCount()).toBe(1);
 
@@ -209,7 +216,7 @@ describe('adding and editing', () => {
 
   it('updates many boards by id or by filter, counting only real changes', () => {
     const sources = build();
-    companies.seedIfEmpty();
+    seedFollowed();
     indexPosting(sources, 'ashby', 'initech');
     expect(companies.bulk({ enabled: false, industry: 'fintech' })).toBe(2);
     expect(ctx.services.jobs.openCount()).toBe(0);
@@ -278,23 +285,34 @@ describe('export and import', () => {
     const sources = build();
     companies.seedIfEmpty();
     companies.add({ ats: 'greenhouse', token: 'zeta', name: 'Zeta', industry: 'ai' });
-    companies.patch('lever:acme', { enabled: false });
+    companies.add({ ats: 'greenhouse', token: 'disabled', name: 'Disabled', industry: 'ai' });
+    companies.patch('greenhouse:disabled', { enabled: false });
+    companies.patch('lever:acme', { enabled: true });
     const exported = companies.exportUser();
+    // Bundled boards left unfollowed are the default, so only the followed one is exported.
     expect(exported).toEqual([
-      { name: 'acme', ats: 'lever', token: 'acme', industry: 'ai', enabled: false },
+      { name: 'acme', ats: 'lever', token: 'acme', industry: 'ai', enabled: true },
+      { name: 'Disabled', ats: 'greenhouse', token: 'disabled', industry: 'ai', enabled: false },
       { name: 'Zeta', ats: 'greenhouse', token: 'zeta', industry: 'ai', enabled: true },
     ]);
     db.close();
 
     build();
-    companies.seedIfEmpty();
-    indexPosting(sources, 'lever', 'acme');
+    seedFollowed();
+    companies.patch('lever:acme', { enabled: false });
+    indexPosting(sources, 'greenhouse', 'globex');
     requestSync.mockClear();
-    const imported = companies.importUser([...exported, { name: 'Nope', ats: 'workable', token: 'nope', enabled: true }]);
-    expect(imported).toBe(2);
-    expect(companies.get('lever:acme')).toMatchObject({ enabled: false, origin: 'seed' });
+    const imported = companies.importUser([
+      ...exported,
+      { name: 'Globex', ats: 'greenhouse', token: 'globex', enabled: false },
+      { name: 'Nope', ats: 'workable', token: 'nope', enabled: true },
+    ]);
+    expect(imported).toBe(4);
+    expect(companies.get('lever:acme')).toMatchObject({ enabled: true, origin: 'seed' });
+    expect(companies.get('greenhouse:globex')).toMatchObject({ enabled: false, origin: 'seed' });
     expect(ctx.services.jobs.openCount()).toBe(0);
     expect(companies.get('greenhouse:zeta')).toMatchObject({ origin: 'user', enabled: true, industry: 'ai' });
-    expect(requestSync).toHaveBeenCalledWith({ feedKeys: ['greenhouse:zeta'] });
+    expect(companies.get('greenhouse:disabled')).toMatchObject({ origin: 'user', enabled: false });
+    expect(requestSync).toHaveBeenCalledWith({ feedKeys: ['lever:acme', 'greenhouse:zeta'] });
   });
 });

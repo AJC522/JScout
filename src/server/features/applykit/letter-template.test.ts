@@ -104,6 +104,13 @@ describe('template cover letters', () => {
     expect(ae).toContain('Brightwave Software');
   });
 
+  it('states years of experience as a whole number', () => {
+    const work = { ...softwareProfile.profile.work, summary: '', yearsExperience: 8.5 };
+    const letter = letterFor(job, { ...softwareProfile, profile: { ...softwareProfile.profile, work } }, { tone: 'professional', length: 'medium' });
+    expect(letter).toContain('over 8 years of professional experience');
+    expect(letter).not.toContain('8.5');
+  });
+
   it('marks only essential missing information as a placeholder', () => {
     const bare: Profile = { ...softwareProfile.profile, personal: { ...softwareProfile.profile.personal, fullName: '' }, work: { ...softwareProfile.profile.work, summary: '', currentTitle: '', currentCompany: '', yearsExperience: null }, experience: [], education: [] };
     const letter = letterFor(job, { profile: bare, skills: [], resumeText: '' }, { tone: 'concise', length: 'short' });

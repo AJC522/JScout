@@ -127,11 +127,11 @@ describe('jobicy fetchFeed', () => {
   it('handles the awkward postings', async () => {
     const { postings } = await fetchFeed(threePages());
 
-    // Salary without currency; two-space geo separator; a level that is passed on as given.
+    // Salary without currency; two-space geo separator; Jobicy's unreliable "Director" level dropped.
     const forma = byId(postings, '164068');
     expect(forma.salary).toEqual({ min: 120000, max: 150000, currency: undefined, period: 'year' });
     expect(forma.locations).toEqual(['Canada', 'USA']);
-    expect(forma.seniority).toBe('Director');
+    expect(forma.seniority).toBeUndefined();
     expect(forma.employmentType).toBe('Full-Time');
 
     const apaleo = byId(postings, '164053');

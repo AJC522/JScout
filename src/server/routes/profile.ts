@@ -114,6 +114,7 @@ export function registerProfileRoutes(app: FastifyInstance, ctx: AppContext): vo
         s.userState.clear();
         s.search.clearHistory();
         ctx.db.run("DELETE FROM companies WHERE origin = 'user'");
+        ctx.db.run("UPDATE companies SET enabled = 0 WHERE origin = 'seed'");
         clearAllSettings(ctx);
       }
     });

@@ -277,7 +277,8 @@ describe('data reset', () => {
     expect(profile.personal.fullName).toBe('');
     expect(profile.resume).toBeNull();
     expect(fs.existsSync(path.join(dataDir, 'resume', 'original'))).toBe(false);
-    expect(built.ctx.db.all('SELECT id FROM companies')).toEqual([{ id: 'greenhouse:seed' }]);
+    // Bundled boards go back to their first-run state: unfollowed.
+    expect(built.ctx.db.all('SELECT id, enabled FROM companies')).toEqual([{ id: 'greenhouse:seed', enabled: 0 }]);
     expect(built.ctx.db.scalar('SELECT COUNT(*) FROM settings')).toBe(0);
     expect(built.ctx.services.settings.getApp().theme).toBe('system');
   });

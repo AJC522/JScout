@@ -62,6 +62,12 @@ const CURATED: Array<{ source: string; board?: BoardRef; postings: Curated[] }> 
       { externalId: 'remotive-swe-de-only', title: 'Software Engineer', company: 'Initech', locations: ['Remote (Germany)'], remote: 'remote', postedAt: daysAgo(2), descriptionHtml: description('Ruby on Rails') },
       { externalId: 'remotive-swe-eu', title: 'Software Engineer', company: 'Umbrella', locations: ['Remote - Europe'], remote: 'remote', postedAt: daysAgo(4), descriptionHtml: description('Elixir') },
       { externalId: 'remotive-nurse', title: 'Registered Nurse (Telehealth)', company: 'CareFirst Clinics', locations: ['Remote - US'], remote: 'remote', postedAt: daysAgo(7), descriptionHtml: description('patient triage') },
+      // Porter stems "accountant" and "account" alike: title searches must still tell them apart.
+      { externalId: 'remotive-accountant', title: 'Senior Accountant', company: 'Ledgerly', locations: ['Remote - US'], remote: 'remote', postedAt: daysAgo(3), descriptionHtml: description('NetSuite and GAAP') },
+      { externalId: 'remotive-account-exec', title: 'Account Executive', company: 'Ledgerly', locations: ['Remote - US'], remote: 'remote', postedAt: daysAgo(3), descriptionHtml: description('Salesforce') },
+      { externalId: 'remotive-eur-low', title: 'Data Engineer', company: 'Kontor', locations: ['Berlin, Germany'], remote: 'hybrid', postedAt: daysAgo(2), salary: { min: 50000, max: 75000, currency: 'EUR', period: 'year' }, descriptionHtml: description('Airflow') },
+      { externalId: 'remotive-eur-high', title: 'Staff Data Engineer', company: 'Kontor', locations: ['Munich, Germany'], remote: 'hybrid', postedAt: daysAgo(2), salary: { min: 110000, max: 130000, currency: 'EUR', period: 'year' }, descriptionHtml: description('Spark') },
+      { externalId: 'remotive-teachers', title: 'Online English Teachers', company: 'Polyglot School', locations: ['Remote'], remote: 'remote', postedAt: daysAgo(5), descriptionHtml: description('lesson planning') },
     ],
   },
 ];

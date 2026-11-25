@@ -141,7 +141,7 @@ function addOpening(d: Draft): void {
   const { profile, job, tone } = d.input;
   const work = profile.work;
   const recent = d.experience[0];
-  const years = work.yearsExperience;
+  const years = work.yearsExperience ?? 0;
   const currentTitle = work.currentTitle.trim() || (recent?.current ? recent.title : '');
   const currentCompany = work.currentCompany.trim() || (recent?.current ? recent.company : '');
   const at = currentCompany ? ` at ${currentCompany}` : '';
@@ -154,7 +154,9 @@ function addOpening(d: Draft): void {
         `Right now I work as ${withArticle(currentTitle)}${at}.`,
       ])
     : undefined;
-  const yearsPhrase = years ? `${years} year${years === 1 ? '' : 's'} of professional experience` : undefined;
+  // Profiles may hold fractions computed from résumé dates (8.5); a letter says "over 8 years".
+  const whole = Math.floor(years);
+  const yearsPhrase = whole >= 1 ? `${whole < years ? 'over ' : ''}${whole} year${whole === 1 ? '' : 's'} of professional experience` : undefined;
   const yearsSentence = yearsPhrase && `I have ${yearsPhrase}.`;
   const summary = firstPersonSummary(work.summary);
   if (summary[0]) {

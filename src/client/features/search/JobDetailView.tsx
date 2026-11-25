@@ -108,6 +108,8 @@ export function JobDetailView({ jobId, placeholder, actions, variant, onClose }:
   }
 
   const descriptionLoading = detail.isPlaceholderData && detail.isFetching;
+  // The detail endpoint scores against the profile; opened from a search, explain the job as the result list did.
+  const explained = placeholder?.job.id === data.job.id ? placeholder : data;
   const runCheck = () =>
     check.mutate(data.job.id, {
       onSuccess: (result) => toast[result.status === 'closed' ? 'error' : 'info'](livenessTitle(result), { description: result.detail }),
@@ -133,7 +135,7 @@ export function JobDetailView({ jobId, placeholder, actions, variant, onClose }:
           <TabsTrigger value="kit">Apply kit</TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="space-y-5 pt-4">
-          <WhyThisJob score={data.score} match={data.match} />
+          <WhyThisJob score={explained.score} match={explained.match} />
           <Description data={data} loading={descriptionLoading} failed={detail.isError} onRetry={() => void detail.refetch()} />
         </TabsContent>
         <TabsContent value="kit" className="pt-4">

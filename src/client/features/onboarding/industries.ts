@@ -51,19 +51,28 @@ const TITLE_HINTS: Array<{ pattern: RegExp; industries: string[] }> = [
 ];
 
 /**
- * Industries to preselect for these target titles: when every title clearly points at some
- * industries, their union; otherwise (no titles, or any title that fits everywhere) all of them.
+ * Industries to preselect for these target titles: those the titles clearly point at, and none
+ * otherwise. Following every bundled company means a first sync of roughly half a gigabyte, so the
+ * user opts in to industries rather than out of them.
  */
 export function preselectIndustries(titles: readonly string[], available: readonly string[]): string[] {
-  if (titles.length === 0) return [...available];
   const picked = new Set<string>();
   for (const title of titles) {
-    const hints = TITLE_HINTS.filter((hint) => hint.pattern.test(title));
-    if (hints.length === 0) return [...available];
-    for (const hint of hints) for (const industry of hint.industries) picked.add(industry);
+    for (const hint of TITLE_HINTS) if (hint.pattern.test(title)) for (const industry of hint.industries) picked.add(industry);
   }
-  const matched = available.filter((industry) => picked.has(industry));
-  return matched.length > 0 ? matched : [...available];
+  return available.filter((industry) => picked.has(industry));
+}
+
+/** Averages over the bundled company list, measured on a real sync: open jobs and download size per company. */
+const JOBS_PER_COMPANY = 78;
+const MB_PER_COMPANY = 1.1;
+
+/** "about 2,300 jobs, 30 MB to download": what following this many companies costs the first sync. */
+export function downloadEstimate(companies: number): string {
+  const jobs = Math.max(100, Math.round((companies * JOBS_PER_COMPANY) / 100) * 100);
+  const mb = companies * MB_PER_COMPANY;
+  const size = mb >= 1000 ? `${(mb / 1000).toFixed(1)} GB` : `${Math.max(10, Math.round(mb / 10) * 10)} MB`;
+  return `about ${jobs.toLocaleString('en-US')} jobs, ${size} to download`;
 }
 
 /** "about 500" for a large registry, the exact number for a small one, "hundreds of" while unknown. */

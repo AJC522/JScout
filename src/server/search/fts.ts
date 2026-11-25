@@ -21,6 +21,18 @@ export function ftsString(text: string): string {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
+/** Shortest last word that also matches its longer forms; shorter ones are acronyms ("RN", "SWE") that must match as typed. */
+const MIN_PREFIX_LENGTH = 4;
+
+/**
+ * ftsString() whose last word also matches longer words starting with it ("teacher" -> "teachers"),
+ * for the unstemmed title index, where plurals are not folded together by a stemmer.
+ */
+export function ftsPrefixString(text: string): string {
+  const last = text.trim().split(/[^\p{L}\p{N}+#]+/u).filter(Boolean).at(-1) ?? '';
+  return last.length >= MIN_PREFIX_LENGTH && /^[\p{L}\p{N}]+$/u.test(last) ? `${ftsString(text)}*` : ftsString(text);
+}
+
 const group = (parts: string[], op: 'AND' | 'OR'): string | undefined => {
   const kept = parts.filter(Boolean);
   if (kept.length === 0) return undefined;

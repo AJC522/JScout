@@ -1,9 +1,11 @@
 /** First visit without a query: search with the saved profile in one click, or pick a recent search. */
 import { Link } from 'react-router';
-import { Clock, History, MapPin, Sparkles, UserRound } from 'lucide-react';
+import { Building2, Clock, History, MapPin, Sparkles, UserRound } from 'lucide-react';
 import type { SearchQuery } from '../../../shared/types';
 import { Button, Card, ErrorState, Skeleton } from '../../components/ui';
 import { formatRelativeTime, pluralize } from '../../lib/format';
+import { useCompanies } from '../companies/queries';
+import { aboutCount } from '../onboarding/industries';
 import { describeQuery, SUMMARY_SEPARATOR } from '../saved/describe';
 import { useClearHistory, useProfileQuery, useSearchHistory } from './queries';
 
@@ -119,6 +121,30 @@ function RecentSearches({ onRun }: { onRun: (query: SearchQuery) => void }) {
   );
 }
 
+/** Only the totals are needed, not the boards. */
+const COMPANY_TOTALS_QUERY = { limit: 1 } as const;
+
+/** Bundled company boards start unfollowed; until the user follows some, point at where to do it. */
+function FollowCompaniesCard() {
+  const companies = useCompanies(COMPANY_TOTALS_QUERY);
+  if (!companies.data || companies.data.enabledTotal > 0 || companies.data.total === 0) return null;
+  return (
+    <Card padded className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <Building2 className="size-8 shrink-0 text-primary" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <h2 className="text-base font-semibold text-fg">Search employers’ career pages too</h2>
+        <p className="mt-0.5 text-sm text-muted">
+          JScout can also check {aboutCount(companies.data.total)} companies’ own job boards, which list many jobs the big boards miss. Follow the
+          industries you care about.
+        </p>
+      </div>
+      <Button asChild variant="secondary">
+        <Link to="/companies">Choose companies</Link>
+      </Button>
+    </Card>
+  );
+}
+
 export function StartPanel({ onboarded, onRun }: { onboarded: boolean; onRun: (query: SearchQuery) => void }) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -136,6 +162,7 @@ export function StartPanel({ onboarded, onRun }: { onboarded: boolean; onRun: (q
           </Button>
         </Card>
       )}
+      <FollowCompaniesCard />
       <RecentSearches onRun={onRun} />
       <p className="text-center text-sm text-muted">
         Or{' '}

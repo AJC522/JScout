@@ -1,48 +1,19 @@
 /** Building and editing the job snapshot an application keeps. */
-import type { JobPosting, JobSnapshot, Salary, SalaryPeriod } from '../../../shared/types';
+import type { JobPosting, JobSnapshot, Salary } from '../../../shared/types';
 import { badRequest } from '../../errors';
 import { sanitizeHtml } from '../../lib/html';
+import { formatSalary } from '../../lib/salary';
 import { toIso } from './rows';
 import { isHttpUrl } from './schemas';
 
 export const MANUAL_SOURCE = 'manual';
 export const MANUAL_SOURCE_NAME = 'Added manually';
 
-const PERIOD_SUFFIX: Record<SalaryPeriod, string> = { year: '/yr', month: '/mo', week: '/wk', day: '/day', hour: '/hr' };
-
-function formatAmount(amount: number, currency: string | undefined): string {
-  const compact = { notation: 'compact', minimumFractionDigits: 0, maximumFractionDigits: 1 } as const;
-  if (currency) {
-    try {
-      return new Intl.NumberFormat('en-US', { ...compact, style: 'currency', currency }).format(amount);
-    } catch {
-      // Malformed currency code from a source: show the bare number with the code.
-      return `${new Intl.NumberFormat('en-US', compact).format(amount)} ${currency}`;
-    }
-  }
-  return new Intl.NumberFormat('en-US', compact).format(amount);
-}
-
-const usable = (n: number | undefined): n is number => n !== undefined && Number.isFinite(n) && n > 0;
-
-/** Short display string such as "$120K–$150K/yr", "From €50K/yr", or the source's own text. */
+/** Short display string such as "$120k–$150k/yr", "From €50k/yr", or the source's own text; the same wording search results use. */
 export function salaryDisplay(salary: Salary | undefined): string | undefined {
   if (!salary) return undefined;
-  const { currency, period } = salary;
-  const min = usable(salary.min) ? salary.min : undefined;
-  const max = usable(salary.max) ? salary.max : undefined;
-  let range: string;
-  if (min !== undefined && max !== undefined) {
-    range = min === max ? formatAmount(min, currency) : `${formatAmount(min, currency)}–${formatAmount(max, currency)}`;
-  } else if (min !== undefined) {
-    range = `From ${formatAmount(min, currency)}`;
-  } else if (max !== undefined) {
-    range = `Up to ${formatAmount(max, currency)}`;
-  } else {
-    const text = salary.text?.replace(/\s+/g, ' ').trim();
-    return text ? text.slice(0, 120) : undefined;
-  }
-  return period ? `${range}${PERIOD_SUFFIX[period]}` : range;
+  const text = formatSalary(salary).replace(/\s+/g, ' ').trim();
+  return text ? text.slice(0, 120) : undefined;
 }
 
 export function snapshotFromPosting(posting: JobPosting, descriptionHtml: string): JobSnapshot {

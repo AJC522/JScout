@@ -72,6 +72,8 @@ export interface SearchPlan {
   location: LocationFilter;
   /** Positive FTS expression (query terms AND an unresolved location). */
   match?: string;
+  /** Title searches: expression the unstemmed jobs_title index must match too (see Understanding.exact). */
+  titleExact?: string;
   /** FTS expression of excluded terms. */
   exclude?: string;
   base: SqlCond[];
@@ -125,6 +127,36 @@ function dimFilters(query: SearchQuery, ageCutoff: string | undefined): Partial<
   return dims;
 }
 
+/**
+ * Rough US dollars per unit of common salary currencies, used only to apply a minimum salary to
+ * postings paid in another currency: without it a €50k job passes a "$120k or more" filter as
+ * "not comparable". Rates move, so a posting within ~10% of the minimum may land on either side.
+ */
+const USD_PER_UNIT: Readonly<Record<string, number>> = {
+  USD: 1, EUR: 1.1, GBP: 1.28, CHF: 1.15, CAD: 0.73, AUD: 0.66, NZD: 0.6, SGD: 0.75, HKD: 0.128, JPY: 0.0067,
+  CNY: 0.14, INR: 0.012, KRW: 0.00073, SEK: 0.095, NOK: 0.093, DKK: 0.147, PLN: 0.25, CZK: 0.044, HUF: 0.0028,
+  RON: 0.22, ILS: 0.27, AED: 0.272, TRY: 0.03, ZAR: 0.055, BRL: 0.18, MXN: 0.055, PHP: 0.017,
+};
+/** SQL for a posting's currency in US dollars per unit; NULL for currencies not in the table. Values are constants. */
+const USD_RATE_SQL = `CASE j.salary_currency ${Object.entries(USD_PER_UNIT)
+  .map(([code, rate]) => `WHEN '${code}' THEN ${rate}`)
+  .join(' ')} END`;
+
+/** Postings whose stated pay reaches `min` (yearly, in `currency`), converting other currencies roughly when both are known. */
+function salaryMeets(min: number, currency: string): SqlCond {
+  const amount = 'COALESCE(j.salary_annual_max, j.salary_annual_min)';
+  const rate = USD_PER_UNIT[currency];
+  if (rate === undefined) return { sql: `(j.salary_currency = ? AND ${amount} >= ?)`, params: [currency, min] };
+  return { sql: `(${amount} * (${USD_RATE_SQL}) >= ?)`, params: [min * rate] };
+}
+
+/** Postings with no salary that can be compared with a minimum in `currency`. */
+function salaryUnknown(currency: string): SqlCond {
+  const amount = 'COALESCE(j.salary_annual_max, j.salary_annual_min)';
+  if (USD_PER_UNIT[currency] === undefined) return { sql: `(j.salary_currency IS NULL OR j.salary_currency != ? OR ${amount} IS NULL)`, params: [currency] };
+  return { sql: `(${amount} IS NULL OR (${USD_RATE_SQL}) IS NULL)`, params: [] };
+}
+
 /** Statuses at or past "applied". */
 const APPLIED_OR_LATER = APPLICATION_STATUSES.slice(APPLICATION_STATUSES.indexOf('applied'));
 
@@ -143,13 +175,13 @@ function baseFilters(query: SearchQuery, opts: SearchOptions, location: Location
     base.push({ sql: 'j.company_key NOT IN (SELECT value FROM json_each(?))', params: [json(query.excludeCompanies.map(companyKey))] });
   }
   if (query.salaryMin !== undefined && query.salaryMin > 0) {
-    const amount = 'COALESCE(j.salary_annual_max, j.salary_annual_min)';
-    const meets = `(j.salary_currency = ? AND ${amount} >= ?)`;
-    base.push(
-      opts.includeNoSalary
-        ? { sql: `(${meets} OR j.salary_currency IS NULL OR j.salary_currency != ? OR ${amount} IS NULL)`, params: [salaryCurrency, query.salaryMin, salaryCurrency] }
-        : { sql: meets, params: [salaryCurrency, query.salaryMin] },
-    );
+    const meets = salaryMeets(query.salaryMin, salaryCurrency);
+    if (opts.includeNoSalary) {
+      const unknown = salaryUnknown(salaryCurrency);
+      base.push({ sql: `(${meets.sql} OR ${unknown.sql})`, params: [...meets.params, ...unknown.params] });
+    } else {
+      base.push(meets);
+    }
   }
   if (location.cond) base.push(location.cond);
   return base;
@@ -168,6 +200,7 @@ export function buildPlan(query: SearchQuery, env: PlanEnv): SearchPlan {
     understanding,
     location,
     match: ftsAnd([understanding.match, location.fts]),
+    titleExact: understanding.exact,
     exclude: understanding.exclude,
     base: baseFilters(query, opts, location, salaryCurrency),
     dims: dimFilters(query, ageCutoff),

@@ -68,7 +68,7 @@ const DEPARTMENT_LIKE = new Set(['Sales']);
  * are ignored: "…national origin, disability, genetics…" is not a skill requirement.
  */
 const BOILERPLATE_RE =
-  /national origin|sexual orientation|gender identity|veteran status|equal (?:employment )?opportunity|without regard to|reasonable accommodation|privacy (?:policy|notice)|recruit(?:ment|ing) (?:fraud|scam)|e-verify|affirmative action|protected (?:class|characteristic|status|veteran)|pay transparency|(?:hiring|recruit(?:ment|ing)|application|interview) process|recruiting partner|request (?:an? )?(?:reasonable )?accommodation|accommodations? (?:due to|during)|total rewards package|benefits package|\beeo\b(?: is the law| policy| rights| employer| statement)|know your rights/gi;
+  /national origin|sexual orientation|gender identity|veteran status|equal (?:employment )?opportunity|without regard to|reasonable accommodation|privacy (?:policy|notice)|recruit(?:ment|ing) (?:fraud|scam)|e-verify|affirmative action|protected (?:class|characteristic|status|veteran)|pay transparency|(?:hiring|recruit(?:ment|ing)|application|interview) process|recruiting partner|request (?:an? )?(?:reasonable )?accommodation|accommodations? (?:due to|during)|total rewards package|benefits package|\beeo\b(?: is the law| policy| rights| employer| statement)|know your rights|categories of personal information|personal information (?:we|you|that)|(?:interviews?|calls?) (?:will|may) be recorded/gi;
 
 /** Words that may follow a hyphen after a skill without making it part of a compound ("Python-based"). */
 const HYPHEN_SUFFIX_OK = new Set([

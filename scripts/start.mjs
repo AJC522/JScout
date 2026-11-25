@@ -1,5 +1,5 @@
 // `npm start`: build if needed (first run or sources changed), then run the server.
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -52,5 +52,10 @@ const env = { ...process.env };
 const proxied = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'].some((k) => env[k]);
 if (proxied && env.NODE_USE_ENV_PROXY === undefined) env.NODE_USE_ENV_PROXY = '1';
 
-const run = spawnSync(process.execPath, ['--enable-source-maps', serverOut], { cwd: root, stdio: 'inherit', env });
-process.exit(run.status ?? 0);
+// node:sqlite and the proxy agent print "experimental" warnings at startup, before any of the
+// server's own code runs (so src/server/quiet-warnings.ts cannot catch them); both work fine.
+const quiet = ['--disable-warning=ExperimentalWarning', '--disable-warning=UNDICI-EHPA'];
+// Not spawnSync: a signal sent to this process alone (a process manager, a test runner) must reach the server too.
+const server = spawn(process.execPath, [...quiet, '--enable-source-maps', serverOut], { cwd: root, stdio: 'inherit', env });
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.kill(signal));
+server.on('exit', (code, signal) => process.exit(code ?? (signal ? 0 : 1)));

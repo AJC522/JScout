@@ -7,7 +7,7 @@ import { api, errorMessage } from '../../api/client';
 import { Button, Chip, ErrorState, Skeleton, useToast } from '../../components/ui';
 import { formatNumber } from '../../lib/format';
 import { qk } from '../../lib/query';
-import { aboutCount, industryLabel, preselectIndustries } from './industries';
+import { aboutCount, downloadEstimate, industryLabel, preselectIndustries } from './industries';
 import { StepLayout } from './StepLayout';
 
 interface CompaniesStepProps {
@@ -16,8 +16,10 @@ interface CompaniesStepProps {
   onNext: () => void;
 }
 
-/** The registry query only needs its facets and totals, not the boards themselves. */
+/** The registry queries only need their facets and totals, not the boards themselves. */
 const FACETS_QUERY = { limit: 1 } as const;
+/** Its industry facet lists the industries with at least one followed company. */
+const FOLLOWED_QUERY = { enabled: true, limit: 1 } as const;
 
 /** Choose which industries' employer job boards JScout follows. This decides how much the first sync downloads. */
 export function CompaniesStep({ profile, onBack, onNext }: CompaniesStepProps) {
@@ -27,10 +29,21 @@ export function CompaniesStep({ profile, onBack, onNext }: CompaniesStepProps) {
     queryKey: qk.companies(FACETS_QUERY),
     queryFn: ({ signal }) => api('GET /api/companies', { query: FACETS_QUERY, signal }),
   });
+  const followedQuery = useQuery({
+    queryKey: qk.companies(FOLLOWED_QUERY),
+    queryFn: ({ signal }) => api('GET /api/companies', { query: FOLLOWED_QUERY, signal }),
+  });
   const industries = companies.data?.industries ?? [];
+  /** Followed companies per industry. */
+  const followedCounts = new Map((followedQuery.data?.industries ?? []).map((i) => [i.value, i.count]));
+  const followed = [...followedCounts.keys()];
   const [selected, setSelected] = useState<string[] | null>(null);
-  const chosen = selected ?? preselectIndustries(profile.preferences.targetTitles, industries.map((i) => i.value));
-  const chosenCount = industries.filter((i) => chosen.includes(i.value)).reduce((sum, i) => sum + i.count, 0);
+  // Someone coming back to setup keeps what they already follow; a first run starts from their titles.
+  const chosen = selected ?? (followed.length > 0 ? followed : preselectIndustries(profile.preferences.targetTitles, industries.map((i) => i.value)));
+  // An industry already followed stays as it is (perhaps only some of its companies); a new one is followed in full.
+  const chosenIndustries = industries.filter((i) => chosen.includes(i.value));
+  const chosenCount = chosenIndustries.reduce((sum, i) => sum + (followedCounts.get(i.value) ?? i.count), 0);
+  const addedCount = chosenIndustries.reduce((sum, i) => sum + (followedCounts.has(i.value) ? 0 : i.count), 0);
   const [saving, setSaving] = useState(false);
 
   const toggle = (value: string) => setSelected(chosen.includes(value) ? chosen.filter((v) => v !== value) : [...chosen, value]);
@@ -42,14 +55,16 @@ export function CompaniesStep({ profile, onBack, onNext }: CompaniesStepProps) {
     }
     setSaving(true);
     try {
-      // Only boards from JScout's own list are switched off; companies the user added stay as they are.
-      await Promise.all(
-        industries.map((industry) =>
-          chosen.includes(industry.value)
-            ? api('POST /api/companies/bulk', { body: { enabled: true, industry: industry.value } })
-            : api('POST /api/companies/bulk', { body: { enabled: false, industry: industry.value, origin: 'seed' } }),
-        ),
-      );
+      // Only industries whose choice changed are touched, so companies followed one by one on the
+      // Companies page stay followed. Unfollowing switches off JScout's own boards, never ones the user added.
+      await Promise.all([
+        ...chosen
+          .filter((industry) => !followed.includes(industry))
+          .map((industry) => api('POST /api/companies/bulk', { body: { enabled: true, industry } })),
+        ...followed
+          .filter((industry) => !chosen.includes(industry))
+          .map((industry) => api('POST /api/companies/bulk', { body: { enabled: false, industry, origin: 'seed' } })),
+      ]);
       void queryClient.invalidateQueries({ queryKey: qk.companies() });
       void queryClient.invalidateQueries({ queryKey: qk.bootstrap() });
       onNext();
@@ -65,8 +80,9 @@ export function CompaniesStep({ profile, onBack, onNext }: CompaniesStepProps) {
       title="Which companies should JScout follow?"
       description={
         <>
-          Besides the big job boards, JScout checks {aboutCount(companies.data?.total)} employers’ own career pages
-          directly. Pick the industries you care about. Fewer means a faster first sync, and you can add companies any time from the{' '}
+          JScout already searches the big job boards. It can also check {aboutCount(companies.data?.total)} employers’ own career pages,
+          which list many jobs that never reach those boards. Pick the industries you care about, or none for now: you can follow more, or
+          add any company, from the{' '}
           <Link to="/companies" className="font-medium text-primary underline-offset-2 hover:underline">
             Companies
           </Link>{' '}
@@ -75,9 +91,9 @@ export function CompaniesStep({ profile, onBack, onNext }: CompaniesStepProps) {
       }
       onBack={onBack}
       onSkip={onNext}
-      primary={{ label: 'Next', onClick: () => void next(), loading: saving, disabled: companies.isSuccess && chosen.length === 0 }}
+      primary={{ label: 'Next', onClick: () => void next(), loading: saving }}
     >
-      {companies.isPending ? (
+      {companies.isPending || followedQuery.isPending ? (
         <div className="flex flex-wrap gap-2" aria-busy="true" aria-label="Loading industries">
           {Array.from({ length: 14 }, (_, i) => (
             <Skeleton key={i} className="h-7 w-32 rounded-full" />
@@ -101,6 +117,7 @@ export function CompaniesStep({ profile, onBack, onNext }: CompaniesStepProps) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted" aria-live="polite">
               {formatNumber(chosenCount)} of {formatNumber(industries.reduce((sum, i) => sum + i.count, 0))} companies selected
+              {addedCount > 0 ? ` · ${downloadEstimate(addedCount)}` : ''}
             </p>
             <div className="flex gap-1">
               <Button size="sm" variant="ghost" onClick={() => setSelected(industries.map((i) => i.value))}>
@@ -120,7 +137,9 @@ export function CompaniesStep({ profile, onBack, onNext }: CompaniesStepProps) {
                 </Chip>
               ))}
           </div>
-          {chosen.length === 0 ? <p className="text-sm text-warning">Pick at least one industry, or skip this step.</p> : null}
+          {chosen.length === 0 ? (
+            <p className="text-sm text-muted">No industries picked: JScout will search the job boards only until you follow some companies.</p>
+          ) : null}
         </div>
       )}
     </StepLayout>

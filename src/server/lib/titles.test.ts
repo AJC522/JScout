@@ -51,7 +51,7 @@ describe('analyzeTitle: titles from the brief', () => {
     ['Assistant General Manager', 'assistant general manager', 'manager', 'general-manager'],
     ['Lead Line Cook', 'line cook', 'lead', 'cook'],
     ['Tech Lead', 'tech lead', 'lead', 'software-engineer'],
-    ['Team Lead, Customer Support', 'team lead customer support', 'manager', null],
+    ['Team Lead, Customer Support', 'team lead customer support', 'manager', 'customer-support-specialist'],
     ['Sr Staff ML Engineer', 'ml engineer', 'lead', 'machine-learning-engineer'],
     ['Member of Technical Staff', 'member of technical staff', 'unknown', 'software-engineer'],
     ['Founding Engineer', 'founding engineer', 'unknown', 'software-engineer'],

@@ -10,6 +10,8 @@ if (!cmd) {
 const env = { ...process.env };
 const proxied = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'].some((k) => env[k]);
 if (proxied && env.NODE_USE_ENV_PROXY === undefined) env.NODE_USE_ENV_PROXY = '1';
+// node:sqlite and the proxy agent warn that they are experimental before the server's code runs; both work fine.
+env.NODE_OPTIONS = [env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning', '--disable-warning=UNDICI-EHPA'].filter(Boolean).join(' ');
 
 const child = spawn(cmd, args, { stdio: 'inherit', env, shell: process.platform === 'win32' });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));

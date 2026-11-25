@@ -54,6 +54,17 @@ describe('scorePosting', () => {
     expect(labels.find((l) => l.startsWith('In Round Rock'))).toMatch(/^In Round Rock, TX \(\d+ km\)$/);
   });
 
+  it('for a search with a place, a job there outranks an equally titled remote job that is newer and lists a salary', () => {
+    const austin = resolvePlace('Austin, TX') as Place;
+    const context = ctx('software engineer', { location: { place: austin, radiusKm: 50, includeRemote: true } });
+    const local = scorePosting(input({ ts: '2026-11-18T12:00:00.000Z', location: { places: [austin], remote: 'onsite', remoteScope: [] } }), context);
+    const remote = scorePosting(
+      input({ salary: { annualMax: 150_000, currency: 'USD' }, location: { places: [], remote: 'remote', remoteScope: ['US'] } }),
+      context,
+    );
+    expect(local.score).toBeGreaterThan(remote.score);
+  });
+
   it('penalises closed and very old postings, and stays within 0–100', () => {
     const closed = scorePosting(input({ closed: true }), ctx('software engineer'));
     expect(closed.match.reasons.at(-1)).toEqual({ key: 'closed', label: 'This posting is closed', points: -20 });
@@ -78,6 +89,6 @@ describe('helpers', () => {
     expect(textRelevance(null, -10)).toBe(0);
     expect(recency(NOW.toISOString(), NOW)).toBe(1);
     expect(recency('2026-10-25T12:00:00.000Z', NOW)).toBeCloseTo(Math.exp(-1), 5);
-    expect([0, 1, 5, 20, 90].map(ageLabel)).toEqual(['Posted today', 'Posted yesterday', 'Posted 5 days ago', 'Posted 3 weeks ago', 'Posted 3 months ago']);
+    expect([0, 1, 5, 20, 90].map(ageLabel)).toEqual(['Posted today', 'Posted yesterday', 'Posted 5 days ago', 'Posted 2 weeks ago', 'Posted 3 months ago']);
   });
 });

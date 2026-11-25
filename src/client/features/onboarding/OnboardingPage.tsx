@@ -68,7 +68,7 @@ export function OnboardingPage() {
             <StepLayout
               key="welcome"
               title="Welcome to JScout"
-              description="JScout searches hundreds of job boards and company career pages at once, ranks what fits you, and helps you apply. Setup takes about two minutes, and every step is optional."
+              description="JScout searches the major job boards and hundreds of company career pages at once, ranks what fits you, and helps you apply. Setup takes about two minutes, and every step is optional."
               primary={{ label: 'Get started', onClick: next }}
             >
               <div className="flex items-start gap-3 rounded-card bg-primary-soft p-4 text-sm text-fg">

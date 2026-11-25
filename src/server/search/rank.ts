@@ -48,7 +48,12 @@ export interface ScoreContext {
   now: Date;
 }
 
-const MAX = { title: 40, text: 15, skills: 15, location: 8, seniority: 5, recency: 10, salary: 3 } as const;
+/**
+ * Location outweighs recency and salary together, so for a search with a place the jobs actually
+ * there rank above remote ones with an equally good title; remote jobs open to the place get half.
+ */
+const MAX = { title: 40, text: 15, skills: 15, location: 15, seniority: 5, recency: 10, salary: 3 } as const;
+const REMOTE_LOCATION_SHARE = 0.5;
 /**
  * For title searches bm25 only sees the title column, so it mostly repeats the title tier (biased by
  * how rare each synonym is): it only breaks ties there, and must not lift a synonym over the exact title.
@@ -75,27 +80,36 @@ export interface TitleTier {
   words: string[];
 }
 
+/** Plural "s" dropped from each word, so the title "Registered Nurses" matches the search "registered nurse". */
+function singular(phrase: string): string {
+  return phrase
+    .split(' ')
+    .map((w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w))
+    .join(' ');
+}
+
 /**
  * Title match tier against the searched titles, best first: the query's own title as the whole
  * title, then contained in it ("Software Engineer, Payments"), then a synonym as the whole title,
  * then contained or the same taxonomy role, then an opted-in related role, then shared words.
  */
 export function titleTier(input: Pick<ScoreInput, 'title' | 'titleCore' | 'roleId'>, u: Understanding): TitleTier {
-  const core = input.titleCore || normalizeText(input.title);
+  const core = singular(input.titleCore || normalizeText(input.title));
   const tier = (kind: TitleMatchKind, points: number, target?: TitleTarget): TitleTier => ({ kind, points, target, words: [] });
   const typed = u.targets.filter((t) => t.via === 'query');
   const synonyms = u.targets.filter((t) => t.via === 'synonym');
   const related = u.targets.filter((t) => t.via === 'related');
-  const find = (list: TitleTarget[], test: (t: TitleTarget) => boolean): TitleTarget | undefined => list.find(test);
+  const find = (list: TitleTarget[], test: (phrase: string, t: TitleTarget) => boolean): TitleTarget | undefined =>
+    list.find((t) => test(singular(t.phrase), t));
   let t: TitleTarget | undefined;
-  if ((t = find(typed, (x) => x.phrase === core))) return tier('exact', 40, t);
-  if ((t = find(typed, (x) => containsPhrase(core, x.phrase)))) return tier('exact', 36, t);
-  if ((t = find(synonyms, (x) => x.phrase === core))) return tier('synonym', 34, t);
-  if ((t = find(synonyms, (x) => containsPhrase(core, x.phrase)))) return tier('synonym', 30, t);
-  if (input.roleId && (t = find([...typed, ...synonyms], (x) => x.roleId === input.roleId))) return tier('synonym', 28, t);
-  if ((t = find(related, (x) => containsPhrase(core, x.phrase) || x.roleId === input.roleId))) return tier('related', 22, t);
-  const titleWords = new Set(normalizeText(input.title).split(' '));
-  const words = u.words.filter((w) => titleWords.has(w));
+  if ((t = find(typed, (p) => p === core))) return tier('exact', 40, t);
+  if ((t = find(typed, (p) => containsPhrase(core, p)))) return tier('exact', 36, t);
+  if ((t = find(synonyms, (p) => p === core))) return tier('synonym', 34, t);
+  if ((t = find(synonyms, (p) => containsPhrase(core, p)))) return tier('synonym', 30, t);
+  if (input.roleId && (t = find([...typed, ...synonyms], (_, x) => x.roleId === input.roleId))) return tier('synonym', 28, t);
+  if ((t = find(related, (p, x) => containsPhrase(core, p) || x.roleId === input.roleId))) return tier('related', 22, t);
+  const titleWords = new Set(singular(normalizeText(input.title)).split(' '));
+  const words = u.words.filter((w) => titleWords.has(singular(w)));
   if (words.length === 0) return tier('none', 0);
   return { kind: 'partial', points: Math.max(6, Math.round((24 * words.length) / u.words.length)), words };
 }
@@ -161,9 +175,10 @@ function locationPart(location: JobLocation, target: LocationTarget): Part {
       return part(`In ${near?.place.label ?? 'a nearby city'} (${km} km)`, MAX.location * (1 - 0.4 * share));
     }
     case 'area':
-      return part(`In ${target.place.label}`, MAX.location * 0.75);
+      // The target is itself an area (state, country, region): being anywhere in it is a full match.
+      return part(`In ${target.place.label}`, MAX.location);
     case 'remote':
-      return part(`Remote, open to ${target.place.label}`, MAX.location * 0.6);
+      return part(`Remote, open to ${target.place.label}`, MAX.location * REMOTE_LOCATION_SHARE);
     default:
       return part(`Not in ${target.place.label}`, 0);
   }
@@ -173,8 +188,9 @@ export function ageLabel(days: number): string {
   if (days <= 0) return 'Posted today';
   if (days === 1) return 'Posted yesterday';
   if (days < 14) return `Posted ${days} days ago`;
-  if (days < 60) return `Posted ${Math.round(days / 7)} weeks ago`;
-  return `Posted ${Math.round(days / 30)} months ago`;
+  // Floored like the app's relative times, so the reasons never call a posting older than the card does.
+  if (days < 60) return `Posted ${Math.floor(days / 7)} weeks ago`;
+  return `Posted ${Math.floor(days / 30)} months ago`;
 }
 
 function matchedTerms(input: ScoreInput, u: Understanding, titleMatch?: string): string[] {

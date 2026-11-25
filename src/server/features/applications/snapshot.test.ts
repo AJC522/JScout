@@ -3,11 +3,11 @@ import { manualSnapshot, mergeSnapshot, salaryDisplay } from './snapshot';
 
 describe('salaryDisplay', () => {
   it('formats ranges, open ends, periods and currencies', () => {
-    expect(salaryDisplay({ min: 120_000, max: 150_000, currency: 'USD', period: 'year' })).toBe('$120K–$150K/yr');
-    expect(salaryDisplay({ min: 50_000, currency: 'EUR', period: 'year' })).toBe('From €50K/yr');
-    expect(salaryDisplay({ max: 45.5, currency: 'GBP', period: 'hour' })).toBe('Up to £45.5/hr');
-    expect(salaryDisplay({ min: 6000, max: 6000, period: 'month' })).toBe('6K/mo');
-    expect(salaryDisplay({ min: 100_000, currency: 'not-a-code' })).toBe('From 100K not-a-code');
+    expect(salaryDisplay({ min: 120_000, max: 150_000, currency: 'USD', period: 'year' })).toBe('$120k–$150k/yr');
+    expect(salaryDisplay({ min: 50_000, currency: 'EUR', period: 'year' })).toBe('From €50k/yr');
+    expect(salaryDisplay({ max: 45.5, currency: 'GBP', period: 'hour' })).toBe('Up to £45.50/hr');
+    expect(salaryDisplay({ min: 6000, max: 6000, period: 'month' })).toBe('6k/mo');
+    expect(salaryDisplay({ min: 100_000, currency: 'not-a-code' })).toBe('From 100k');
   });
 
   it('falls back to the source text and ignores unusable numbers', () => {

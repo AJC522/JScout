@@ -13,7 +13,7 @@ import { Badge, Button, Drawer, ErrorState, IconButton, Kbd, PageHeader, Select,
 import { useBootstrap } from '../../app/bootstrap';
 import { useServerEvent, useSyncState } from '../../app/events';
 import { cn } from '../../lib/cn';
-import { formatNumber, pluralize } from '../../lib/format';
+import { pluralize } from '../../lib/format';
 import { useDocumentTitle, useHotkey, useMediaQuery } from '../../lib/hooks';
 import { qk } from '../../lib/query';
 import { useMarkViewed as useMarkSavedSearchViewed } from '../saved/queries';
@@ -247,7 +247,7 @@ export function SearchPage() {
   const showDetailColumn = split && !blank;
   const showFiltersColumn = filtersInline && !blank;
   const indexLine = index
-    ? `${formatNumber(index.openJobs)} open jobs from ${pluralize(index.sources, 'source')}${index.companies ? ` and ${formatNumber(index.companies)} company boards` : ''}${syncing ? ' · updating…' : ''}`
+    ? `${index.openJobs > 0 ? `${pluralize(index.openJobs, 'open job')} at ${pluralize(index.companies, 'company', 'companies')} from ${pluralize(index.sources, 'source')}` : 'No jobs downloaded yet'}${syncing ? ' · updating…' : ''}`
     : undefined;
 
   const filtersPanel = <FiltersPanel query={query} facets={response?.facets} onChange={(next) => setQuery(next)} />;

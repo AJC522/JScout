@@ -220,4 +220,27 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX job_places_kind ON job_places (kind, country, admin1, city, job_rid);
   CREATE INDEX job_places_geo  ON job_places (lat, lon, kind, job_rid);
   `,
+  // 3 — unstemmed title index (search). jobs_fts stems with Porter, which merges different titles:
+  // "accountant" and "account executive" both index as "account", "operator" as "operations".
+  // Title searches must also match here, where words keep their spelling. Triggers keep it in step
+  // with jobs, so the job store does not have to know about it.
+  `
+  CREATE VIRTUAL TABLE jobs_title USING fts5 (
+    title,
+    content = '',
+    contentless_delete = 1,
+    tokenize = "unicode61 remove_diacritics 2 tokenchars '+#'"
+  );
+  INSERT INTO jobs_title (rowid, title) SELECT rid, title FROM jobs;
+  CREATE TRIGGER jobs_title_insert AFTER INSERT ON jobs BEGIN
+    INSERT INTO jobs_title (rowid, title) VALUES (new.rid, new.title);
+  END;
+  CREATE TRIGGER jobs_title_delete AFTER DELETE ON jobs BEGIN
+    DELETE FROM jobs_title WHERE rowid = old.rid;
+  END;
+  CREATE TRIGGER jobs_title_update AFTER UPDATE OF title ON jobs WHEN new.title IS NOT old.title BEGIN
+    DELETE FROM jobs_title WHERE rowid = old.rid;
+    INSERT INTO jobs_title (rowid, title) VALUES (new.rid, new.title);
+  END;
+  `,
 ];

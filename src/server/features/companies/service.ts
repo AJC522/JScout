@@ -150,6 +150,9 @@ export function createCompaniesService(ctx: AppContext, options: CompaniesOption
       if (!Array.isArray(seed)) return 0;
       const entries = seed as BoardInput[];
       const now = ctx.now().toISOString();
+      // Bundled boards start unfollowed: all of them together are ~38k postings and hundreds of MB,
+      // too much to download before the user has said what they want. Onboarding (or the Companies
+      // page) follows the industries they pick; the aggregator sources keep search useful meanwhile.
       return db.tx(() => {
         let inserted = 0;
         for (const entry of entries) {
@@ -157,7 +160,7 @@ export function createCompaniesService(ctx: AppContext, options: CompaniesOption
           if (!board) continue;
           inserted += db.run(
             `INSERT OR IGNORE INTO companies (id, name, ats, token, industry, origin, enabled, added_at)
-             VALUES (?, ?, ?, ?, ?, 'seed', 1, ?)`,
+             VALUES (?, ?, ?, ?, ?, 'seed', 0, ?)`,
             `${board.ats}:${board.token}`,
             board.name,
             board.ats,
@@ -302,9 +305,9 @@ export function createCompaniesService(ctx: AppContext, options: CompaniesOption
     },
 
     exportUser() {
-      // Boards the user added, plus bundled boards they switched off: both are choices worth keeping.
+      // Boards the user added, plus bundled boards they chose to follow (bundled ones start unfollowed).
       return db
-        .all<CompanyRow>(`SELECT * FROM companies WHERE origin = 'user' OR enabled = 0 ORDER BY name COLLATE NOCASE, id`)
+        .all<CompanyRow>(`SELECT * FROM companies WHERE origin = 'user' OR enabled = 1 ORDER BY name COLLATE NOCASE, id`)
         .map((r) => ({ name: r.name, ats: r.ats, token: r.token, ...(r.industry ? { industry: r.industry } : {}), enabled: r.enabled === 1 }));
     },
 

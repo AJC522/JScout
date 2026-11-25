@@ -59,7 +59,7 @@ export function DoneStep({ profile, onBack, onFinished }: DoneStepProps) {
   return (
     <StepLayout
       title="You’re all set"
-      description="JScout will now download jobs from its sources. The first sync takes a minute or two; results appear as they arrive."
+      description="JScout is downloading jobs from the job boards and the companies you picked. The first sync takes a minute or two; results appear as they arrive."
       onBack={onBack}
       primary={{ label: 'Start searching', onClick: () => void finish(), loading: starting }}
     >

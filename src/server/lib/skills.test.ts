@@ -141,6 +141,9 @@ describe('extractSkills: ranking and limits', () => {
     expect(extractSkills('See our EEO Policy and EEO is the Law poster.')).toEqual([]);
     expect(extractSkills('We offer a comprehensive total rewards package.')).toEqual([]);
     expect(extractSkills('You will design our Total Rewards programs.')).toEqual(['Total Rewards']);
+    // Privacy notices name "audio" recordings and transcription; they are not what the job needs.
+    expect(extractSkills('We collect these categories of personal information: Sensory Information (audio/video recording).')).toEqual([]);
+    expect(extractSkills('In select roles, the interviews will be recorded, transcribed and summarized by AI.')).toEqual([]);
   });
   it('handles empty and odd input', () => {
     expect(extractSkills('')).toEqual([]);

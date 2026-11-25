@@ -228,6 +228,9 @@ function mapJob(value: unknown): RawPosting {
   if (!url) throw new Error('no http(s) url');
 
   const level = asString(job.jobLevel);
+  // "Any" is the absence of a level. "Director" is not a level Jobicy can be trusted with: on live
+  // data two thirds of the postings it labels so are account executives, BDRs and the like.
+  const trustedLevel = level && !/^(?:any|director)$/i.test(level.trim()) ? level : undefined;
 
   return {
     externalId,
@@ -244,8 +247,7 @@ function mapJob(value: unknown): RawPosting {
     postedAt: asString(job.pubDate),
     salary: mapSalary(job),
     employmentType: compactStrings(listOf(job.jobType)).join(', ') || undefined,
-    // "Any" is the absence of a level.
-    seniority: level && level.toLowerCase() !== 'any' ? level : undefined,
+    seniority: trustedLevel,
     tags: compactStrings(listOf(job.jobIndustry)),
   };
 }

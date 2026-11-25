@@ -25,11 +25,17 @@ function whereClause(conds: SqlCond[]): { sql: string; params: SqlValue[] } {
 function textConds(plan: SearchPlan): SqlCond[] {
   const conds: SqlCond[] = [];
   if (plan.match) conds.push({ sql: 'j.rid IN (SELECT rowid FROM jobs_fts WHERE jobs_fts MATCH ?)', params: [plan.match] });
-  if (plan.exclude) conds.push(excludeCond(plan.exclude));
+  conds.push(...filterConds(plan));
   return conds;
 }
 
 const excludeCond = (expr: string): SqlCond => ({ sql: '+j.rid NOT IN (SELECT rowid FROM jobs_fts WHERE jobs_fts MATCH ?)', params: [expr] });
+const titleExactCond = (expr: string): SqlCond => ({ sql: '+j.rid IN (SELECT rowid FROM jobs_title WHERE jobs_title MATCH ?)', params: [expr] });
+
+/** Text conditions that only narrow the positive match: the unstemmed title check and exclusions. */
+function filterConds(plan: SearchPlan): SqlCond[] {
+  return [...(plan.titleExact ? [titleExactCond(plan.titleExact)] : []), ...(plan.exclude ? [excludeCond(plan.exclude)] : [])];
+}
 
 /** De-duplicated result count (distinct clusters) with every filter applied, plus optional extra conditions. */
 export function countClusters(db: Db, plan: SearchPlan, extra: SqlCond[] = []): number {
@@ -103,7 +109,7 @@ function decode(t: CandidateTuple): CandidateRow {
  * with its own filter removed from the same rows.
  */
 export function fetchCandidates(db: Db, plan: SearchPlan): CandidateRow[] {
-  const where = whereClause([...plan.base, ...(plan.exclude ? [excludeCond(plan.exclude)] : [])]);
+  const where = whereClause([...plan.base, ...filterConds(plan)]);
   const salary = plan.opts.sort === 'salary' ? `, ${SALARY_COLUMNS}` : '';
   const tuples = plan.match
     ? arrayStatement(

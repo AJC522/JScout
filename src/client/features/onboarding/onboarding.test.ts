@@ -1,23 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { aboutCount, industryLabel, preselectIndustries } from './industries';
+import { aboutCount, downloadEstimate, industryLabel, preselectIndustries } from './industries';
 import { STEPS, clampStep } from './steps';
 
 const ALL = ['ai', 'healthcare', 'biotech-pharma', 'education', 'fintech', 'developer-tools', 'nonprofit-research'];
 
 describe('preselectIndustries', () => {
-  it('selects everything when there are no titles or a title fits every industry', () => {
-    expect(preselectIndustries([], ALL)).toEqual(ALL);
-    expect(preselectIndustries(['Software Engineer'], ALL)).toEqual(ALL);
-    expect(preselectIndustries(['Registered Nurse', 'Product Manager'], ALL)).toEqual(ALL);
+  it('selects nothing when there are no titles or the titles fit every industry', () => {
+    expect(preselectIndustries([], ALL)).toEqual([]);
+    expect(preselectIndustries(['Software Engineer', 'Product Manager'], ALL)).toEqual([]);
   });
 
-  it('narrows to the industries every title clearly points at', () => {
+  it('selects the industries the titles clearly point at, in registry order', () => {
     expect(preselectIndustries(['Registered Nurse'], ALL)).toEqual(['healthcare', 'biotech-pharma']);
+    expect(preselectIndustries(['Registered Nurse', 'Product Manager'], ALL)).toEqual(['healthcare', 'biotech-pharma']);
     expect(preselectIndustries(['Math Teacher', 'Curriculum Designer'], ALL)).toEqual(['education']);
   });
 
-  it('falls back to everything when the matched industries are not in the registry', () => {
-    expect(preselectIndustries(['Game Designer'], ALL)).toEqual(ALL);
+  it('ignores matched industries that are not in the registry', () => {
+    expect(preselectIndustries(['Game Designer'], ALL)).toEqual([]);
   });
 });
 
@@ -26,6 +26,12 @@ describe('labels and counts', () => {
     expect(industryLabel('developer-tools')).toBe('Developer tools');
     expect(industryLabel('space_tech')).toBe('Space tech');
     expect(industryLabel('')).toBe('Other');
+  });
+
+  it('estimates what following companies downloads', () => {
+    expect(downloadEstimate(1)).toBe('about 100 jobs, 10 MB to download');
+    expect(downloadEstimate(26)).toBe('about 2,000 jobs, 30 MB to download');
+    expect(downloadEstimate(492)).toBe('about 38,400 jobs, 540 MB to download');
   });
 
   it('rounds large company counts', () => {

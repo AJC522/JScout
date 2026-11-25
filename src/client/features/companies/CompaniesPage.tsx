@@ -8,7 +8,7 @@ import { Button, Chip, EmptyState, ErrorState, IconButton, Input, PageHeader, Se
 import { cn } from '../../lib/cn';
 import { formatNumber, pluralize } from '../../lib/format';
 import { useDebouncedValue, useDocumentTitle, useNow } from '../../lib/hooks';
-import { industryLabel } from '../onboarding/industries';
+import { downloadEstimate, industryLabel } from '../onboarding/industries';
 import { AddCompanyDialog } from './AddCompanyDialog';
 import { CompanyRow, ROW_GRID } from './CompanyRow';
 import { ATS_KINDS, ATS_LABELS, COMPANIES_PAGE_SIZE, DEFAULT_FILTERS, hasFilters, pageRange, planBulk, toListQuery, type CompanyFilters, type FollowFilter } from './model';
@@ -79,7 +79,7 @@ export function CompaniesPage() {
         plan.scope === 'page'
           ? 'This changes the companies listed on this page.'
           : enabled
-            ? 'Their jobs will be fetched at the next sync.'
+            ? `Their jobs will be fetched at the next sync (${downloadEstimate(plan.count)}).`
             : 'Their jobs stop updating and will not be fetched again until you follow them.',
       confirmLabel: verb,
       tone: enabled ? undefined : 'danger',

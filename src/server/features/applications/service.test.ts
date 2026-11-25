@@ -113,7 +113,7 @@ describe('create', () => {
         remote: 'remote',
         locationText: 'Remote (US)',
         applyUrl: 'https://boards.example.com/jobs/1/apply',
-        salaryText: '$120K–$150K/yr',
+        salaryText: '$120k–$150k/yr',
         sourceName: 'Greenhouse',
         skills: ['TypeScript', 'React'],
         descriptionHtml: '<p>Build things.</p>',

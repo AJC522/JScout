@@ -11,7 +11,7 @@
 import type { ExpandedTitle, SearchQuery } from '../../shared/types';
 import { findRole, getRole, type RoleRef } from '../lib/titles';
 import { normalizeText, tokenize, uniqueFolded } from '../lib/text';
-import { type FtsColumn, ftsAnd, ftsOr, ftsScope, ftsString } from './fts';
+import { type FtsColumn, ftsAnd, ftsOr, ftsPrefixString, ftsScope, ftsString } from './fts';
 import { alternativeText, type ParsedQuery, parseQuery, type QueryAlternative } from './query-parse';
 
 /** A title phrase the engine searched for, for scoring postings' titles. */
@@ -36,6 +36,11 @@ export interface Understanding {
   excluded: string[];
   /** Positive FTS expression; undefined when q has no positive terms. */
   match?: string;
+  /**
+   * Title searches only: the same title expression for the unstemmed jobs_title index, which a
+   * posting must match as well, so Porter stemming cannot pair "accountant" with "Account Executive".
+   */
+  exact?: string;
   /** FTS expression matching any excluded term; undefined when nothing is excluded. */
   exclude?: string;
   targets: TitleTarget[];
@@ -98,6 +103,8 @@ function roleTitles(role: RoleRef): string[] {
 
 interface AltPlan {
   expr?: string;
+  /** Title alternatives: `expr` for the unstemmed title index. */
+  exact?: string;
   terms: string[];
   targets: TitleTarget[];
   role?: RoleRef;
@@ -129,13 +136,16 @@ function titleAlternative(alt: QueryAlternative, query: SearchQuery, related: Ti
       if (phrase && phrase !== corePhrase) targets.push({ phrase, display: t, via: 'synonym', roleId: role.id });
     }
   }
-  const wordExprs = (ws: string[]) => ws.map((w) => ftsOr(variantsOf(w).map(ftsString)));
-  const relatedExprs = related.map((t) => ftsString(t.phrase));
-  const expr = corePhrase
-    ? ftsAnd([...wordExprs(extras), ...alt.phrases.map(ftsString), ftsOr([...targets.map((t) => ftsString(t.phrase)), ...relatedExprs])])
-    : ftsOr([ftsAnd([...wordExprs(words), ...alt.phrases.map(ftsString)]), ...relatedExprs]);
+  const build = (str: (text: string) => string): string | undefined => {
+    const wordExprs = (ws: string[]) => ws.map((w) => ftsOr(variantsOf(w).map(str)));
+    const relatedExprs = related.map((t) => str(t.phrase));
+    const expr = corePhrase
+      ? ftsAnd([...wordExprs(extras), ...alt.phrases.map(str), ftsOr([...targets.map((t) => str(t.phrase)), ...relatedExprs])])
+      : ftsOr([ftsAnd([...wordExprs(words), ...alt.phrases.map(str)]), ...relatedExprs]);
+    return expr && ftsScope(['title'], expr);
+  };
   const terms = corePhrase ? [corePhrase, ...extras, ...alt.phrases] : [...words, ...alt.phrases];
-  return { expr: expr && ftsScope(['title'], expr), terms, targets, role };
+  return { expr: build(ftsString), exact: build(ftsPrefixString), terms, targets, role };
 }
 
 /** Search one alternative as keywords: every word and phrase, anywhere in the posting. */
@@ -170,9 +180,12 @@ export function understandQuery(query: SearchQuery): Understanding {
 
   const plans = parsed.alternatives.map((alt) => (titleOnly ? titleAlternative(alt, query, related.targets) : keywordAlternative(alt)));
   const alternativesExpr = plans.map((p) => p.expr);
+  const exactExpr = plans.map((p) => p.exact);
   // Title alternatives already OR the related titles in; keyword searches get them as one more alternative.
   if ((!titleOnly || plans.length === 0) && related.targets.length) {
-    alternativesExpr.push(ftsScope(['title'], ftsOr(related.targets.map((t) => ftsString(t.phrase)))!));
+    const relatedTitles = (str: (text: string) => string) => ftsScope(['title'], ftsOr(related.targets.map((t) => str(t.phrase)))!);
+    alternativesExpr.push(relatedTitles(ftsString));
+    exactExpr.push(relatedTitles(ftsPrefixString));
   }
 
   const scope: FtsColumn[] = titleOnly ? ['title'] : [];
@@ -202,6 +215,8 @@ export function understandQuery(query: SearchQuery): Understanding {
     terms: uniqueFolded(plans.flatMap((p) => p.terms)),
     excluded: uniqueFolded([...parsed.excluded, ...(query.excludeTerms ?? [])]),
     match: ftsOr(alternativesExpr),
+    // A keyword search may OR related titles with words anywhere, so only pure title searches are checked.
+    ...(titleOnly ? { exact: ftsOr(exactExpr) } : {}),
     exclude: ftsOr(exclusions),
     targets,
     words: [...new Set(parsed.alternatives.flatMap(altTokens))],
