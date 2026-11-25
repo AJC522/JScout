@@ -868,8 +868,19 @@ function expandAbbreviations(tokens: string[]): string[] | undefined {
 const OF_HEADS = new Set(['vp', 'svp', 'evp', 'head', 'director']);
 
 function mapRole(main: string[], all: string[], teams: string[][]): RoleRef | undefined {
-  const exact = lookupPhrase(all.join(' ')) ?? lookupPhrase(main.join(' '));
-  if (exact) return exact.role;
+  const whole = lookupPhrase(all.join(' '));
+  if (whole) return whole.role;
+  const exact = lookupPhrase(main.join(' '));
+  if (exact) {
+    // "Software Engineer, Backend" -> "backend software engineer" / "backend engineer", when that is a
+    // more specific role of the same family
+    const team = teams[0];
+    if (team && team.length <= 2) {
+      const spec = lookupPhrase([...team, ...main].join(' ')) ?? lookupPhrase([...team, main[main.length - 1]!].join(' '));
+      if (spec && spec.role.familyId === exact.role.familyId) return spec.role;
+    }
+    return exact.role;
+  }
   // "VP Sales", "VP, Sales", "Head, Design" -> "vp of sales"
   const lead = main[0]!;
   if (OF_HEADS.has(lead) && main[1] !== 'of') {
