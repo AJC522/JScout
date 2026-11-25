@@ -204,7 +204,7 @@ export function tailorResume(doc: ResumeDoc, detail: ResumeAnalysisDetail, job: 
   if (!doc.sections.has('summary')) {
     const strengths = uniqueFolded([
       ...detail.skillsMatched,
-      ...detail.keywords.filter((k) => k.kind !== 'skill' && k.present && k.weight >= 0.4).map((k) => k.term),
+      ...detail.keywords.filter((k) => (k.kind === 'phrase' || k.kind === 'name') && k.present && k.weight >= 0.4).map((k) => k.term),
     ]);
     const summary = draftSummary(detail.facts, me, strengths);
     if (summary) {

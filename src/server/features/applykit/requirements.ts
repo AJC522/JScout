@@ -31,9 +31,9 @@ const PREFERRED_ITEM =
   /\b(preferred|nice[- ]to[- ]have|(is |are |would be )?an? (big |huge |strong )?plus|bonus|ideally|desirable|desired|advantageous|helpful|not required|optional)\b/i;
 const DUTIES_HEADING =
   /\b(responsibilities|what you('|’)?ll (do|be doing|work on|own)|duties|the role|about the (role|job|team|position)|day[- ]to[- ]day|your impact|in this role|key tasks|what we offer|benefits|perks|about us|who we are)\b/i;
-/** Lines that read like a requirement when a posting has no requirements section. */
+/** Lines that read like a requirement ("3+ years…", "experience with…", "you have…"). */
 const REQUIREMENT_CUE =
-  /\b(required|requires?|must|you have|you bring|experience (with|in|of|building|leading|managing)|proficien\w*|knowledge of|familiar\w* with|expertise in|degree|bachelor\w*|master\w*|certif\w*|licen[cs]\w*|\d{1,2}\s*\+?\s*(?:(?:-|–|to)\s*\d{1,2}\s*)?years?)\b/i;
+  /\b(required|requires?|must|you have|you've|you bring|you are|you're|experience (with|in|of|building|leading|managing|using)|proficien\w*|knowledge of|familiar\w* with|expertise in|understanding of|ability to|able to|comfortable (with|in)|track record|background in|fluen\w*|skilled|hands-on|degree|bachelor\w*|master['’]?s|certif\w*|licen[cs]\w*|\d{1,2}\s*\+?\s*(?:(?:-|–|to)\s*\d{1,2}\s*\+?\s*)?years?)\b/i;
 /** Conditions of the job rather than things a résumé shows. */
 const NOT_RESUME_CONTENT =
   /\b(citizen\w*|permanent resident|authori[sz]ed to work|work authori[sz]ation|sponsor\w*|visa|on-?site|in[- ]office|remote|relocat\w*|travel\w*|shifts?|weekends?|overtime|on[- ]call|background check|drug (test|screen)\w*|lift(ing)? (up to )?\d+|pounds|lbs|salary|compensation|benefits|equal opportunity|accommodation|reliable transportation|be at least \d+|years of age|18 years)\b/i;
@@ -104,9 +104,15 @@ export function extractRequirements(descriptionText: string): Requirement[] {
   let mode: 'none' | 'duties' | RequirementLevel = 'none';
   let sawList = false;
 
-  const add = (target: typeof fromSections, raw: string, sectionLevel: RequirementLevel) => {
+  const add = (target: typeof fromSections, raw: string, sectionLevel: RequirementLevel, opts: { needsCue?: boolean } = {}) => {
     const text = clean(raw);
     if (!/\p{L}{2}/u.test(text) || NOT_RESUME_CONTENT.test(text) || BOILERPLATE.test(text)) return;
+    // Prose under a requirements heading mixes requirements with culture talk ("We value curiosity"):
+    // keep only what reads like a requirement. A list item is kept unless it is several sentences of neither.
+    // "We value curiosity" describes the company; "You're curious" describes the candidate.
+    const aboutUs = /^(we|we're|we’re|our|us|the (team|role|company)|this (role|team|position))\b/i.test(text);
+    const reads = REQUIREMENT_CUE.test(text) || extractSkills(text).length > 0 || (SOFT.test(text) && !aboutUs);
+    if (!reads && (opts.needsCue || splitSentences(text).length > 1)) return;
     target.push({ text, level: sectionLevel === 'preferred' || PREFERRED_ITEM.test(text) ? 'preferred' : 'required' });
   };
 
@@ -133,7 +139,7 @@ export function extractRequirements(descriptionText: string): Requirement[] {
           sawList = true;
           add(fromSections, line.slice(2), mode);
         } else {
-          for (const sentence of splitSentences(line)) add(fromSections, sentence, mode);
+          for (const sentence of splitSentences(line)) add(fromSections, sentence, mode, { needsCue: true });
         }
         continue;
       }

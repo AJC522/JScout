@@ -106,6 +106,32 @@ Preferred
     ]);
   });
 
+  it('keeps requirements but not culture talk from prose under a requirements heading', () => {
+    const reqs = extractRequirements(`Who you are
+
+We value curiosity and a calm approach to hard problems. You have shipped production services in TypeScript. Questions are welcome at every step.
+
+Minimum requirements
+
+- 2+ years of industry software engineering experience (does not include internships or co-ops)
+- Clear goals help everyone stay aligned. Kindness and candour go together here
+- Kafka`);
+    expect(reqs.map((r) => r.text)).toEqual([
+      'You have shipped production services in TypeScript',
+      '2+ years of industry software engineering experience (does not include internships or co-ops)',
+      'Kafka',
+    ]);
+    // The aside is not counted against the résumé.
+    const checked = reviewResume(
+      fromPastedPosting({ title: 'Engineer', description: `Requirements\n- ${reqs[1]!.text}` }),
+      parseResumeDoc(softwareResume, NOW),
+      profileOf(softwareProfile),
+      { source: 'saved' },
+    ).requirements[0]!;
+    expect(checked.missing).not.toContain('internships');
+    expect(checked.status).toBe('met');
+  });
+
   it('reads degree levels without mistaking codes and product names for degrees', () => {
     expect(degreeLevel('BS in Computer Science')).toBe(2);
     expect(degreeLevel('B.S., Computer Science')).toBe(2);

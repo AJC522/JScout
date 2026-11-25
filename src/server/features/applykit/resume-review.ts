@@ -67,7 +67,7 @@ const REQUIREMENT_FILLER = new Set(
     'other etc including such like ability able excellent good great solid deep advanced basic strong demonstrated proven ' +
     'track record knowledge understanding working skills skill degree bachelor bachelors master masters certification ' +
     'certifications certified certificate license licence licensed licensure active valid current minimum comparable relevant practical ' +
-    'professional combination area areas discipline closely preferably someone ideal candidate'
+    'professional combination area areas discipline closely preferably someone ideal candidate industry'
   ).split(' '),
 );
 const DEGREE_TOKEN = /^(bs|ba|ms|ma|bsc|msc|mba|phd|beng|meng|bsn|msn|mph|aa|as|aas)$/i;
@@ -151,8 +151,10 @@ function requirementTerms(req: Requirement, doc: ResumeDoc, facts: ResumeFacts):
     terms.push({ label: DEGREE_LABEL[level]!.replace(/^an? /, ''), key: '', weight: softened && !has ? 1 : 2, present: has });
     if (!has && softened) note = 'The posting accepts equivalent experience instead of the degree.';
   }
+  // "(does not include internships)" or "(e.g. Jira, Asana)": asides count only for the skills they name.
+  const content = req.text.replace(/\(([^()]*)\)/g, (_m, inner: string) => (extractSkills(inner).length > 0 && !/\b(not|excluding|except)\b/i.test(inner) ? ` ${inner} ` : ' '));
   const seen = new Set<string>();
-  for (const w of words(req.text)) {
+  for (const w of words(content)) {
     const acronym = /^\p{Lu}{2,}$/u.test(w.text);
     if ((!acronym && w.norm.length < 3) || /\d/.test(w.norm)) continue;
     if (STOPWORDS.has(w.norm) || GENERIC.has(w.norm) || REQUIREMENT_FILLER.has(w.norm)) continue;
@@ -527,7 +529,8 @@ export function analyzeResume(job: JobContext, doc: ResumeDoc, me: ProfileContex
   }
   warnings.push(...doc.analysis.warnings.filter((w) => !/experience section|jobs with date ranges/i.test(w)));
 
-  const strengths = uniqueFolded([...skillsMatched, ...others.filter((k) => k.present && k.weight >= 0.4).map((k) => k.term)]);
+  // What the résumé demonstrably shares with the posting: listed skills, then multi-word terms and names.
+  const strengths = uniqueFolded([...skillsMatched, ...others.filter((k) => k.present && k.weight >= 0.4 && k.kind !== 'word').map((k) => k.term)]);
   const recommendations = recommend({
     job,
     doc,
@@ -730,15 +733,18 @@ function recommend(input: RecommendInput): ResumeRecommendation[] {
   // Title.
   const title = input.title;
   if (title && (title.kind === 'related' || title.kind === 'partial' || title.kind === 'none' || title.kind === 'synonym')) {
-    const jobCore = analyzeTitle(job.title).core;
+    const jobInfo = analyzeTitle(job.title);
     const mineCore = analyzeTitle(title.title).core;
-    if (jobCore && jobCore !== mineCore) {
+    if (jobInfo.core && jobInfo.core !== mineCore) {
+      // A short role name makes a usable example; a long posting title ("…, Developer & End-user Platform") does not.
+      const role = jobInfo.role?.title ?? (jobInfo.core.split(' ').length <= 4 ? upperWords(jobInfo.core) : undefined);
+      const example = role && foldText(role) !== foldText(title.title) ? ` (for example “${role} with …”)` : '';
       out.push({
         id: 'title',
         priority: title.kind === 'none' ? 'medium' : 'low',
         area: 'title',
-        title: `Echo “${job.title}” in your summary if it fits`,
-        detail: `${title.detail} Keep your real job titles as they were, but if the work matches, use the posting's wording in a headline or summary line (for example “${upperWords(jobCore)} with …”).`,
+        title: `Echo the posting's job title in your summary if it fits`,
+        detail: `${title.detail} Keep your real job titles as they were, but if the work matches, use the posting's wording in a headline or summary line${example}.`,
       });
     }
   }
