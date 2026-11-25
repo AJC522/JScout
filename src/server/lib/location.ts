@@ -15,7 +15,9 @@ import {
   CITY_STATES,
   COMMON_WORD_CITIES,
   COUNTRY_SHORT,
+  DENY_KEYS,
   EXTRA_CITY_ALIASES,
+  EXTRA_COUNTRY_ALIASES,
   ISO_PREFERRED_CODES,
   LOWER_OK_SHORT_KEYS,
   STANDALONE_ADMIN1_COUNTRIES,
@@ -107,8 +109,9 @@ interface Index {
 
 let INDEX: Index | undefined;
 
-function addEntry(keys: Map<string, Entry>, key: string, field: keyof Entry, idx: number): void {
+function addEntry(keys: Map<string, Entry>, key: string, field: keyof Entry, idx: number, variants = true): void {
   if (!key) return;
+  if (variants && field !== 'c') for (const [re, rep] of KEY_VARIANTS) if (re.test(key)) addEntry(keys, key.replace(re, rep), field, idx, false);
   let e = keys.get(key);
   if (!e) {
     e = {};
@@ -146,6 +149,10 @@ function index(): Index {
     addEntry(keys, c.code.toLowerCase(), 'k', i);
     for (const al of c.aliases) addEntry(keys, placeKey(al), 'k', i);
   });
+  for (const [al, code] of Object.entries(EXTRA_COUNTRY_ALIASES)) {
+    const i = countryByCode.get(code);
+    if (i !== undefined) addEntry(keys, placeKey(al), 'k', i);
+  }
 
   const admin1: Admin1Rec[] = [];
   const admin1ById = new Map<string, number>();
@@ -202,6 +209,15 @@ function index(): Index {
     addEntry(keys, placeKey(r.name), 'r', i);
     for (const al of r.aliases) addEntry(keys, placeKey(al), 'r', i);
   });
+  for (const k of DENY_KEYS) {
+    const e = keys.get(k);
+    if (e) {
+      delete e.k;
+      delete e.a;
+      delete e.r;
+      if (!e.c) keys.delete(k);
+    }
+  }
 
   INDEX = {
     cities,
@@ -257,6 +273,8 @@ function lookup(text: string, mode: Mode): { key: string; e: Entry } | undefined
   if (LOWER_OK_SHORT_KEYS.has(key) && !(mode === Mode.Desc && key === 'us')) return { key, e };
   const letters = text.replace(/[^\p{L}]/gu, '');
   if (isAllUpper(letters)) return { key, e };
+  // AP-style state abbreviations: "Ga.", "Pa.", "Va.".
+  if (e.a && /^\p{Lu}\p{Ll}{1,3}\.$/u.test(text.trim())) return { key, e: { a: e.a } };
   // "Ufa", "Zug", "Rio": a capitalised three-letter word may be a city, never a code.
   if (compact.length === 3 && /^\p{Lu}\p{Ll}+$/u.test(letters) && e.c && !COMMON_WORD_CITIES.has(key)) {
     return { key, e: { c: e.c } };
@@ -407,7 +425,7 @@ const MARKERS = F_REMOTE | F_HYBRID | F_ONSITE | F_ANYWHERE;
 const TZ_ABBR = 'est|edt|pst|pdt|cst|cdt|mst|mdt|akst|hst|cet|cest|gmt|utc|bst|ist|aest|aedt|awst|eet|eest|wet|sgt|jst|kst|hkt|brt';
 
 const REMOTE_PHRASE =
-  /^(?:(?:fully|100%|100 %|completely|full[\s-]?time|permanently|primarily|mostly)\s+)?(?:remote(?:ly)?|remote[\s-]+(?:first|friendly|ok|only|eligible|job|jobs|position|work|working|role|opportunity|possible|available|option|based|anywhere\s+in\s+country)|wfh|work(?:ing)?\s+from\s+home|work\s+at\s+home|home[\s-]?office|home[\s-]?based|telecommut\w*|telework\w*|virtual|virtually|distributed|remote\s+work\s+from\s+home)(?:\s+(?:ok|only|possible|available|eligible|friendly|first))?$/;
+  /^(?:(?:fully|100%|100 %|completely|full[\s-]?time|permanently|primarily|mostly)\s+)?(?:remote(?:ly)?|remote[\s-]+(?:first|friendly|ok|only|eligible|job|jobs|position|work|working|role|opportunity|possible|available|option|based|anywhere\s+in\s+country)|wfh|work(?:ing)?\s+from\s+home|work\s+at\s+home|home[\s-]?office|home[\s-]?based|telecommut\w*|telework\w*|virtual|virtually|distributed|remote\s+work\s+from\s+home|(?:100%\s+)?remot[oa]|trabajo\s+remoto|teletrabajo|teletrabalho|trabalho\s+remoto|t[eé]l[eé]travail|a\s+distancia|[aà]\s+distance|fernarbeit|mobiles\s+arbeiten)(?:\s+(?:ok|only|possible|available|eligible|friendly|first))?$/;
 const HYBRID_PHRASE =
   /^(?:(?:flexible|flex)\s+)?hybrid(?:[\s-](?:remote|work|working|role|model|position|office|schedule|setup))?$|^(?:partially|partly|part[\s-]time|occasionally)\s+remote$|^remote[\s-]+hybrid$|^hybrid[\s-]+remote$/;
 const ONSITE_PHRASE = /^(?:on[\s-]?site|in[\s-]office|in[\s-]person|office[\s-]based|on[\s-]premises?|onsite\s+only|on[\s-]site\s+only|in[\s-]office\s+only)$/;
@@ -422,13 +440,13 @@ const NOISE_PHRASE = new RegExp(
   ].join('|'),
 );
 const TZ_PHRASE = new RegExp(
-  `^(?:(?:${TZ_ABBR})(?:\\s*[+±-]\\s*\\d+(?::\\d+)?)?(?:\\s*(?:time\\s*zones?|timezones?|hours|tz|time|overlap))?|(?:eastern|pacific|central|mountain|atlantic)\\s+(?:time(?:\\s*zones?)?|timezones?|standard\\s+time|hours)|(?:us|european|european\\s+union)\\s+time\\s*zones?|time\\s*zones?|timezones?|[+±-]?\\s*\\d+\\s*(?:hours?|hrs?)|utc\\s*[+±-]\\s*\\d+(?:\\s*(?:to|-)\\s*(?:utc)?\\s*[+±-]\\s*\\d+)?)$`,
+  `^(?:(?:${TZ_ABBR})(?:\\s*(?:\\+\\s*/\\s*-|[+±-])\\s*\\d+(?::\\d+)?)?(?:\\s*(?:time\\s*zones?|timezones?|hours?|hrs?|h|tz|time|overlap))?|(?:eastern|pacific|central|mountain|atlantic)\\s+(?:time(?:\\s*zones?)?|timezones?|standard\\s+time|hours)|(?:us|european|european\\s+union)\\s+time\\s*zones?|time\\s*zones?|timezones?|[+±-]?\\s*\\d+\\s*(?:hours?|hrs?)|utc\\s*[+±-]\\s*\\d+(?:\\s*(?:to|-)\\s*(?:utc)?\\s*[+±-]\\s*\\d+)?)$`,
 );
 
 /** Leading decorations: [regex, flag]. Each must leave something behind. */
 const LEAD: Array<[RegExp, number]> = [
   [/^(?:(?:fully|100%|completely|partially)\s+)?remote(?:[\s-](?:first|friendly|ok|only))?(?:\s*[-–—:,|]\s*|\s+(?:in|within|from|across|based\s+in|only\s+in)\s+(?:the\s+)?|\s+)/i, F_REMOTE],
-  [/^(?:wfh|work(?:ing)?\s+from\s+home|home[\s-]?office|home[\s-]?based|telecommute|telework(?:ing)?|distributed|virtual)(?:\s*[-–—:,|]\s*|\s+(?:in|within|from)\s+(?:the\s+)?|\s+)/i, F_REMOTE],
+  [/^(?:wfh|work(?:ing)?\s+from\s+home|home[\s-]?office|home[\s-]?based|telecommute|telework(?:ing)?|distributed|virtual|remot[oa]|teletrabajo|t[eé]l[eé]travail)(?:\s*[-–—:,|]\s*|\s+(?:in|within|from|en|desde)\s+(?:the\s+)?|\s+)/i, F_REMOTE],
   [/^(?:hybrid(?:[\s-]remote)?)(?:\s*[-–—:,|]\s*|\s+(?:in|within|from|near|at)\s+(?:the\s+)?|\s+)/i, F_HYBRID],
   [/^(?:on[\s-]?site|in[\s-]office|in[\s-]person|office[\s-]based)(?:\s*[-–—:,|]\s*|\s+(?:in|at|near)\s+(?:the\s+)?|\s+)/i, F_ONSITE],
   [/^(?:work\s+from\s+)?anywhere\s+(?:in|within|across)\s+(?:the\s+)?/i, F_REMOTE],
@@ -443,13 +461,16 @@ const LEAD: Array<[RegExp, number]> = [
 
 /** Trailing decorations: [regex, flag]. Must not match at index 0. */
 const TRAIL: Array<[RegExp, number]> = [
-  [/(?:\s*[-–—:,|(]\s*|\s+)(?:fully\s+)?remote(?:[\s-](?:ok|only|first|friendly|eligible|possible))?\)?$/i, F_REMOTE],
+  [/(?:\s*[-–—:,|(]\s*|\s+)(?:fully\s+)?(?:remote|remot[oa]|t[eé]l[eé]travail|teletrabajo)(?:[\s-](?:ok|only|first|friendly|eligible|possible))?\)?$/i, F_REMOTE],
   [/(?:\s*[-–—:,|]\s*|\s+)(?:or|and|\+|&)\s+remote$/i, F_REMOTE],
   [/(?:\s*[-–—:,|(]\s*|\s+)hybrid\)?$/i, F_HYBRID],
   [/(?:\s*[-–—:,|(]\s*|\s+)(?:on[\s-]?site|in[\s-]office)\)?$/i, F_ONSITE],
-  [/[\s-]+(?:only|exclusively)$/i, 0],
+  [/[\s-]+(?:only|exclusively|preferred|strongly\s+preferred|a\s+plus|ideally)$/i, 0],
+  // Postal codes: "CA 94105", "London EC1V 2NX", "Toronto M5V 2T6", "10115".
+  [/\s+(?:\d{4,6}(?:-\d{4})?|[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]\d[A-Z]\s?\d[A-Z]\d)$/, 0],
   [/\s+(?:locations?|offices?|hq|headquarters|head\s+office|campus|hub|site|branch|centre|center)$/i, 0],
-  [/\s+(?:(?:metro(?:politan)?\s+)?area|metro(?:politan)?|metroplex|region|vicinity|(?:and\s+)?surrounding\s+areas?|area\s+only)$/i, 0],
+  [/\s+(?:area|region|vicinity|(?:and\s+)?surrounding\s+areas?|area\s+only)$/i, 0],
+  [/\s+(?:metro(?:politan)?|metroplex)$/i, 0],
   [/[\s-]+based$/i, 0],
   [/\s+state$/i, F_WANT_ADMIN],
   [/\s+(?:province|prefecture|shi|municipality|governorate|oblast|voivodeship)$/i, F_WANT_ADMIN],
@@ -548,6 +569,8 @@ function makeAtoms(raw: string, sep: string, mode: Mode, depth = 0): Atom[] {
   if (!cur) return [markerAtom(flags, sep)];
   // Function words ("in", "or", "of") are never places; their capitalised forms ("IN", "OR") were looked up above.
   if (/^(?:of|the|and|or|in|at|on|to|by|for|with|near|from)$/i.test(cur)) return [markerAtom(flags | F_NOISE, sep)];
+  // Street addresses, suites, employment types, exclusions ("excluding California"), stray symbols.
+  if (ADDRESS_NOISE.test(cur) || EXCLUSION.test(cur) || (cur.match(/\p{L}/gu)?.length ?? 0) < 2) return [markerAtom(flags | F_NOISE, sep)];
 
   // "Austin TX", "London UK", "Berlin Germany": a qualifier fused onto the name.
   const split = splitFusedQualifier(cur, mode);
@@ -569,8 +592,8 @@ function makeAtoms(raw: string, sep: string, mode: Mode, depth = 0): Atom[] {
     }
   }
 
-  // Free text ("3 days/week in Chicago"): pick out capitalised place names.
-  if (cur.includes(' ')) {
+  // Free text ("3 days/week in Chicago"): pick out capitalised place names (source text only).
+  if (cur.includes(' ') && mode !== Mode.Relaxed) {
     const found = scanPlaces(cur, mode);
     if (found.length) {
       found[0]!.flags |= flags;
@@ -578,8 +601,13 @@ function makeAtoms(raw: string, sep: string, mode: Mode, depth = 0): Atom[] {
       return found;
     }
   }
+  // Place names are capitalised: a lower-case phrase in source text is commentary ("must overlap with EST").
+  if (mode !== Mode.Relaxed && /^\p{Ll}/u.test(cur) && cur.includes(' ')) return [markerAtom(flags | F_NOISE, sep)];
   return [{ text: cur, key: placeKey(cur), sep, flags }];
 }
+
+const ADDRESS_NOISE =
+  /^(?:\d+[a-z]?\s+(?:[\p{L}.'-]+\s+){0,4}(?:st|street|ave|avenue|rd|road|blvd|boulevard|suite|ste|floor|fl|way|dr|drive|lane|ln|plaza|square|sq|place|pl|court|ct|parkway|pkwy|hwy|highway|strasse|straße|str)\b.*|(?:suite|ste|floor|fl|unit|building|bldg|room|po box)\s*#?\s*\w+|full[\s-]?time|part[\s-]?time|contract(?:or)?|permanent|temporary|temp|internship|freelance|seasonal)$/iu;
 
 function splitFusedQualifier(text: string, mode: Mode): [{ text: string; key: string; e: Entry }, { text: string; key: string; e: Entry }] | undefined {
   const words = text.split(' ');
@@ -658,9 +686,11 @@ interface Item {
 }
 
 /** Priority of `e` as a qualifier of city row `row`: 0 US state, 1 CA province, 2 country, 3 other admin1; -1 none. */
-function qualPri(e: Entry, row: CityRow): number {
+function qualPri(e: Entry, row: CityRow, rowIdx = -1): number {
   const ix = index();
   let best = -1;
+  // "Washington, DC Metro Area", "New York, NYC": the next atom names the same city.
+  if (rowIdx >= 0 && e.c?.[0] === rowIdx && !e.a && !e.k) best = 2;
   for (const ai of e.q ?? []) {
     const a = ix.admin1[ai]!;
     if (a.country === row[3] && a.code === row[2]) best = 3;
@@ -725,7 +755,7 @@ function interpretHier(atoms: Atom[], i: number, mode: Mode): Hier | undefined {
           }
           break;
         }
-        const p = qualPri(q.e, r);
+        const p = qualPri(q.e, r, row);
         if (p < 0) break;
         if (matched === 0) pri = p;
         matched++;
@@ -752,7 +782,9 @@ function interpretHier(atoms: Atom[], i: number, mode: Mode): Hier | undefined {
   const nameLike = a.flags & F_NOISE ? /^\p{Lu}/u.test(a.text) : isProperName(a.text, mode) && !(a.flags & F_SCAN);
   // "London, Berlin" is two cities, not a London in the state of Berlin (US/CA/AU state names excepted: "Paris, Ontario").
   const listOfCities = Boolean(e?.c && q.e?.c && !(q.e.a ?? []).some((ai) => ADMIN1_BEATS_CITY_COUNTRIES.has(ix.admin1[ai]!.country)) && !q.e.k);
-  if ((!e || (e.c && !e.k && !e.r && !e.a)) && a.text && nameLike && !listOfCities && q.e && (q.e.a || q.e.k)) {
+  // A US/CA/AU state name is never someone's locality ("California, Washington" is a list); "Berlin, NH" is.
+  const stateName = (e?.a ?? []).some((ai) => ADMIN1_BEATS_CITY_COUNTRIES.has(ix.admin1[ai]!.country));
+  if ((!e || (!e.k && !e.r && e.c && !stateName) || (!e.k && !e.r && !e.a && e.c)) && a.text && nameLike && !listOfCities && q.e && (q.e.a || q.e.k)) {
     const opts: Array<{ kind: 'a' | 'k'; i: number; country: string; pri: number }> = [];
     for (const ai of q.e.a ?? []) {
       const ad = ix.admin1[ai]!;
@@ -951,13 +983,13 @@ function cleanRaw(s: string): string {
     .replace(/&nbsp;/g, ' ')
     .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200B}-\u{200D}\u{2060}]/gu, ' ')
-    .replace(/\s*\(?\s*\+\s*\d+\s*(?:more|others?|locations?)?\s*\)?\s*$/i, '')
+    .replace(/(?:^|\s)\(?\+\s*\d+\s*(?:more|others?|locations?)?\s*\)?\s*$/i, '')
     .replace(/\s*,?\s*(?:and|&)\s+\d+\s+(?:more|others?)(?:\s+(?:locations?|cities|offices))?\s*$/i, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-const STRONG_SEP = /\s*(?:[;|•·\n\t]|\s+(?:or|Or|and|And|AND)\s+|(?<!,)\s+OR\s+|\s+&\s+|\s+\+\s+|\s*\/\s*)\s*/g;
+const STRONG_SEP = /\s*(?:[;|•·\n\t]|\s+(?:or|Or|and|And|AND)\s+|(?<!,)\s+OR\s+|\s+&\s+|\s+\+\s+|(?<!\+\s*)\/(?!\s*-))\s*/g;
 
 /** Split on list separators at bracket depth 0, re-joining names that contain one ("Trinidad and Tobago"). */
 function splitStrong(s: string): string[] {
@@ -992,8 +1024,12 @@ interface PieceOut {
   flags: number;
 }
 
+const EXCLUSION = /\b(?:except|excluding|excluded|exclude|excl|not\s+(?:in|available|eligible|open|including)|outside(?:\s+of)?|ineligible|no\s+(?:candidates|applicants))\b/i;
+
 function parsePiece(text: string, ctx: Ctx | undefined, single: boolean, mode: Mode, depth: number): PieceOut {
   const parens: string[] = [];
+  // A name that contains brackets: "Frankfurt (Oder)", "Falkland Islands (Malvinas)".
+  if (/[([]/.test(text) && keyExists(text)) text = text.replace(/[()[\]]/g, ' ');
   let outer = text.replace(/\(([^()]*)\)|\[([^[\]]*)\]/g, (_m, p1: string | undefined, p2: string | undefined) => {
     parens.push(p1 ?? p2 ?? '');
     return ' ';
@@ -1025,7 +1061,18 @@ function parsePiece(text: string, ctx: Ctx | undefined, single: boolean, mode: M
     } else i++;
   }
   segs.forEach((seg, i) => pushAtoms(seg, i === 0 ? '' : segSeps[i - 1]!.includes(',') ? ',' : '-'));
-  const items = chainParse(atoms, ctx, single && atoms.length === 1 && parens.length === 0, mode);
+  // A bracketed country/state right after a name qualifies it: "Georgia (US)", "Cambridge (UK)".
+  for (let i = 0; i < parens.length && atoms.length; i++) {
+    const p = parens[i]!;
+    if (phraseFlags(normLow(p)) || EXCLUSION.test(p)) continue;
+    const pa = makeAtoms(p, ',', mode);
+    const q = pa[0];
+    if (pa.length === 1 && q?.e && (q.e.k || q.e.a) && !q.e.r && !q.e.c && q.flags === 0) {
+      atoms.push(q);
+      parens.splice(i--, 1);
+    }
+  }
+  const items = chainParse(atoms, ctx, single && atoms.length === 1 && parens.every((p) => phraseFlags(normLow(p)) !== 0), mode);
   const outerResolved = items.some((it) => it.place.kind !== 'unknown');
   for (const p of parens) {
     const low = normLow(p);
@@ -1034,9 +1081,16 @@ function parsePiece(text: string, ctx: Ctx | undefined, single: boolean, mode: M
       flags |= pf & (MARKERS | F_NOISE | F_TZ);
       continue;
     }
-    if (depth > 1) continue;
+    if (depth > 1 || EXCLUSION.test(p)) continue;
     const sub = parsePieces(p, ctx, false, mode, depth + 1);
     flags |= sub.flags & MARKERS;
+    // "Japan (Tokyo)": a city inside the single country before it.
+    const only = items.length === 1 ? items[0] : undefined;
+    const city = sub.items.find((it) => it.place.kind === 'city');
+    if (only && only.place.kind === 'country' && !only.place.city && city && city.place.country === only.place.country) {
+      items[0] = city;
+      continue;
+    }
     // After a resolved place, a bracket only adds areas ("Austin (US)"), never neighbourhoods ("San Francisco (SoMa)").
     for (const it of sub.items) if (it.place.kind !== 'unknown' && !(outerResolved && it.place.kind === 'city')) items.push(it);
   }
@@ -1254,6 +1308,13 @@ function placeIdentity(p: Place): string {
   return `${p.kind}|${p.country ?? ''}|${p.admin1 ?? ''}|${p.city ?? ''}|${p.region ?? ''}|${p.kind === 'unknown' ? normLow(p.raw) : ''}`;
 }
 
+/** Parsed strings are cached: hand out copies so callers may mutate what they get. */
+function clonePlace(p: Place): Place {
+  const c = { ...p };
+  if (p.countries) c.countries = [...p.countries];
+  return c;
+}
+
 function listLabel(labels: string[], max = 3): string {
   const uniq = [...new Set(labels)];
   if (uniq.length <= max) return uniq.join(', ');
@@ -1350,7 +1411,7 @@ export function parseJobLocation(input: LocationInput): ParsedLocation {
     const id = placeIdentity(p);
     if (seen.has(id)) continue;
     seen.add(id);
-    places.push(p);
+    places.push(clonePlace(p));
   }
   if (mode === 'remote' && !anywhere && scope.size === 0 && input.descriptionText) {
     const d = scopeFromDescription(input.descriptionText);

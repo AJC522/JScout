@@ -71,6 +71,7 @@ export const hnHiringSource: JobSource = {
   },
 
   async fetchFeed(ctx): Promise<FeedResult> {
+    if (ctx.signal?.aborted) throw new SourceError('aborted', 'Hacker News sync was cancelled');
     const threads = await findThreads(ctx);
     const current = threads[0];
     if (!current) throw new SourceError('parse', 'Hacker News: no "Ask HN: Who is hiring?" thread found');

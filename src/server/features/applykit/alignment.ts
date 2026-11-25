@@ -9,7 +9,7 @@ import { formatSalary } from '../../lib/salary';
 import { type TitleInfo, analyzeTitle } from '../../lib/titles';
 import { uniqueFolded } from '../../lib/text';
 import type { JobContext } from './context';
-import { STOPWORDS } from './text';
+import { STOPWORDS, formatMoney } from './text';
 
 export interface Scored<T> {
   value: T;
@@ -144,15 +144,6 @@ export function locationAlignment(job: JobContext, profile: Profile): Scored<Fit
   return result(false, `${where} is outside your preferred locations (${targets.map((p) => p.label).join(', ')}).`);
 }
 
-function money(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
-  } catch {
-    // Not a currency code Intl knows; show the plain number with the code.
-    return `${amount.toLocaleString('en-US')} ${currency}`;
-  }
-}
-
 export function salaryAlignment(salary: Salary | undefined, profile: Profile): Scored<FitAnalysis['salaryAlignment']> {
   const result = (ok: boolean | null, detail: string) => ({
     value: { ok, detail },
@@ -167,7 +158,7 @@ export function salaryAlignment(salary: Salary | undefined, profile: Profile): S
   }
   const top = salary.annualMax ?? salary.annualMin;
   if (top === undefined) return result(null, `Pay is listed as ${listed}, which couldn't be compared to a yearly minimum.`);
-  const min = money(salaryMin, salaryCurrency);
+  const min = formatMoney(salaryMin, salaryCurrency);
   if (top < salaryMin) return result(false, `Pays ${listed}, below your minimum of ${min}.`);
   return (salary.annualMin ?? top) >= salaryMin
     ? result(true, `Pays ${listed}, at or above your minimum of ${min}.`)

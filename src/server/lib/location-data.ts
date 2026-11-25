@@ -61,6 +61,7 @@ export const WHOLE_STRING_CITIES: ReadonlySet<string> = new Set(['reading', 'bat
 /** Extra city aliases (lower case) -> [city, admin1, country], for common spellings the gazetteer lacks. */
 export const EXTRA_CITY_ALIASES: ReadonlyArray<readonly [string, string, string, string]> = [
   ['cluj', 'Cluj-Napoca', '13', 'RO'],
+  ['aarhus', 'Århus', '18', 'DK'],
   ['san fransisco', 'San Francisco', 'CA', 'US'],
   ['san fransisco bay area', 'San Francisco', 'CA', 'US'],
   ['beijing shi', 'Beijing', '22', 'CN'],
@@ -118,3 +119,23 @@ export const UK_COUNTIES: Readonly<Record<string, string>> = Object.fromEntries(
   ...['county antrim', 'antrim', 'county down', 'county armagh', 'county tyrone', 'county londonderry', 'county fermanagh']
     .map((k) => [k, 'NIR']),
 ]);
+
+/** Folded alias keys that are ordinary English words and must not resolve ("Ísland" folds to "island"). */
+export const DENY_KEYS: ReadonlySet<string> = new Set(['island']);
+
+/** Extra country aliases (lower-case keys) -> ISO code. */
+export const EXTRA_COUNTRY_ALIASES: Readonly<Record<string, string>> = {
+  ksa: 'SA',
+  'kingdom of saudi arabia': 'SA',
+  'st lucia': 'LC',
+  'st kitts and nevis': 'KN',
+  'st kitts': 'KN',
+  'st vincent and the grenadines': 'VC',
+  'the gambia': 'GM',
+  'the bahamas': 'BS',
+  'mainland china': 'CN',
+  deutschlandweit: 'DE',
+  'ganz deutschland': 'DE',
+  osterreichweit: 'AT',
+  schweizweit: 'CH',
+};

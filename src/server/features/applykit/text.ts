@@ -98,9 +98,12 @@ export function splitSentences(text: string): string[] {
     .filter(Boolean);
 }
 
-/** "a"/"an" + noun phrase, by the first letter (good enough for job titles). */
+/** "a"/"an" + noun phrase; acronyms go by how their first letter is spoken ("an MBA", "a BSN"). */
 export function withArticle(phrase: string): string {
-  return `${/^[aeiou]/i.test(phrase) ? 'an' : 'a'} ${phrase}`;
+  const first = phrase.split(/\s/)[0] ?? '';
+  const acronym = first.length > 1 && /^[A-Z]+$/.test(first);
+  const vowelSound = acronym ? /^[AEFHILMNORSX]/.test(first) : /^[aeiou]/i.test(phrase);
+  return `${vowelSound ? 'an' : 'a'} ${phrase}`;
 }
 
 /** Lower-case the first letter unless the first word looks like an acronym or proper name ("AWS", "iOS"). */
@@ -124,6 +127,30 @@ export function asSentence(s: string): string {
 export function listPhrase(items: string[]): string {
   if (items.length <= 1) return items[0] ?? '';
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/** Trim, drop a leading bullet and trailing punctuation. */
+export function stripEnd(s: string): string {
+  return s.trim().replace(/^[-•*]\s*/, '').replace(/[.;,\s]+$/, '');
+}
+
+/** "immediately" / "from 1 March" / "within 2 weeks"; undefined when the text doesn't fit a sentence. */
+export function startPhrase(raw: string): string | undefined {
+  const t = stripEnd(raw);
+  if (/^(immediately|now|right away)$/i.test(t)) return t.toLowerCase();
+  if (/^(in|within|after|from)\s/i.test(t)) return lowerFirst(t);
+  if (/^\d+\s*(day|week|month)s?$/i.test(t)) return `within ${t}`;
+  if (/^(\d{4}-\d{2}|\d{1,2}[/.]\d{1,2}|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b)/i.test(t)) return `from ${t}`;
+  return undefined;
+}
+
+/** "$150,000" style amount; falls back to "150,000 XYZ" for codes Intl doesn't know. */
+export function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
+  } catch {
+    return `${amount.toLocaleString('en-US')} ${currency}`;
+  }
 }
 
 /** Function words ignored when extracting or comparing terms. */
