@@ -61,6 +61,8 @@ export const WHOLE_STRING_CITIES: ReadonlySet<string> = new Set(['reading', 'bat
 /** Extra city aliases (lower case) -> [city, admin1, country], for common spellings the gazetteer lacks. */
 export const EXTRA_CITY_ALIASES: ReadonlyArray<readonly [string, string, string, string]> = [
   ['cluj', 'Cluj-Napoca', '13', 'RO'],
+  ['san fransisco', 'San Francisco', 'CA', 'US'],
+  ['san fransisco bay area', 'San Francisco', 'CA', 'US'],
   ['beijing shi', 'Beijing', '22', 'CN'],
   ['shanghai shi', 'Shanghai', '23', 'CN'],
   ['new york city metro', 'New York City', 'NY', 'US'],
@@ -93,3 +95,26 @@ export const ADMIN1_CODE_LABEL_COUNTRIES: ReadonlySet<string> = new Set(['US', '
 
 /** Lower-case short keys (3 letters or fewer) accepted in any letter case. */
 export const LOWER_OK_SHORT_KEYS: ReadonlySet<string> = new Set(['usa', 'uk', 'uae', 'us', 'eu', 'eea', 'nyc', 'sf', 'dc']);
+
+/**
+ * UK counties (and their usual abbreviations) -> GB admin1 code. Used only to qualify a city
+ * ("Reading, Berkshire"); alone they do not resolve.
+ */
+export const UK_COUNTIES: Readonly<Record<string, string>> = Object.fromEntries([
+  ...[
+    'bedfordshire', 'beds', 'berkshire', 'berks', 'buckinghamshire', 'bucks', 'cambridgeshire', 'cambs', 'cheshire',
+    'cornwall', 'cumbria', 'derbyshire', 'devon', 'dorset', 'county durham', 'east sussex', 'essex', 'gloucestershire',
+    'glos', 'hampshire', 'hants', 'herefordshire', 'hertfordshire', 'herts', 'isle of wight', 'kent', 'lancashire',
+    'lancs', 'leicestershire', 'leics', 'lincolnshire', 'lincs', 'merseyside', 'middlesex', 'norfolk',
+    'northamptonshire', 'northants', 'northumberland', 'north yorkshire', 'nottinghamshire', 'notts', 'oxfordshire',
+    'oxon', 'rutland', 'shropshire', 'somerset', 'south yorkshire', 'staffordshire', 'staffs', 'suffolk', 'surrey',
+    'tyne and wear', 'warwickshire', 'west sussex', 'west yorkshire', 'wiltshire', 'wilts', 'worcestershire', 'worcs',
+    'east riding of yorkshire', 'yorkshire', 'greater manchester', 'greater london', 'west midlands',
+  ].map((k) => [k, 'ENG']),
+  ...['lanarkshire', 'fife', 'aberdeenshire', 'lothian', 'midlothian', 'west lothian', 'renfrewshire', 'ayrshire', 'highland', 'perthshire']
+    .map((k) => [k, 'SCT']),
+  ...['glamorgan', 'south glamorgan', 'west glamorgan', 'gwent', 'gwynedd', 'powys', 'carmarthenshire', 'pembrokeshire', 'flintshire']
+    .map((k) => [k, 'WLS']),
+  ...['county antrim', 'antrim', 'county down', 'county armagh', 'county tyrone', 'county londonderry', 'county fermanagh']
+    .map((k) => [k, 'NIR']),
+]);
