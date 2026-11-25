@@ -301,3 +301,17 @@ export function scaffoldAnswer(input: ScaffoldInput): string {
       ].join('\n\n');
   }
 }
+
+/**
+ * The bank-mode draft: the best saved answer adapted to this job when it is a close match,
+ * otherwise an outline for the question type.
+ */
+export function bankAnswer(
+  ranked: RankedAnswer[],
+  input: ScaffoldInput,
+  otherJobs: () => Array<{ company: string; title: string }>,
+): string {
+  const best = ranked[0];
+  if (best && best.score >= REUSE_MIN) return adaptAnswer(best.answer.answer, input.job, otherJobs());
+  return scaffoldAnswer(input);
+}

@@ -13,8 +13,8 @@ const CLEARANCE =
   /\b(security clearance|secret clearance|top secret|ts\/sci|active clearance|clearance (is )?required|obtain (and maintain )?(a )?clearance|polygraph)\b/i;
 
 const CITIZENSHIP = [
-  /\b(must be|must hold|requires?|required|only)\b[^.]{0,40}\bcitizen(s|ship)?\b/i,
-  /\bcitizen(s|ship)?\b[^.]{0,30}\b(is |are )?(required|only|a requirement|mandatory)\b/i,
+  /\b(must be|must hold|requires?|required|only)\b.{0,40}\bcitizen(s|ship)?\b/i,
+  /\bcitizen(s|ship)?\b.{0,30}\b(is |are )?(required|only|a requirement|mandatory)\b/i,
 ];
 /** Country mentions, short forms case-sensitive so the pronoun "us" is not read as the US. */
 const COUNTRY_SHORT = /\b(U\.?S\.?A?|U\.?K|EU)\b/g;
@@ -40,7 +40,7 @@ const NO_SPONSORSHIP = [
 ];
 
 const ONSITE_ONLY = [
-  /\b(on-?site|in[- ]office|in[- ]person)\b[^.]{0,30}\b(only|required|mandatory|5 days|five days|full[- ]time)\b/i,
+  /\b(on-?site|in[- ]office|in[- ]person)\b.{0,30}\b(only|required|mandatory|5 days|five days|full[- ]time)\b/i,
   /\b(this is )?not a remote (role|position|job)\b/i,
   /\b(no remote|remote work is not (available|possible|offered))\b/i,
 ];
@@ -108,7 +108,9 @@ export function detectFlags(job: JobContext, profile: ProfileContext): string[] 
     const required = countries(citizenship);
     const held = countries(work.workAuthorization);
     const satisfied =
-      /citizen/i.test(work.workAuthorization) && (required.size === 0 || [...required].some((c) => held.has(c)));
+      (/citizen/i.test(work.workAuthorization) && (required.size === 0 || [...required].some((c) => held.has(c)))) ||
+      // "citizen or permanent resident" is met by a permanent resident.
+      (/permanent resident/i.test(citizenship) && /permanent resident/i.test(work.workAuthorization));
     if (!satisfied) flags.push(`Citizenship requirement: ${quote(citizenship)}`);
   }
 

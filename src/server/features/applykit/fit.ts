@@ -117,7 +117,11 @@ function suggestions(
   }
 
   const opening = stemmedText(openingText(job.descriptionText));
-  const lead = keywords.find((k) => k.present && containsPhrase(opening, k.key));
+  // Title words ("backend engineer") are in every opening; lead with what the work is about.
+  const titleWords = new Set(phraseKey(job.title).split(' '));
+  const lead = keywords.find(
+    (k) => k.present && containsPhrase(opening, k.key) && !k.key.split(' ').every((t) => titleWords.has(t)),
+  );
   if (lead) out.push(`Lead with your ${lead.term} experience; the posting mentions ${lead.term} in its opening paragraph.`);
 
   return out.slice(0, MAX_SUGGESTIONS);

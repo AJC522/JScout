@@ -320,7 +320,7 @@ function cityDisplayName(city: string, country: string | undefined): string {
   return city === 'New York City' && country === 'US' ? 'New York' : city;
 }
 
-function cityStyleLabel(city: string, admin1: string | undefined, country: string | undefined, admin1Name?: string): string {
+function cityStyleLabel(city: string, admin1: string | undefined, country: string | undefined): string {
   const name = cityDisplayName(city, country);
   if (!country) return name;
   if (CITY_STATES.has(country)) return name;
@@ -328,7 +328,6 @@ function cityStyleLabel(city: string, admin1: string | undefined, country: strin
     const abbr = admin1Rec(country, admin1)?.abbr ?? (admin1 && /^[A-Z]{2}$/.test(admin1) ? admin1 : undefined);
     if (abbr) return `${name}, ${abbr}`;
   }
-  void admin1Name;
   return `${name}, ${countryShortName(country) ?? country}`;
 }
 
@@ -340,9 +339,9 @@ export function placeLabel(place: Omit<Place, 'label'>): string {
     case 'region':
       return place.region ?? place.raw.trim();
     case 'city':
-      return place.city ? cityStyleLabel(place.city, place.admin1, place.country, place.admin1Name) : place.raw.trim();
+      return place.city ? cityStyleLabel(place.city, place.admin1, place.country) : place.raw.trim();
     case 'admin1': {
-      if (place.city) return cityStyleLabel(place.city, place.admin1, place.country, place.admin1Name);
+      if (place.city) return cityStyleLabel(place.city, place.admin1, place.country);
       const name = place.admin1Name ?? admin1Rec(place.country, place.admin1)?.name ?? place.admin1;
       if (!name) return place.raw.trim();
       return place.country ? `${name}, ${countryShortName(place.country) ?? place.country}` : name;
@@ -420,6 +419,10 @@ const F_NOISE = 64;
 const F_TZ = 128;
 /** Atom picked out of free text (never the locality of a qualifier). */
 const F_SCAN = 256;
+/** The string lists some areas "and more": not a remote restriction. */
+const F_OPEN = 512;
+
+const OPEN_LIST = /\b(?:many|other|more|various|several|multiple)\s+(?:countries|locations|regions|places|cities|states|territories)\b|\betc\b|\+\s*(?:many|more|others)\b|\band\s+(?:more|others)\b/i;
 const MARKERS = F_REMOTE | F_HYBRID | F_ONSITE | F_ANYWHERE;
 
 const TZ_ABBR = 'est|edt|pst|pdt|cst|cdt|mst|mdt|akst|hst|cet|cest|gmt|utc|bst|ist|aest|aedt|awst|eet|eest|wet|sgt|jst|kst|hkt|brt';
@@ -427,7 +430,7 @@ const TZ_ABBR = 'est|edt|pst|pdt|cst|cdt|mst|mdt|akst|hst|cet|cest|gmt|utc|bst|i
 const REMOTE_PHRASE =
   /^(?:(?:fully|100%|100 %|completely|full[\s-]?time|permanently|primarily|mostly)\s+)?(?:remote(?:ly)?|remote[\s-]+(?:first|friendly|ok|only|eligible|job|jobs|position|work|working|role|opportunity|possible|available|option|based|anywhere\s+in\s+country)|wfh|work(?:ing)?\s+from\s+home|work\s+at\s+home|home[\s-]?office|home[\s-]?based|telecommut\w*|telework\w*|virtual|virtually|distributed|remote\s+work\s+from\s+home|(?:100%\s+)?remot[oa]|trabajo\s+remoto|teletrabajo|teletrabalho|trabalho\s+remoto|t[eé]l[eé]travail|a\s+distancia|[aà]\s+distance|fernarbeit|mobiles\s+arbeiten)(?:\s+(?:ok|only|possible|available|eligible|friendly|first))?$/;
 const HYBRID_PHRASE =
-  /^(?:(?:flexible|flex)\s+)?hybrid(?:[\s-](?:remote|work|working|role|model|position|office|schedule|setup))?$|^(?:partially|partly|part[\s-]time|occasionally)\s+remote$|^remote[\s-]+hybrid$|^hybrid[\s-]+remote$/;
+  /^(?:(?:flexible|flex)\s+)?hybrid(?:[\s-](?:remote|work|working|role|model|position|office|schedule|setup))?$|^(?:partially|partly|part|part[\s-]time|occasionally|sometimes|some)\s+remote$|^remote[\s-]+hybrid$|^hybrid[\s-]+remote$/;
 const ONSITE_PHRASE = /^(?:on[\s-]?site|in[\s-]office|in[\s-]person|office[\s-]based|on[\s-]premises?|onsite\s+only|on[\s-]site\s+only|in[\s-]office\s+only)$/;
 const ANYWHERE_PHRASE =
   /^(?:(?:fully\s+)?remote\s*[-,:]?\s*)?(?:anywhere|worldwide|world[\s-]?wide|global(?:ly)?|anywhere\s+in\s+the\s+world|anywhere\s+on\s+earth|work\s+from\s+anywhere|location[\s-]independent|everywhere|planet\s+earth|earth|all\s+countries|any\s+country|any\s+location|anywhere\s+in\s+the\s+globe|around\s+the\s+world)(?:\s*[-,:]?\s*(?:remote|ok|only))?$/;
@@ -529,7 +532,8 @@ function makeAtoms(raw: string, sep: string, mode: Mode, depth = 0): Atom[] {
     const h = pf === F_NOISE ? lookup(cur, mode) : undefined;
     if (h?.e.c) return [{ text: cur, key: h.key, e: { c: h.e.c }, sep, flags: F_NOISE }];
     const key = placeKey(cur);
-    if (pf === F_NOISE && COMMON_WORD_CITIES.has(key)) return [{ text: cur, key, sep, flags: F_NOISE }];
+    // Small towns the gazetteer lacks but that do appear qualified ("Media, PA", "Industry, CA").
+    if (pf === F_NOISE && (key === 'media' || key === 'industry' || key === 'commerce')) return [{ text: cur, key, sep, flags: F_NOISE }];
     return [markerAtom(pf, sep)];
   }
   let flags = 0;
@@ -683,6 +687,8 @@ interface Item {
   amb: boolean;
   /** Came from a dash-separated atom (neighbourhood/office decorations when unresolved). */
   dash?: boolean;
+  /** Resolved from a bare two/three-letter code ("SE", "IT"): unreliable among non-place words. */
+  code?: boolean;
 }
 
 /** Priority of `e` as a qualifier of city row `row`: 0 US state, 1 CA province, 2 country, 3 other admin1; -1 none. */
@@ -943,6 +949,7 @@ function chainOnce(atoms: Atom[], ctx: Ctx | undefined, single: boolean, mode: M
       continue;
     }
     const s = a.flags & F_NOISE ? undefined : resolveStandalone(a, ctx, single, mode);
+    if (s && /^[a-z]{2,3}$/.test(a.key) && a.text.length <= 4) s.code = true;
     if (s) {
       items.push(s);
       score += s.amb ? 0.5 : 1;
@@ -1127,6 +1134,11 @@ function parseLocationString(raw: string, ctx: Ctx | undefined, mode: Mode): Str
   if (pf & (MARKERS | F_NOISE)) return { items: [], flags: pf };
   if (pf & F_TZ) return { items: [{ place: unknownPlace(s), amb: false }], flags: 0 };
   const r = parsePieces(s, ctx, true, mode, 0);
+  // A bare code among words that are not places ("TypeScript / React / AI") is an acronym, not a country.
+  const unknownCount = r.items.filter((it) => it.place.kind === 'unknown').length;
+  if (unknownCount >= 2 && unknownCount >= r.items.length - unknownCount) r.items = r.items.filter((it) => !it.code);
+  // "US + many countries", "UK and other countries": the list is open, so it is no restriction.
+  if (OPEN_LIST.test(s)) r.flags |= F_OPEN;
   const known = r.items.filter((it) => it.place.kind !== 'unknown');
   if (!known.length && !(r.flags & MARKERS)) {
     // Nothing recognised: keep the whole string once, unless it was only filler words.
@@ -1217,7 +1229,7 @@ interface ScopeOut {
 }
 
 const DESC_SCOPE_TRIGGER =
-  /\b(?:(?:must|should|need\s+to|needs\s+to|required\s+to|have\s+to|has\s+to)\s+(?:be\s+)?(?:currently\s+|physically\s+|permanently\s+)?(?:based|located|residing|reside|live|living)|(?:candidates?|applicants?|you)\s+(?:must\s+|should\s+|will\s+need\s+to\s+)?(?:be\s+)?(?:currently\s+|physically\s+)?(?:based|located|residing|living)|(?:open|available)\s+(?:only\s+)?to\s+(?:candidates|applicants|residents|people|those|anyone|individuals|talent|professionals)(?:\s+(?:who\s+(?:are|live)\s+)?(?:based|located|residing|living))?|(?:only\s+)?(?:hiring|accepting\s+applications|recruiting)(?:\s+(?:candidates|applicants|talent))?|(?:work(?:ing)?\s+)?remote(?:ly)?|(?:work\s+)?from\s+anywhere|anywhere)\s+(?:in|within|from|across)\s+(?:the\s+)?([^.;:!?\n()]{2,80})/gi;
+  /\b(?:(?:must|should|need\s+to|needs\s+to|required\s+to|have\s+to|has\s+to)\s+(?:be\s+)?(?:currently\s+|physically\s+|permanently\s+)?(?:based|located|residing|reside|live|living)|(?:candidates?|applicants?|you)\s+(?:must\s+|should\s+|will\s+need\s+to\s+)?(?:be\s+)?(?:currently\s+|physically\s+)?(?:based|located|residing|living)|(?:open|available)\s+(?:only\s+)?to\s+(?:candidates|applicants|residents|people|those|anyone|individuals|talent|professionals)(?:\s+(?:who\s+(?:are|live)\s+)?(?:based|located|residing|living))?|(?:only\s+)?(?:hiring|accepting\s+applications|recruiting)(?:\s+(?:candidates|applicants|talent))?|(?:work(?:ing)?\s+)?remote(?:ly)?|(?:work\s+)?from\s+anywhere|anywhere)\s+(?:in|within|from|across|of)\s+(?:the\s+)?([^.;:!?\n()]{2,80})/gi;
 const DESC_SCOPE_PAIRED =
   /\b(?:based|located|reside|residing|live|living)\s+in\s+and\s+(?:be\s+)?(?:legally\s+)?(?:authori[sz]ed|eligible|able)\s+to\s+work\s+in\s+(?:the\s+)?([^.;:!?\n()]{2,80})/gi;
 const DESC_SCOPE_ONLY = /\b((?:[A-Z][A-Za-z.]*)(?:[\s-][A-Z][A-Za-z.]*){0,2})(?:[\s-]+(?:residents|candidates|applicants|citizens|based))?[\s(-]+(?:only|ONLY|Only)\b/g;
@@ -1256,7 +1268,7 @@ function scopeItem(text: string): { codes: string[]; label: string } | undefined
 
 function scopeFromSegment(seg: string): ScopeOut | undefined {
   let s = seg
-    .split(/\s(?:who|with|that|which|to|for|at|during|as|while|but|so|if|because|where|when|in\s+order|and\s+(?:be|have|are|must|will|can|should|hold|possess|eligible|legally|authori[sz]ed|able)|or\s+(?:be|have))\b|\s[-–—]\s|\(/i)[0]!
+    .split(/\s(?:who|with|that|which|to|for|at|during|as|while|but|so|if|because|where|when|will|are|is|must|should|can|may|need|please|only|would|could|have|has|in\s+order|and\s+(?:be|have|are|must|will|can|should|hold|possess|eligible|legally|authori[sz]ed|able)|or\s+(?:be|have))\b|\s[-–—]\s|\(/i)[0]!
     .trim();
   s = s.replace(/^(?:anywhere|any\s+(?:state|country|location|city))\s+(?:in|within|across)\s+(?:the\s+)?/i, '');
   if (/^(?:the\s+)?(?:world|globe)\b/i.test(s)) return { codes: [], labels: [], anywhere: true };
@@ -1365,6 +1377,18 @@ function listLabel(labels: string[], max = 3): string {
  *    "US only", "UK-based candidates"; bare work-authorisation boilerplate is ignored). "Anywhere" anywhere
  *    wins over restrictions.
  *  - A location-string marker "Onsite"/"In office" counts as the source saying so; descriptions never set onsite.
+ *    Several markers: remote beats hybrid beats on-site ("Remote or Onsite" -> remote, "Onsite (part remote)" ->
+ *    hybrid). Spanish/Portuguese/French/German remote words count ("Remoto", "Télétravail", "Homeoffice").
+ *  - Exclusions ("Worldwide (except US)", "excluding California") never add places or scope; an open list
+ *    ("US + many countries", "UK and other countries") is no restriction (empty scope).
+ *  - Ordinary words are never places ("Remote", "Flexible", "Multiple Locations", "HQ", "Field", "Mobile");
+ *    city-named words resolve only with a qualifier ("Mobile, AL", "Normal, IL"), and Reading/Bath/Nice/Split
+ *    also when they are the whole string. A bare code among non-place words ("TypeScript / React / AI") is
+ *    dropped. Street addresses, postcodes, employment types and lower-case commentary are ignored.
+ *  - Whole strings that resolve to nothing keep one unknown place (raw = the cleaned string) unless they are
+ *    only filler ("N/A", "TBD", "Multiple Locations"); timezone-only strings ("EST/PST timezones") stay unknown.
+ *  - `text`: "Austin, TX · Hybrid", "Remote · US, Canada", "Remote · Anywhere", "London, UK +3 more",
+ *    "New York, NY · Remote (US)", "On-site"; with no mode and no places, the raw strings.
  */
 export function parseJobLocation(input: LocationInput): ParsedLocation {
   const raws = input.locations.filter((s) => typeof s === 'string' && s.trim());
@@ -1395,6 +1419,7 @@ export function parseJobLocation(input: LocationInput): ParsedLocation {
   const scope = new Set<string>();
   const scopeLabels: string[] = [];
   let anywhere = mode === 'remote' && (flags & F_ANYWHERE) !== 0;
+  const open = (flags & F_OPEN) !== 0;
   for (const it of items) {
     const p = it.place;
     const cityState = p.kind === 'city' && p.country !== undefined && CITY_STATES.has(p.country);
@@ -1413,7 +1438,11 @@ export function parseJobLocation(input: LocationInput): ParsedLocation {
     seen.add(id);
     places.push(clonePlace(p));
   }
-  if (mode === 'remote' && !anywhere && scope.size === 0 && input.descriptionText) {
+  if (open) {
+    scope.clear();
+    scopeLabels.length = 0;
+  }
+  if (mode === 'remote' && !anywhere && !open && scope.size === 0 && input.descriptionText) {
     const d = scopeFromDescription(input.descriptionText);
     if (d?.anywhere) anywhere = true;
     else if (d) {

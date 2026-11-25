@@ -12,7 +12,7 @@ import type { JobContext, ProfileContext } from './context';
 import { STOPWORDS, containsPhrase, occurrences, phraseKey, type Word, words } from './text';
 
 export interface Keyword extends KeywordCoverage {
-  kind: 'skill' | 'phrase' | 'name';
+  kind: 'skill' | 'phrase' | 'word' | 'name';
   /** Stem key used for matching. */
   key: string;
   /** Mentions in the posting (at least 1 for listed skills). */
@@ -37,6 +37,14 @@ const GENERIC = new Set(
     'someone people person like make making get one two three four five six seven eight nine ten' +
     ' monday tuesday wednesday thursday friday saturday sunday january february march april may june july' +
     ' august september october november december'
+  ).split(' '),
+);
+
+/** Broad nouns that are fine inside a phrase ("distributed systems") but say little alone. */
+const VAGUE_ALONE = new Set(
+  (
+    'system systems service services platform platforms product products solution solutions process processes ' +
+    'tool tools customer customers client clients business data project projects tech technology technologies'
   ).split(' '),
 );
 
@@ -132,6 +140,20 @@ function lowerCapitalised(phrase: string): string {
   return phrase.replace(/\p{L}+/gu, (w) => (/^\p{Lu}\p{Ll}*$/u.test(w) ? w.toLowerCase() : w));
 }
 
+/** Single words that recur at least three times ("payments" in a payments company's posting). */
+function wordCandidates(text: string, ws: Word[], ranges: Ranges, excluded: Set<string>): Candidate[] {
+  const byStem = new Map<string, Candidate>();
+  for (let i = 0; i < ws.length; i++) {
+    const w = ws[i]!;
+    if (w.norm.length < 4 || STOPWORDS.has(w.norm) || GENERIC.has(w.norm) || VAGUE_ALONE.has(w.norm)) continue;
+    if (excluded.has(w.norm) || /\d/.test(w.norm) || inRanges(ranges.boilerplate, w.index)) continue;
+    const found = byStem.get(w.stem);
+    if (found) found.positions.push(i);
+    else byStem.set(w.stem, { term: lowerCapitalised(w.text), key: w.stem, kind: 'word', positions: [i] });
+  }
+  return [...byStem.values()].filter((c) => c.positions.length >= 3);
+}
+
 /** Capitalised words used like names (never lower-case in the posting), e.g. "Salesforce", "Epic", "ACLS". */
 function nameCandidates(text: string, ws: Word[], ranges: Ranges, excluded: Set<string>): Candidate[] {
   const stats = new Map<string, { term: string; positions: number[]; midSentence: number; lower: number }>();
@@ -150,9 +172,15 @@ function nameCandidates(text: string, ws: Word[], ranges: Ranges, excluded: Set<
     .map((s) => ({ term: s.term, key: phraseKey(s.term), kind: 'name' as const, positions: s.positions }));
 }
 
-/** True when one stem key is a contiguous run inside the other. */
-function overlaps(a: string, b: string): boolean {
-  return ` ${a} `.includes(` ${b} `) || ` ${b} `.includes(` ${a} `);
+/**
+ * Whether two candidates say the same thing: one key is a contiguous run inside the other.
+ * A recurring single word may sit alongside a phrase containing it ("payments" and
+ * "payments platform"); skills and names still absorb phrases built around them.
+ */
+function overlaps(a: Candidate, b: Candidate): boolean {
+  if (a.key === b.key) return true;
+  if ((a.kind === 'word' && b.key.includes(' ')) || (b.kind === 'word' && a.key.includes(' '))) return false;
+  return ` ${a.key} `.includes(` ${b.key} `) || ` ${b.key} `.includes(` ${a.key} `);
 }
 
 /** Important terms of the posting, most important first, each marked present when the profile covers it. */
@@ -173,6 +201,7 @@ export function extractKeywords(job: JobContext, profile: ProfileContext): Keywo
   const candidates = [
     ...skillCandidates,
     ...phraseCandidates(text, ws, ranges, excluded),
+    ...wordCandidates(text, ws, ranges, notNames),
     ...nameCandidates(text, ws, ranges, notNames),
   ];
 
@@ -183,7 +212,7 @@ export function extractKeywords(job: JobContext, profile: ProfileContext): Keywo
       const count = Math.max(c.positions.length, 1);
       const firstAt = c.positions.length > 0 ? c.positions[0]! / total : 0.5;
       const eligible = c.kind === 'skill' || count >= 2 || inRequirements;
-      const base = c.kind === 'skill' ? 2 : c.kind === 'name' ? 1.2 : 1;
+      const base = { skill: 2, name: 1.2, phrase: 1, word: 0.9 }[c.kind];
       const score = base * (1 + Math.log2(count)) * (inRequirements ? 1.5 : 1) * (firstAt < 0.25 ? 1.2 : 1);
       return { c, count, firstAt, eligible, score };
     })
@@ -193,7 +222,7 @@ export function extractKeywords(job: JobContext, profile: ProfileContext): Keywo
   const take = (pool: typeof scored, limit: number) => {
     for (const s of pool) {
       if (chosen.length >= limit) return;
-      if (chosen.some((x) => overlaps(x.c.key, s.c.key))) continue;
+      if (chosen.some((x) => overlaps(x.c, s.c))) continue;
       chosen.push(s);
     }
   };

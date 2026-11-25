@@ -16,7 +16,7 @@ export const CITY_STATES: ReadonlySet<string> = new Set(['SG', 'HK', 'MO', 'MC',
 export const ISO_PREFERRED_CODES: ReadonlySet<string> = new Set(['CA', 'DE', 'IN', 'ID', 'AR', 'CO', 'MA', 'IL']);
 
 /** Uppercase codes never read as a place on their own ("9 AM", "PM"). */
-export const BLOCKED_CODES: ReadonlySet<string> = new Set(['AM', 'PM']);
+export const BLOCKED_CODES: ReadonlySet<string> = new Set(['AM', 'PM', 'AI', 'IO', 'TV', 'FM']);
 
 /**
  * Countries whose first-level divisions are commonly named on their own ("California", "Ontario",

@@ -572,6 +572,143 @@ export const AWKWARD: Case[] = [
     ["Telecommute", 'remote', [], [], "Remote"],
 ];
 
+/** Inputs written to break the parser while reviewing it; each once revealed a bug or pins a decision. */
+export const ADVERSARIAL: Case[] = [
+    ["Remote - Austin, TX", 'remote', ["city:Austin/TX/US"], [], "Austin, TX · Remote"],
+    ["Austin, Texas, USA", 'unknown', ["city:Austin/TX/US"], [], "Austin, TX"],
+    ["Remote, US or Canada", 'remote', [], ["CA","US"], "Remote · US, Canada"],
+    ["Remote (Americas)", 'remote', [], 56, "Remote · AMER"],
+    ["Remote - Anywhere", 'remote', [], [], "Remote · Anywhere"],
+    ["Remote Worldwide", 'remote', [], [], "Remote · Anywhere"],
+    ["Anywhere, US", 'remote', [], ["US"], "Remote · US"],
+    ["Georgia, US", 'unknown', ["admin1:GA/US"], [], "Georgia, US"],
+    ["Georgia (US)", 'unknown', ["admin1:GA/US"], [], "Georgia, US"],
+    ["Cambridge (UK)", 'unknown', ["city:Cambridge/ENG/GB"], [], "Cambridge, UK"],
+    ["London (Remote US)", 'remote', ["city:London/ENG/GB"], ["US"], "London, UK · Remote (US)"],
+    ["Remote (Austin, TX)", 'remote', ["city:Austin/TX/US"], [], "Austin, TX · Remote"],
+    ["Remote — US & Canada", 'remote', [], ["CA","US"], "Remote · US, Canada"],
+    ["Remote within the US", 'remote', [], ["US"], "Remote · US"],
+    ["U.S. Remote", 'remote', [], ["US"], "Remote · US"],
+    ["Remote: US/Canada", 'remote', [], ["CA","US"], "Remote · US, Canada"],
+    ["North America (Remote)", 'remote', [], ["CA","MX","US"], "Remote · North America"],
+    ["Remote-friendly (EST)", 'remote', [], [], "Remote"],
+    ["In-Office (London)", 'onsite', ["city:London/ENG/GB"], [], "London, UK · On-site"],
+    ["Hybrid Remote - Denver", 'hybrid', ["city:Denver/CO/US"], [], "Denver, CO · Hybrid"],
+    ["Remote - US (East Coast)", 'remote', [], ["US"], "Remote · US"],
+    ["Remote - US East", 'remote', [], ["US"], "Remote · US"],
+    ["Paris 75008", 'unknown', ["city:Paris/11/FR"], [], "Paris, France"],
+    ["1 Market St, San Francisco, CA 94105", 'unknown', ["city:San Francisco/CA/US"], [], "San Francisco, CA"],
+    ["San Francisco, CA 94105", 'unknown', ["city:San Francisco/CA/US"], [], "San Francisco, CA"],
+    ["London EC1V 2NX", 'unknown', ["city:London/ENG/GB"], [], "London, UK"],
+    ["Berlin, 10115", 'unknown', ["city:Berlin/16/DE"], [], "Berlin, Germany"],
+    ["Remote (UTC-5 to UTC+3)", 'remote', [], [], "Remote"],
+    ["Remote or Onsite", 'remote', [], [], "Remote"],
+    ["Remote (Canada); Hybrid (Toronto)", 'remote', ["city:Toronto/08/CA"], ["CA"], "Toronto, ON · Remote (Canada)"],
+    ["Washington, DC Metro Area", 'unknown', ["city:Washington/DC/US"], [], "Washington, DC"],
+    ["Remote (Seattle, WA preferred)", 'remote', ["city:Seattle/WA/US"], [], "Seattle, WA · Remote"],
+    ["Remote | US | Full-time", 'remote', [], ["US"], "Remote · US"],
+    ["Remote (Worldwide) - must overlap with EST", 'remote', [], [], "Remote · Anywhere"],
+    ["Pittsburgh, Pa.", 'unknown', ["city:Pittsburgh/PA/US"], [], "Pittsburgh, PA"],
+    ["Atlanta, Ga.", 'unknown', ["city:Atlanta/GA/US"], [], "Atlanta, GA"],
+    ["Long Island", 'unknown', ["unknown:Long Island"], [], "Long Island"],
+    ["US-CA", 'unknown', ["admin1:CA/US"], [], "California, US"],
+    ["US-TX-Austin", 'unknown', ["city:Austin/TX/US"], [], "Austin, TX"],
+    ["CA-ON-Toronto", 'unknown', ["city:Toronto/08/CA"], [], "Toronto, ON"],
+    ["IN-Bangalore", 'unknown', ["city:Bengaluru/19/IN"], [], "Bengaluru, India"],
+    ["GB-London", 'unknown', ["city:London/ENG/GB"], [], "London, UK"],
+    ["Toronto, ON M5V 2T6", 'unknown', ["city:Toronto/08/CA"], [], "Toronto, ON"],
+    ["Reading (Hybrid)", 'hybrid', ["city:Reading/ENG/GB"], [], "Reading, UK · Hybrid"],
+    ["New York, NYC", 'unknown', ["city:New York City/NY/US"], [], "New York, NY"],
+    ["San Francisco, SF Bay Area", 'unknown', ["city:San Francisco/CA/US"], [], "San Francisco, CA"],
+    ["KSA", 'unknown', ["country:SA"], [], "Saudi Arabia"],
+    ["Riyadh, KSA", 'unknown', ["city:Riyadh/10/SA"], [], "Riyadh, Saudi Arabia"],
+    ["St Lucia", 'unknown', ["country:LC"], [], "Saint Lucia"],
+    ["Aarhus", 'unknown', ["city:Århus/18/DK"], [], "Århus, Denmark"],
+    ["Remote (US/Canada)", 'remote', [], ["CA","US"], "Remote · US, Canada"],
+    ["Paris (Germany)", 'unknown', ["country:DE@Paris"], [], "Paris, Germany"],
+    ["Suite 400, Austin, TX", 'unknown', ["city:Austin/TX/US"], [], "Austin, TX"],
+    ["Austin, TX (Full-time)", 'unknown', ["city:Austin/TX/US"], [], "Austin, TX"],
+    ["NYC (Hybrid) or Remote (US)", 'remote', ["city:New York City/NY/US"], ["US"], "New York, NY · Remote (US)"],
+    ["Remote within Europe, Remote within the UK", 'remote', [], 53, "Remote · Europe, UK"],
+    ["Bay Area, CA", 'unknown', ["city:San Francisco/CA/US"], [], "San Francisco, CA"],
+    ["Austin or Dallas, TX", 'unknown', ["city:Austin/TX/US","city:Dallas/TX/US"], [], "Austin, TX +1 more"],
+    ["San Francisco and New York", 'unknown', ["city:San Francisco/CA/US","city:New York City/NY/US"], [], "San Francisco, CA +1 more"],
+    ["London and Remote", 'remote', ["city:London/ENG/GB"], [], "London, UK · Remote"],
+    ["Austin, TX and Remote", 'remote', ["city:Austin/TX/US"], [], "Austin, TX · Remote"],
+    ["Remote, but must be in PST", 'remote', [], [], "Remote"],
+    ["California or Remote", 'remote', [], ["US"], "Remote · US"],
+    ["Greater NYC Area", 'unknown', ["city:New York City/NY/US"], [], "New York, NY"],
+    ["New York Metro", 'unknown', ["city:New York City/NY/US"], [], "New York, NY"],
+    ["NY Metro Area", 'unknown', ["city:New York City/NY/US"], [], "New York, NY"],
+    ["Remote (EU timezone)", 'remote', [], 27, "Remote · EU"],
+    ["Remote - CET +/- 2h", 'remote', [], [], "Remote"],
+    ["Hybrid, London", 'hybrid', ["city:London/ENG/GB"], [], "London, UK · Hybrid"],
+    ["London, Hybrid", 'hybrid', ["city:London/ENG/GB"], [], "London, UK · Hybrid"],
+    ["Remote OR Austin", 'remote', ["city:Austin/TX/US"], [], "Austin, TX · Remote"],
+    ["Hamilton, ON", 'unknown', ["city:Hamilton/08/CA"], [], "Hamilton, ON"],
+    ["Hamilton, New Zealand", 'unknown', ["city:Hamilton/G1/NZ"], [], "Hamilton, New Zealand"],
+    ["Kingston, Jamaica", 'unknown', ["city:Kingston/17/JM"], [], "Kingston, Jamaica"],
+    ["Kingston, ON", 'unknown', ["city:Kingston/08/CA"], [], "Kingston, ON"],
+    ["Victoria, Australia", 'unknown', ["admin1:07/AU"], [], "Victoria, Australia"],
+    ["Perth, Scotland", 'unknown', ["city:Perth/SCT/GB"], [], "Perth, UK"],
+    ["Richmond, VA", 'unknown', ["city:Richmond/VA/US"], [], "Richmond, VA"],
+    ["Richmond", 'unknown', ["city:Richmond/VA/US"], [], "Richmond, VA"],
+    ["Richmond, BC", 'unknown', ["city:Richmond/02/CA"], [], "Richmond, BC"],
+    ["Newcastle, NSW", 'unknown', ["city:Newcastle/02/AU"], [], "Newcastle, Australia"],
+    ["Newcastle upon Tyne", 'unknown', ["city:Newcastle upon Tyne/ENG/GB"], [], "Newcastle upon Tyne, UK"],
+    ["Sydney, Nova Scotia", 'unknown', ["city:Sydney/07/CA"], [], "Sydney, NS"],
+    ["Melbourne, FL", 'unknown', ["city:Melbourne/FL/US"], [], "Melbourne, FL"],
+    ["Melbourne", 'unknown', ["city:Melbourne/07/AU"], [], "Melbourne, Australia"],
+    ["Athens, GA", 'unknown', ["city:Athens/GA/US"], [], "Athens, GA"],
+    ["Rome, GA", 'unknown', ["city:Rome/GA/US"], [], "Rome, GA"],
+    ["Moscow, ID", 'unknown', ["city:Moscow/ID/US"], [], "Moscow, ID"],
+    ["Berlin, NH", 'unknown', ["admin1:NH/US@Berlin"], [], "Berlin, NH"],
+    ["Dublin, OH", 'unknown', ["city:Dublin/OH/US"], [], "Dublin, OH"],
+    ["Frankfurt (Oder)", 'unknown', ["city:Frankfurt (Oder)/11/DE"], [], "Frankfurt (Oder), Germany"],
+    ["Remote, Earth", 'remote', [], [], "Remote · Anywhere"],
+    ["Remote (Planet Earth)", 'remote', [], [], "Remote · Anywhere"],
+    ["Anywhere on Earth", 'remote', [], [], "Remote · Anywhere"],
+    ["Worldwide (except US)", 'remote', [], [], "Remote · Anywhere"],
+    ["Remote - Canada only", 'remote', [], ["CA"], "Remote · Canada"],
+    ["Remote, Canada (Quebec excluded)", 'remote', [], ["CA"], "Remote · Canada"],
+    ["Alberta, Canada", 'unknown', ["admin1:01/CA"], [], "Alberta, Canada"],
+    ["BC, Canada", 'unknown', ["admin1:02/CA"], [], "British Columbia, Canada"],
+    ["Ontario or Quebec", 'unknown', ["admin1:08/CA","admin1:10/CA"], [], "Ontario, Canada +1 more"],
+    ["AB/BC", 'unknown', ["admin1:01/CA","admin1:02/CA"], [], "Alberta, Canada +1 more"],
+    ["NSW/VIC", 'unknown', ["admin1:02/AU","admin1:07/AU"], [], "New South Wales, Australia +1 more"],
+    ["QLD", 'unknown', ["admin1:04/AU"], [], "Queensland, Australia"],
+    ["Brisbane QLD", 'unknown', ["city:Brisbane/04/AU"], [], "Brisbane, Australia"],
+    ["Auckland NZ", 'unknown', ["city:Auckland/E7/NZ"], [], "Auckland, New Zealand"],
+    ["Remote NZ", 'remote', [], ["NZ"], "Remote · New Zealand"],
+    ["Remote - APJ", 'remote', [], 58, "Remote · APAC"],
+    ["Japan (Tokyo)", 'unknown', ["city:Tokyo/40/JP"], [], "Tokyo, Japan"],
+    ["Tokyo (Shibuya)", 'unknown', ["city:Tokyo/40/JP"], [], "Tokyo, Japan"],
+    ["Remote US-East", 'remote', [], ["US"], "Remote · US"],
+    ["USA - Remote (Eastern Time)", 'remote', [], ["US"], "Remote · US"],
+    ["Remote: EMEA / LATAM", 'remote', [], 161, "Remote · EMEA, LATAM"],
+    ["Mexico City or Remote (LATAM)", 'remote', ["city:Mexico City/09/MX"], 25, "Mexico City, Mexico · Remote (LATAM)"],
+    ["Bogotá, Colombia; Remote LATAM", 'remote', ["city:Bogotá/34/CO"], 25, "Bogotá, Colombia · Remote (LATAM)"],
+    ["Buenos Aires, Argentina (Remote)", 'remote', ["city:Buenos Aires/07/AR"], [], "Buenos Aires, Argentina · Remote"],
+    ["São Paulo - SP", 'unknown', ["city:São Paulo/27/BR"], [], "São Paulo, Brazil"],
+    ["Rio de Janeiro, RJ", 'unknown', ["city:Rio de Janeiro/21/BR"], [], "Rio de Janeiro, Brazil"],
+    ["Belo Horizonte - MG, Brazil", 'unknown', ["city:Belo Horizonte/15/BR"], [], "Belo Horizonte, Brazil"],
+    ["Curitiba, PR", 'unknown', ["city:Curitiba/18/BR"], [], "Curitiba, Brazil"],
+    ["Remote (BR)", 'remote', [], ["BR"], "Remote · Brazil"],
+    ["Brasil - Remoto", 'remote', [], ["BR"], "Remote · Brazil"],
+    ["México (Remoto)", 'remote', [], ["MX"], "Remote · Mexico"],
+    ["Remoto", 'remote', [], [], "Remote"],
+    ["Teletrabajo", 'remote', [], [], "Remote"],
+    ["Télétravail", 'remote', [], [], "Remote"],
+    ["Homeoffice Deutschland", 'remote', [], ["DE"], "Remote · Germany"],
+    ["Deutschlandweit", 'unknown', ["country:DE"], [], "Germany"],
+    ["100% Remote", 'remote', [], [], "Remote"],
+    ["Fully remote, US based", 'remote', [], ["US"], "Remote · US"],
+    ["Remote but US-based", 'remote', [], ["US"], "Remote · US"],
+    ["US based", 'unknown', ["country:US"], [], "United States"],
+    ["UK based", 'unknown', ["country:GB"], [], "United Kingdom"],
+    ["EU based", 'unknown', ["region:EU"], [], "EU"],
+];
+
 describe('parseJobLocation: real fixture strings', () => {
   check(REAL_STRINGS);
 });
@@ -582,6 +719,10 @@ describe('parseJobLocation: real strings on remote-only boards', () => {
 
 describe('parseJobLocation: awkward inputs', () => {
   check(AWKWARD);
+});
+
+describe('parseJobLocation: adversarial inputs', () => {
+  check(ADVERSARIAL);
 });
 
 describe('parseJobLocation: ambiguity rules', () => {
@@ -681,6 +822,8 @@ describe('parseJobLocation: ambiguity rules', () => {
     expect(summary(parse('Mobile, AL')).places).toEqual(['city:Mobile/AL/US']);
     expect(summary(parse('Normal, IL')).places).toEqual(['city:Normal/IL/US']);
     expect(summary(parse('Media, PA')).places).toEqual(['admin1:PA/US@Media']);
+    expect(summary(parse('Office, United States')).places).toEqual(['country:US']);
+    expect(summary(parse('Field, TX')).places).toEqual(['admin1:TX/US']);
     // Reading/Bath/Nice/Split: the place when the whole string, or with a country/county.
     expect(summary(parse('Reading')).places).toEqual(['city:Reading/ENG/GB']);
     expect(summary(parse('Reading, Berkshire')).places).toEqual(['city:Reading/ENG/GB']);
@@ -851,6 +994,19 @@ describe('parseJobLocation: remote scope', () => {
     expect(scopeOf('You must reside in and be authorized to work in Canada.')).toEqual(['CA']);
     expect(scopeOf('You can work remotely from anywhere in Germany.')).toEqual(['DE']);
     expect(scopeOf('Applicants should be located in California or Texas.')).toEqual(['US']);
+    expect(scopeOf('This is a remote position open to residents of Canada.')).toEqual(['CA']);
+    expect(scopeOf('Only candidates based in India will be considered.')).toEqual(['IN']);
+    expect(scopeOf('Applicants must currently reside in Germany, Austria or Switzerland.')).toEqual(['AT', 'CH', 'DE']);
+    expect(scopeOf('This role is remote within the United States.')).toEqual(['US']);
+    expect(scopeOf('Candidates must be located in the US (excluding Hawaii and Alaska).')).toEqual(['US']);
+    expect(scopeOf('Our team is distributed across the US and Europe.')).toEqual([]);
+    expect(scopeOf('Experience working remote in a startup is a plus.')).toEqual([]);
+    expect(scopeOf('You will work remotely from our London office twice a month.')).toEqual([]);
+    expect(scopeOf('Open to applicants in the following countries: US, UK.')).toEqual([]);
+    expect(scopeOf('English only. Python only. Asian markets only.')).toEqual([]);
+    expect(scopeOf('Remote, but you must live within 50 miles of Austin.')).toEqual([]);
+    expect(scopeOf('You must be eligible to work in the UK.')).toEqual([]);
+    expect(scopeOf('must be located in us')).toEqual([]);
     // Bare work-authorisation boilerplate is not a location restriction.
     expect(scopeOf('You must be authorized to work in the United States.')).toEqual([]);
     // Company facts are not restrictions.
@@ -914,6 +1070,36 @@ describe('parseJobLocation: robustness', () => {
     expect(parse(['', '  ', 'Berlin']).location.places.map(enc)).toEqual(['city:Berlin/16/DE']);
     // De-duplicates the same place given twice.
     expect(parse(['New York, NY', 'NYC', 'New York City']).location.places).toHaveLength(1);
+  });
+
+  it('hands out copies: mutating a result does not leak into later parses of the same string', () => {
+    const a = parse('Remote - EMEA', { remote: 'hybrid' });
+    const p = a.location.places[0]!;
+    p.label = 'MUTATED';
+    p.countries?.splice(0);
+    const b = parse('Remote - EMEA', { remote: 'hybrid' });
+    expect(b.location.places[0]?.label).toBe('EMEA');
+    expect(b.location.places[0]?.countries).toEqual(regionCountries('EMEA'));
+  });
+
+  it('Hacker News header segments: open lists, part-remote, acronyms that look like codes', () => {
+    expect(summary(parse('Remote or onsite (US + many countries)'))).toMatchObject({ remote: 'remote', places: [], scope: [] });
+    expect(summary(parse(['UK and other countries'], { remote: 'remote' }))).toMatchObject({ remote: 'remote', places: [], scope: [] });
+    expect(summary(parse('ONSITE (part remote)')).remote).toBe('hybrid');
+    expect(summary(parse('Flowstate (London, UK) — Founding Engineer — TypeScript / React / Postgres / AI')).places.filter((p) => !p.startsWith('unknown'))).toEqual(['city:London/ENG/GB']);
+    expect(summary(parse('ONSITE (Jersey City, NJ)'))).toMatchObject({ remote: 'onsite', places: ['city:Jersey City/NJ/US'] });
+    expect(summary(parse('Location: India (currently travelling within India; IST, UTC+5:30)')).places).toEqual(['country:IN']);
+    expect(summary(parse('San Francisco (preferred) or London')).places).toEqual(['city:San Francisco/CA/US', 'city:London/ENG/GB']);
+    expect(summary(parse('Berlin, Freiburg, NYC')).places).toEqual(['city:Berlin/16/DE', 'city:Freiburg/01/DE', 'city:New York City/NY/US']);
+    expect(summary(parse('AI')).places).toEqual(['unknown:AI']); // not Anguilla
+    expect(summary(parse('SE')).places).toEqual(['country:SE']);
+  });
+
+  it('exclusions never become places or scope', () => {
+    expect(summary(parse('Worldwide (except US)'))).toMatchObject({ remote: 'remote', places: [], scope: [] });
+    expect(summary(parse('Remote, excluding California'))).toMatchObject({ remote: 'remote', places: [], scope: [] });
+    expect(summary(parse('Remote, Canada (Quebec excluded)')).scope).toEqual(['CA']);
+    expect(parse(['Remote'], { descriptionText: 'We can hire anywhere in Europe except Russia and Belarus.' }).location.remoteScope).toEqual([]);
   });
 
   it('is fast enough for ingest', () => {

@@ -84,4 +84,7 @@ export const qk = {
   /** No argument: the prefix for every company list. With a query: that page. */
   companies: (query?: CompanyListQuery) =>
     query ? (['companies', 'list', compactParams(query)] as const) : (['companies'] as const),
+
+  /** Apply-kit fit analysis for an application or job. Under profile-extras because profile edits change it. */
+  fitAnalysis: (target: { applicationId?: string; jobId?: string }) => ['profile-extras', 'fit', compactParams(target)] as const,
 };

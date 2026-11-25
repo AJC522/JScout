@@ -166,10 +166,10 @@ export async function extractResumeText(kind: ResumeKind, bytes: Buffer): Promis
 /** Clean extracted or pasted text: unify newlines, drop control characters, squeeze blank runs, cap the length. */
 export function normalizeResumeText(raw: string): string {
   let text = raw
-    .replace(/^﻿/, '')
-    .replace(/\r\n?|[  \f\v]/g, '\n')
-    .replace(/[\u0000-\u0008\u000E-\u001F\u007F​-‍⁠﻿]/g, '')
-    .replace(/ /g, ' ')
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n?|[\u2028\u2029\f\v]/g, '\n')
+    .replace(/[\u0000-\u0008\u000E-\u001F\u007F\u200B-\u200D\u2060\uFEFF]/g, '')
+    .replace(/\u00A0/g, ' ')
     .replace(/[ \t]+$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();

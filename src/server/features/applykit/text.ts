@@ -91,11 +91,22 @@ export function wordCount(text: string): number {
   return text.split(/\s+/).filter((t) => /[\p{L}\p{N}]/u.test(t)).length;
 }
 
+/** Tokens ending in a full stop that do not end a sentence ("U.S.", "e.g.", "Inc."). */
+const ABBREVIATION = /(\b(?:\p{L}\.){2,}|\b(?:e\.g|i\.e|etc|vs|inc|ltd|co|st|dr|mr|ms|mrs|jr|sr|no|approx)\.)$/iu;
+
 export function splitSentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?])\s+|\n+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const out: string[] = [];
+  for (const line of text.split(/\n+/)) {
+    let start = 0;
+    for (const m of line.matchAll(/[.!?]+\s+(?=[\p{Lu}\p{N}"“(])/gu)) {
+      const end = m.index + m[0].trimEnd().length;
+      if (ABBREVIATION.test(line.slice(start, end))) continue;
+      out.push(line.slice(start, end));
+      start = m.index + m[0].length;
+    }
+    out.push(line.slice(start));
+  }
+  return out.map((s) => s.trim()).filter(Boolean);
 }
 
 /** "a"/"an" + noun phrase; acronyms go by how their first letter is spoken ("an MBA", "a BSN"). */
