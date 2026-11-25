@@ -78,6 +78,7 @@ export const greenhouseSource: JobSource = {
 
     const postings: RawPosting[] = [];
     const seen = new Set<string>();
+    let failed = 0;
     jobs.forEach((job, index) => {
       try {
         const posting = mapJob(job, ref);
@@ -85,6 +86,7 @@ export const greenhouseSource: JobSource = {
         seen.add(posting.externalId);
         postings.push(posting);
       } catch (err) {
+        failed++;
         ctx.log.warn('greenhouse: skipped a malformed posting', {
           board: ref.token,
           index,
@@ -93,6 +95,9 @@ export const greenhouseSource: JobSource = {
         });
       }
     });
+    if (failed > 0 && failed === jobs.length) {
+      throw new SourceError('parse', `Greenhouse jobs response: none of the ${failed} entries is a posting`);
+    }
 
     // meta.total always equalled jobs.length in research; if it ever does not, the list may be
     // truncated and must not be used to close postings.

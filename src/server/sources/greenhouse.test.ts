@@ -229,6 +229,7 @@ describe('greenhouseSource.fetchFeed', () => {
     ['jobs not a list', { jobs: { a: 1 }, meta: { total: 1 } }],
     ['missing jobs', { name: 'Stripe' }],
     ['invalid JSON', '{"jobs": ['],
+    ['no entry is a posting', { jobs: [{ title: 'x' }, null], meta: { total: 2 } }],
   ])('throws a parse error for a payload of the wrong shape (%s)', async (_label, body) => {
     const http = fakeHttp([{ match: `${API}/stripe/jobs`, body }]);
     await expect(greenhouseSource.fetchFeed!(testContext(http), board('stripe'))).rejects.toMatchObject({ kind: 'parse' });

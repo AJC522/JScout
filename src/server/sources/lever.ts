@@ -70,6 +70,7 @@ export const leverSource: JobSource = {
     checkAborted(ctx);
     const postings: RawPosting[] = [];
     const seen = new Set<string>();
+    let failed = 0;
     items.forEach((item, index) => {
       try {
         const posting = mapPosting(item, ref);
@@ -77,6 +78,7 @@ export const leverSource: JobSource = {
         seen.add(posting.externalId);
         postings.push(posting);
       } catch (err) {
+        failed++;
         ctx.log.warn('lever: skipped a malformed posting', {
           board: ref.token,
           index,
@@ -85,6 +87,9 @@ export const leverSource: JobSource = {
         });
       }
     });
+    if (failed > 0 && failed === items.length) {
+      throw new SourceError('parse', `Lever postings response: none of the ${failed} entries is a posting`);
+    }
     return { postings, complete: true, cursor: validators(res) };
   },
 

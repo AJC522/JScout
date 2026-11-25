@@ -68,6 +68,7 @@ export const ashbySource: JobSource = {
     checkAborted(ctx);
     const postings: RawPosting[] = [];
     const seen = new Set<string>();
+    let failed = 0;
     jobs.forEach((job, index) => {
       try {
         const posting = mapJob(job, ref);
@@ -75,6 +76,7 @@ export const ashbySource: JobSource = {
         seen.add(posting.externalId);
         postings.push(posting);
       } catch (err) {
+        failed++;
         ctx.log.warn('ashby: skipped a malformed posting', {
           board: ref.token,
           index,
@@ -83,6 +85,9 @@ export const ashbySource: JobSource = {
         });
       }
     });
+    if (failed > 0 && failed === jobs.length) {
+      throw new SourceError('parse', `Ashby job board response: none of the ${failed} entries is a posting`);
+    }
     return { postings, complete: true, cursor: validators(res) };
   },
 
