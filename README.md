@@ -23,7 +23,7 @@ npm install
 npm start
 ```
 
-`npm start` builds the app the first time (and again after updates), then opens it at <http://localhost:4310>. A short setup asks for your résumé and what you are looking for; every step can be skipped. JScout then fetches jobs in the background — the first results appear within a minute and the index keeps filling while you look around.
+`npm start` builds the app the first time (and again after updates), then opens it at <http://localhost:4310>. A short setup asks for your résumé, what you are looking for, and which industries' employers to follow; every step can be skipped. JScout then fetches jobs in the background: the job boards give you around 9,000 postings within a couple of minutes, and the employers you follow are added as they sync.
 
 Stop it with `Ctrl+C` in the terminal. Run `npm start` again whenever you want to use it.
 
@@ -43,7 +43,7 @@ Set these environment variables before `npm start` if you need them:
 
 | Source | What it covers |
 |---|---|
-| **Employer job boards** on Greenhouse, Lever and Ashby | Postings straight from employers — the freshest data. About 500 companies are included; add any other company by pasting its careers-page link on the Companies page. |
+| **Employer job boards** on Greenhouse, Lever and Ashby | Postings straight from employers — the freshest data. About 500 companies (roughly 38,000 open jobs) are included; you choose which to follow during setup or on the Companies page, and can add any other company by pasting its careers-page link. Following all of them means a download of several hundred MB, so pick the industries you care about. |
 | [Remote OK](https://remoteok.com), [We Work Remotely](https://weworkremotely.com), [Jobicy](https://jobicy.com), [Remotive](https://remotive.com), [Working Nomads](https://www.workingnomads.com) | Remote jobs |
 | [Arbeitnow](https://www.arbeitnow.com) | Jobs across Europe, many on-site in Germany |
 | [Hacker News "Who is hiring?"](https://news.ycombinator.com) | Monthly threads of tech jobs, often with salaries |
