@@ -213,6 +213,21 @@ describe('patch', () => {
     expect(service.patch(app.id, { appliedAt: '2026-11-02' }).appliedAt).toBe('2026-11-02T00:00:00.000Z');
   });
 
+  it('records appliedAt when the Applied column is skipped, but not for rejected/withdrawn from saved', () => {
+    const skipped = manual('A');
+    tick();
+    const interviewing = service.patch(skipped.id, { status: 'interviewing' });
+    expect(interviewing.appliedAt).toBe(now.toISOString());
+    expect(interviewing.followUpAt).toBeUndefined();
+
+    const created = service.create({ job: { title: 'B', company: 'Y' }, status: 'offer' });
+    expect(created.appliedAt).toBe(now.toISOString());
+
+    const notApplied = manual('C');
+    expect(service.patch(notApplied.id, { status: 'withdrawn' }).appliedAt).toBeUndefined();
+    expect(service.patch(manual('D').id, { status: 'rejected' }).appliedAt).toBeUndefined();
+  });
+
   it('keeps an existing follow-up and lets explicit values win', () => {
     const a = manual('A');
     service.patch(a.id, { followUpAt: '2026-12-24T09:00:00.000Z' });

@@ -31,6 +31,14 @@ import { type ApplicationImport, applicationImportSchema } from './schemas';
 import { manualSnapshot, mergeSnapshot, snapshotFromPosting } from './snapshot';
 import { computeStats } from './stats';
 
+/** Statuses that can only be reached after applying. */
+const IMPLIES_APPLIED: ReadonlySet<ApplicationStatus> = new Set<ApplicationStatus>([
+  'applied',
+  'screening',
+  'interviewing',
+  'offer',
+  'accepted',
+]);
 const DAY_MS = 86_400_000;
 const FOLLOW_UP_AFTER_APPLYING_DAYS = 7;
 const DEFAULT_CHECKLIST = ['Review the posting', 'Tailor résumé', 'Write cover letter', 'Submit application', 'Follow up'];
@@ -163,6 +171,7 @@ export function createApplicationsService(ctx: AppContext): ApplicationsService 
     const id = randomUUID();
     const now = nowIso();
     const applied = input.status === 'applied';
+    const hasApplied = IMPLIES_APPLIED.has(input.status);
     db.tx(() => {
       db.run(
         `INSERT INTO applications (id, job_id, cluster_key, status, job_snapshot, notes, priority, contacts, checklist,
@@ -176,7 +185,7 @@ export function createApplicationsService(ctx: AppContext): ApplicationsService 
         input.notes,
         JSON.stringify(DEFAULT_CHECKLIST.map((label) => ({ id: randomUUID(), label, done: false }))),
         applied ? new Date(ctx.now().getTime() + FOLLOW_UP_AFTER_APPLYING_DAYS * DAY_MS).toISOString() : null,
-        applied ? now : null,
+        hasApplied ? now : null,
         now,
         now,
         now,
@@ -341,8 +350,9 @@ export function createApplicationsService(ctx: AppContext): ApplicationsService 
           next.statusChangedAt = now;
           next.sortOrder = topOf(patch.status, id);
           // Values given explicitly in the same patch win over these defaults.
+          // Reaching screening or later means the user applied, even if they skipped the Applied column.
+          if (IMPLIES_APPLIED.has(patch.status) && !current.appliedAt) next.appliedAt = now;
           if (patch.status === 'applied') {
-            if (!current.appliedAt) next.appliedAt = now;
             if (!current.followUpAt) {
               next.followUpAt = new Date(ctx.now().getTime() + FOLLOW_UP_AFTER_APPLYING_DAYS * DAY_MS).toISOString();
             }
