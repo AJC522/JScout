@@ -80,6 +80,8 @@ function fraction(f: string | undefined): number {
 const ISO_RE =
   /^(\d{4})-(\d{2})-(\d{2})(?:[T\s]+(\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?)?\s*(z|[+-]\d{2}(?::?\d{2})?|(?:utc|gmt)(?:\s*[+-]\d{1,2}(?::?\d{2})?)?)?$/i;
 const SLASH_YMD_RE = /^(\d{4})\/(\d{1,2})\/(\d{1,2})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*(z|utc|gmt)?$/i;
+/** "23.11.2026" (D.M.Y), "23/11/2026" or "11/23/2026" (only when the day/month order is unambiguous). */
+const NUMERIC_DMY_RE = /^(\d{1,2})([./-])(\d{1,2})\2(\d{4})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*(z|utc|gmt)?$/i;
 const TIME = String.raw`(\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?\s*(am|pm)?`;
 const ZONE = String.raw`(?:\s*\(?((?:gmt|utc|ut)?\s*[+-]\d{2}:?\d{2}|[a-z]{1,5})\)?)?`;
 const WEEKDAY = String.raw`(?:[a-z]{3,9}\.?,?\s+)?`;
@@ -161,6 +163,18 @@ function parseString(raw: string, now: number): number | undefined {
   }
   m = SLASH_YMD_RE.exec(s);
   if (m) return withTime(Number(m[1]), Number(m[2]), Number(m[3]), m[4], m[5], m[6], undefined, undefined, m[7]);
+  m = NUMERIC_DMY_RE.exec(s);
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[3]);
+    let day: number;
+    let month: number;
+    // Dots are the European D.M.Y convention; with "/" or "-" accept only an order that cannot be misread.
+    if (m[2] === '.' || (a > 12 && b <= 12) || a === b) [day, month] = [a, b];
+    else if (b > 12 && a <= 12) [day, month] = [b, a];
+    else return undefined;
+    return withTime(Number(m[4]), month, day, m[5], m[6], m[7], undefined, undefined, m[8]);
+  }
 
   return parseNamedMonth(s) ?? parseRelative(s, now);
 }
@@ -174,9 +188,11 @@ function parseString(raw: string, now: number): number | undefined {
  * Returns undefined for empty/unparseable input and for implausible dates
  * (before 2000 or more than 2 days after `now`).
  *
- * Details: numbers below 1e11 are seconds, 1e11–1e14 milliseconds. ISO date-times without a
- * zone are read as UTC. Named zones in RFC 2822 dates (GMT, EST, PDT, CET, …) are honoured;
- * unknown zone names are read as UTC. Relative months/years count as 30/365 days. Never throws.
+ * Details: numbers below 1e11 are seconds, 1e11–1e14 milliseconds; an 8-digit "20261123" is a
+ * calendar date. ISO date-times without a zone are read as UTC. "23.11.2026" is D.M.Y; slash dates
+ * ("23/11/2026", "11/23/2026") are accepted only when day and month cannot be confused. Named
+ * zones in RFC 2822 dates (GMT, EST, PDT, CET, …) are honoured; unknown zone names are read as UTC.
+ * Relative months/years count as 30/365 days. Never throws.
  */
 export function toIsoDate(input: string | number | Date | null | undefined, now: Date = new Date()): string | undefined {
   try {

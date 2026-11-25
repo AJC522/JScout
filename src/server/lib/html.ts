@@ -237,26 +237,49 @@ function hasRealTags(s: string): boolean {
 }
 
 const ESC_OPEN_AT_START = /^\s*&lt;([a-zA-Z][a-zA-Z0-9]*)(?=\s|\/|&gt;)/i;
-const ESC_CLOSE_RE = /&lt;\/([a-zA-Z][a-zA-Z0-9]*)\s*&gt;/gi;
+const ESC_TAG_RE = /&lt;(\/?)([a-zA-Z][a-zA-Z0-9]*)(?=\s|\/|&gt;)/gi;
+
+/** Number of real tags of known elements (and comments/doctypes), stopping once `limit` is exceeded. */
+function countRealTags(s: string, limit: number): number {
+  if (!s.includes('<')) return 0;
+  let n = 0;
+  for (const m of s.matchAll(TAGLIKE_RE)) {
+    const name = m[2];
+    if (name === undefined || KNOWN_TAGS.has(name.toLowerCase())) n++;
+    if (n > limit) break;
+  }
+  return n;
+}
 
 /**
- * Is this tag-free string an entity-escaped HTML *document* (Greenhouse returns
- * "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;…&lt;/p&gt;…"), rather than prose that
- * merely *mentions* markup ("Use a &lt;br&gt; tag to break lines")?
+ * Is this string an entity-escaped HTML *document* (Greenhouse returns
+ * "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;…&lt;/p&gt;…"), rather than prose or
+ * markup that merely *mentions* tags ("Use a &lt;br&gt; tag to break lines")?
  *
- * Heuristic: it must (1) begin, after optional whitespace, with an escaped tag of a known
- * element and (2) contain at least one escaped *closing* tag of a known element. Escaped
- * documents always start with their first element and close their elements; prose about
- * HTML starts with words, and a lone mention like "&lt;br&gt;" or "&lt;div&gt;" is never a
- * closed element. Only then is the string decoded — exactly once — and parsed as HTML.
+ * Heuristic, all three must hold:
+ *  1. it begins, after optional whitespace, with an escaped tag of a known element —
+ *     escaped documents start with their first element, prose about HTML starts with words;
+ *  2. it contains at least one escaped *closing* tag of a known element — a lone mention
+ *     such as "&lt;br&gt;" or "&lt;div&gt;" never closes an element;
+ *  3. escaped tags dominate: there are no real tags, or at least twice as many escaped
+ *     known tags as real ones. This covers aggregators (Arbeitnow, Remote OK) that wrap an
+ *     escaped ATS description and append a short real-HTML footer ("<p>Find <a>…</a></p>"),
+ *     while a real document quoting a few escaped tags as text stays as it is.
+ * Only then is the string decoded — exactly once, as a whole — and parsed as HTML.
  */
 export function isEntityEscapedMarkup(s: string): boolean {
+  if (typeof s !== 'string') return false;
   const m = ESC_OPEN_AT_START.exec(s);
   if (!m || !KNOWN_TAGS.has((m[1] ?? '').toLowerCase())) return false;
-  for (const c of s.matchAll(ESC_CLOSE_RE)) {
-    if (KNOWN_TAGS.has((c[1] ?? '').toLowerCase())) return true;
+  let escaped = 0;
+  let closers = 0;
+  for (const t of s.matchAll(ESC_TAG_RE)) {
+    if (!KNOWN_TAGS.has((t[2] ?? '').toLowerCase())) continue;
+    escaped++;
+    if (t[1]) closers++;
   }
-  return false;
+  if (closers === 0) return false;
+  return countRealTags(s, Math.floor(escaped / 2)) * 2 <= escaped;
 }
 
 function limitInput(s: unknown): string {
@@ -266,8 +289,8 @@ function limitInput(s: unknown): string {
 
 /** The markup to parse, or undefined when the input is plain text. */
 function toMarkup(src: string): string | undefined {
-  if (hasRealTags(src)) return src;
   if (isEntityEscapedMarkup(src)) return decodeHTML(src);
+  if (hasRealTags(src)) return src;
   return undefined;
 }
 
@@ -618,7 +641,13 @@ class Flow {
       else line.push(a);
     }
     endLine();
-    for (const c of paras) this.blocks.push({ t: this.runTag, c });
+    for (const c of paras) {
+      // Two bare runs in a row (item mode, split by an empty heading or similar) would merge
+      // when serialised and re-parsed; join them with the <br> that separates them.
+      const last = this.blocks[this.blocks.length - 1];
+      if (this.runTag === 'run' && last?.t === 'run') last.c.push(BR, ...c);
+      else this.blocks.push({ t: this.runTag, c });
+    }
   }
 }
 
