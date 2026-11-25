@@ -24,14 +24,14 @@ export function StatusSection({ app, now }: { app: ApplicationDetail; now: numbe
   return (
     <Section title="Progress" meta={days === 0 ? 'Status changed today' : `${pluralize(days, 'day')} in this status`}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Status">
+        <Field label="Status" className="sm:col-span-2">
           <Select
             value={app.status}
             options={STATUS_OPTIONS}
             onChange={(e) => patch.mutate({ status: e.target.value as ApplicationStatus })}
           />
         </Field>
-        <Field label="Priority">
+        <Field label="Priority" className="sm:col-span-2">
           <SegmentedControl
             aria-label="Priority"
             options={PRIORITY_OPTIONS}

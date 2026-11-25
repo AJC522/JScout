@@ -42,7 +42,7 @@ const COLUMN_WIDTH = 'w-[17rem] shrink-0 snap-start sm:w-[15rem] xl:w-auto xl:mi
 
 function ColumnHeader({ status, count }: { status: ApplicationStatus; count: number }) {
   return (
-    <div className="flex items-center justify-between gap-2 px-1 pb-2">
+    <div className="flex h-7 items-center justify-between gap-2 px-1 mb-2">
       <h2 className="flex items-center gap-2 text-sm font-semibold text-fg">
         <span aria-hidden="true" className={cn('size-2 rounded-full', DOT_CLASSES[STATUS_TONES[status]])} />
         {STATUS_LABELS[status]}
@@ -91,7 +91,7 @@ function CompactDropZone({ status, count }: { status: ApplicationStatus; count: 
     <div
       ref={setNodeRef}
       className={cn(
-        'flex min-h-16 flex-1 items-center justify-between gap-2 rounded-card border border-dashed border-border bg-surface-2 px-3 py-2 transition-colors',
+        'flex h-14 items-center justify-between gap-2 rounded-card border border-dashed border-border bg-surface-2 px-3 transition-colors',
         isOver && 'border-primary bg-primary-soft',
       )}
     >
@@ -226,8 +226,8 @@ export function TrackerBoard({ apps, now, onOpen, scrollRef, onlyStatus }: Track
           ? CLOSED_STATUSES.map((status) => <BoardColumn key={status} status={status} ids={ids[status]} byId={byId} now={now} onOpen={onOpen} />)
           : null}
         {showClosed ? (
-          <section aria-label="Closed" className={cn('flex shrink-0 flex-col snap-start', closedOpen ? 'w-10' : 'w-[17rem] sm:w-40')}>
-            <div className={cn('flex items-center gap-1 pb-2', closedOpen ? 'justify-center' : 'justify-between px-1')}>
+          <section aria-label="Closed" className={cn('flex shrink-0 snap-start flex-col self-start', closedOpen ? 'w-10' : 'w-[17rem] sm:w-40')}>
+            <div className={cn('mb-2 flex h-7 items-center gap-1', closedOpen ? 'justify-center' : 'justify-between px-1')}>
               {closedOpen ? null : <h2 className="text-sm font-semibold text-muted">Closed</h2>}
               <IconButton
                 size="xs"
@@ -238,7 +238,7 @@ export function TrackerBoard({ apps, now, onOpen, scrollRef, onlyStatus }: Track
               />
             </div>
             {closedOpen ? null : (
-              <div className="flex flex-1 flex-col gap-2">
+              <div className="flex flex-col gap-2">
                 {CLOSED_STATUSES.map((status) => (
                   <CompactDropZone key={status} status={status} count={ids[status].length} />
                 ))}

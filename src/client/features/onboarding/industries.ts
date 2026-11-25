@@ -65,3 +65,10 @@ export function preselectIndustries(titles: readonly string[], available: readon
   const matched = available.filter((industry) => picked.has(industry));
   return matched.length > 0 ? matched : [...available];
 }
+
+/** "about 500" for a large registry, the exact number for a small one, "hundreds of" while unknown. */
+export function aboutCount(total: number | undefined): string {
+  if (total === undefined) return 'hundreds of';
+  if (total < 100) return String(total);
+  return `about ${Math.round(total / 50) * 50}`;
+}
