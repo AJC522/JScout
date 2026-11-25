@@ -72,8 +72,10 @@ describe('workingnomads fetchFeed', () => {
       postedAt: '2026-11-23T04:14:27-05:00',
       tags: ['Education', 'english', 'teaching'],
     });
-    expect(descriptionHtml).toMatch(/^<p>Polly English is an online English teaching com/);
-    expect(descriptionHtml).toMatch(/ourney with Polly English\.<\/p>$/);
+    // The description HTML is passed through as served; the central pipeline sanitises it.
+    const raw = readJsonFixture<Array<{ url: string; description: string }>>('workingnomads', 'exposed_jobs.json');
+    expect(descriptionHtml).toBe(raw.find((j) => j.url === 'https://www.workingnomads.com/job/go/2043539/')?.description);
+    expect(descriptionHtml).toMatch(/^<p>[\s\S]*<\/p>$/);
     // No salary is invented from the "$100" in the title.
     expect(result.postings.every((p) => p.salary === undefined && p.applyUrl === undefined)).toBe(true);
   });

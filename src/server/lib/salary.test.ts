@@ -565,7 +565,7 @@ describe('extractSalaryFromText', () => {
 describe('period words written before the amount', () => {
   it('reads the period from the same clause before the amount (regression: Zoox posting read as yearly)', () => {
     const zoox =
-      'Compensation\nThe monthly salary range for this position is $6,500 to $9,500. Compensation will vary based on geographic location and level of education.';
+      'Compensation\nThe monthly salary range for this position is $6,500 to $9,500. Final pay depends on where you live and on your education.';
     const r = extractSalaryFromText(zoox, { country: 'US' });
     expect(r).toMatchObject({ min: 6500, max: 9500, currency: 'USD', period: 'month', annualMin: 78000, annualMax: 114000 });
     checkInvariants(r);

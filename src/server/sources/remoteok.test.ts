@@ -20,6 +20,18 @@ async function fetchFixture(name: string): Promise<RawPosting[]> {
   return result.postings;
 }
 
+/** A job's description exactly as the API served it (mojibake and anti-spam trailer included). */
+function rawDescription(name: string, id: string): string {
+  const job = readJsonFixture<Array<{ id?: string; description?: string }>>('remoteok', name).find((j) => j.id === id);
+  if (typeof job?.description !== 'string') throw new Error(`fixture job ${id} missing`);
+  return job.description;
+}
+
+/** The same description with its UTF-8 bytes decoded (the API serves each byte as a Latin-1 character). */
+function servedDescription(name: string, id: string): string {
+  return Buffer.from(rawDescription(name, id), 'latin1').toString('utf8');
+}
+
 function byId(postings: RawPosting[], id: string): RawPosting {
   const posting = postings.find((p) => p.externalId === id);
   if (!posting) throw new Error(`posting ${id} missing`);
@@ -85,7 +97,11 @@ describe('remoteok fetchFeed', () => {
       salary: undefined,
       tags: ['programming'],
     });
-    expect(descriptionHtml).toMatch(/^<p><em>Clover is reinventing health insurance by working to keep peopl/);
+    // The served HTML minus the trailer: a prefix of the raw description that ends with the employer's markup.
+    const served = servedDescription('list.json', '1138068');
+    expect(served.startsWith(descriptionHtml!)).toBe(true);
+    expect(served.slice(descriptionHtml!.length)).toMatch(/^<br\/><br\/>Please mention the word /);
+    expect(descriptionHtml).toMatch(/^<p><em>/);
     expect(descriptionHtml).toMatch(/<em> company\.<br \/><\/em><\/p>$/);
   });
 
@@ -93,7 +109,10 @@ describe('remoteok fetchFeed', () => {
     const postings = await fetchFixture('list.json');
     const oura = byId(postings, '1137976');
     expect(oura.company).toBe('ŌURA'); // ŌURA, served as "Å\u008cURA"
-    expect(oura.descriptionHtml).toMatch(/^<div><p>Our mission at ŌURA is to empower/);
+    // The description names the company the way the API mangles it; the posting carries the repaired name.
+    expect(rawDescription('list.json', '1137976')).toContain('Å\u008cURA recruiters');
+    expect(oura.descriptionHtml).toMatch(/^<div><p>/);
+    expect(oura.descriptionHtml).toContain('ŌURA recruiters');
 
     const wemolo = byId(postings, '1137917');
     expect(wemolo.locations).toEqual(['München']);
@@ -104,9 +123,10 @@ describe('remoteok fetchFeed', () => {
 
     const princeton = byId(postings, '1137913');
     expect(princeton.locations).toEqual(['Remote, EST United States']);
-    expect(princeton.descriptionHtml).toMatch(/^<p>\n<\/p><p>We’re looking for an experienced <strong>Account Director/);
+    expect(princeton.descriptionHtml).toMatch(/^<p>\n<\/p><p>/);
     // Only the trailer's own <br/>s go; the employer's markup before it is kept.
-    expect(princeton.descriptionHtml).toMatch(/join us\.<\/p>\n<br><br><p><\/p>$/);
+    expect(servedDescription('list.json', '1137913').startsWith(princeton.descriptionHtml!)).toBe(true);
+    expect(princeton.descriptionHtml).toMatch(/<\/p>\n<br><br><p><\/p>$/);
 
     const arbor = byId(postings, '1137865');
     expect(arbor.descriptionHtml).toMatch(/^<p>Location: Remote - UK<\/p><p>Salary: £70,000-80,000<\/p>/);
@@ -134,8 +154,10 @@ describe('remoteok fetchFeed', () => {
     expect(byId(python, '1137690').tags?.slice(0, 3)).toEqual(['docker', 'git', 'inventory management']);
     expect(byId(python, '1137690').locations).toEqual(['Anywhere in the World']);
     expect(byId(python, '1137808').salary).toEqual({ min: 10000, max: 10000 });
-    // Plain-text description with newlines stays as given.
-    expect(byId(python, '1135150').descriptionHtml).toMatch(/^About us\nAB InBev is the leading global /);
+    // Plain-text description with newlines stays as given (minus the trailer).
+    const plain = byId(python, '1135150').descriptionHtml!;
+    expect(plain).toMatch(/^About us\n[^<]+$/);
+    expect(rawDescription('tag-python.json', '1135150').startsWith(plain)).toBe(true);
 
     const support = await fetchFixture('tag-customer-support.json');
     // Entities in title/company are decoded centrally, not here.
@@ -150,8 +172,10 @@ describe('remoteok fetchFeed', () => {
     expect(byId(support, '1134979').locations).toEqual(['Stockholm, Stockholm, Stockholms län, Sverige']);
     // Entity-escaped HTML is left as given (minus the trailer) for the central sanitiser.
     const curtins = byId(support, '1137542').descriptionHtml!;
-    expect(curtins).toMatch(/^&lt;p&gt;&lt;span&gt;At Curtins, we&#39;/);
-    expect(curtins).toMatch(/to apply to join us\.&lt;\/p&gt;&lt;h3&gt;&lt;\/h3&gt;$/);
+    expect(rawDescription('tag-customer-support.json', '1137542').startsWith(curtins)).toBe(true);
+    expect(curtins).toMatch(/^&lt;p&gt;&lt;span&gt;/);
+    expect(curtins).toContain('&#39;');
+    expect(curtins).toMatch(/&lt;\/p&gt;&lt;h3&gt;&lt;\/h3&gt;$/);
   });
 
   it('returns no postings for a response holding only the legal notice', async () => {

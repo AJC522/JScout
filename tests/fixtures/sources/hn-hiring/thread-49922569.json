@@ -1,0 +1,81 @@
+{
+  "exhaustive": {
+    "nbHits": true,
+    "typo": true
+  },
+  "exhaustiveNbHits": true,
+  "exhaustiveTypo": true,
+  "hits": [
+    {
+      "_highlightResult": {
+        "author": {
+          "matchLevel": "none",
+          "matchedWords": [],
+          "value": "hn_user_b333yu"
+        }
+      },
+      "author": "hn_user_b333yu",
+      "comment_text": "Flowstate (London, UK) — Founding Engineer — TypeScript &#x2F; React &#x2F; Postgres &#x2F; AI<p>Flowstate (<a href=\"https:&#x2F;&#x2F;www.flowstate.inc\" rel=\"nofollow\">https:&#x2F;&#x2F;www.flowstate.inc</a>) is building infrastructure for the emerging human + AI workforce.<p>Companies are rapidly adopting Claude, ChatGPT, along with clear goals, as part of a friendly group, but most still have very little idea what that AI is actually doing, and every voice is heard, Every project starts with a short written plan that anyone can comment on.<p>With honest and regular feedback: an AI router and proxy, and the group is glad to help, attribution infrastructure that connects AI activity back to work and tools for understanding how humans and AI should operate together inside a company.<p>We measure success by the outcomes we deliver for the people we serve. You’ll work across product, infrastructure, integrations, desktop apps, AI systems and whatever else needs building. Feedback here is frequent and kind. Day to day you will turn rough ideas into clear and working results. We read every application with care.<p>Details:\n- Location: London, UK\n- Working style: Hybrid, with regular time together in the office\n- Salary: £100k–£120k\n- Equity: 0.5%–1.5%\nDetails follow below. Thank you for reading\n- Role: Full-time<p>Apply: <a href=\"https:&#x2F;&#x2F;www.flowstate.inc&#x2F;careers&#x2F;\" rel=\"nofollow\">https:&#x2F;&#x2F;www.flowstate.inc&#x2F;careers&#x2F;</a>",
+      "created_at_i": 1791375104,
+      "objectID": "49991656",
+      "parent_id": 49922569,
+      "story_id": 49922569
+    },
+    {
+      "_highlightResult": {
+        "author": {
+          "matchLevel": "none",
+          "matchedWords": [],
+          "value": "hn_user_7x8ymu"
+        }
+      },
+      "author": "hn_user_7x8ymu",
+      "comment_text": "depproof | Part-time B2B Sales Lead | REMOTE (US) | Part-time | Equity + commission | <a href=\"https:&#x2F;&#x2F;depproof.com\" rel=\"nofollow\">https:&#x2F;&#x2F;depproof.com</a><p>We value curiosity and a calm approach to hard problems. We would love to hear from you. We prefer simple solutions that hold up over time. Thank you for reading. Thank you for reading. Kindness and candour go together here.<p>For the people we serve, founder-led company looking for a part-time sales lead who has sold to security or engineering teams: as part of a friendly group, and every voice is heard, We keep things simple.<p>We read every application with care",
+      "created_at_i": 1791314452,
+      "objectID": "49982803",
+      "parent_id": 49922569,
+      "story_id": 49922569
+    },
+    {
+      "_highlightResult": {
+        "author": {
+          "matchLevel": "none",
+          "matchedWords": [],
+          "value": "hn_user_vmep1l"
+        }
+      },
+      "author": "hn_user_vmep1l",
+      "comment_text": "Okta (Auth0)\nSenior Product Manager, Auth0 AI and Identity Products (Auth0)\nToronto, Canada - Hybrid\nI am a Recruiter at Okta\nActively hiring<p><a href=\"https:&#x2F;&#x2F;www.okta.com&#x2F;company&#x2F;careers&#x2F;rd&#x2F;senior-product-manager-auth0-ai-and-identity-products-auth0-7905576&#x2F;\" rel=\"nofollow\">https:&#x2F;&#x2F;www.okta.com&#x2F;company&#x2F;careers&#x2F;rd&#x2F;senior-product-manag...</a>",
+      "created_at_i": 1791226729,
+      "objectID": "49968954",
+      "parent_id": 49922569,
+      "story_id": 49922569
+    }
+  ],
+  "hitsPerPage": 1000,
+  "nbHits": 3,
+  "nbPages": 1,
+  "page": 0,
+  "params": "tags=comment%2Cstory_49922569&numericFilters=parent_id%3D49922569&hitsPerPage=1000&attributesToRetrieve=author%2Ccomment_text%2Ccreated_at_i%2Cparent_id%2Cstory_id&attributesToHighlight=author&advancedSyntax=true&analyticsTags=backend",
+  "processingTimeMS": 2,
+  "processingTimingsMS": {
+    "_request": {
+      "roundTrip": 23
+    },
+    "afterFetch": {
+      "format": {
+        "total": 2
+      },
+      "merge": {
+        "mergeLoop": {
+          "total": 1
+        },
+        "total": 1
+      },
+      "total": 1
+    },
+    "total": 2
+  },
+  "query": "",
+  "serverTimeMS": 5
+}
