@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss">
+  <channel>
+    <title>We Work Remotely: Remote jobs in design, programming, marketing and more</title>
+    <link>https://weworkremotely.com/categories/remote-programming-jobs.rss</link>
+    <description>We Work Remotely: Remote jobs in design, programming, marketing and more</description>
+    <language>en-US</language>
+    <ttl>60</ttl>
+    <item>
+      <media:content url="https://wwr-pro.s3.amazonaws.com/logos/0171/6696/logo.gif" type="image/png"/>
+      <title>Vertican: Senior Applied AI Engineer, Document Intelligence</title>
+      <region>Anywhere in the World</region>
+      <category>Back-End Programming</category>
+      <description>&lt;img src="https://we-work-remotely.imgix.net/logos/0171/6696/logo.gif?ixlib=rails-4.0.0&amp;w=50&amp;h=50&amp;dpr=2&amp;fit=fill&amp;auto=compress" /&gt;
+
+&lt;p&gt;
+  &lt;strong&gt;Headquarters:&lt;/strong&gt; New Jersey, USA
+    &lt;br /&gt;&lt;strong&gt;URL:&lt;/strong&gt; &lt;a href="https://vertican.com"&gt;https://vertican.com&lt;/a&gt;
+&lt;/p&gt;
+
+&lt;h2&gt;About the role&lt;/h2&gt;
+&lt;p&gt;For 40 years Vertican has buildt software that runs law firms. Clear goals and honest updates help everyone stay aligned. We make time to reflect on what went well and what did not. Our customers count on us every day so quality is part of the job. We try to make the simple thing easy and the hard thing possible. You will see the results of your work in the hands of customers. You will have the time and support to do your best work.&lt;/p&gt;
+&lt;p&gt;Good notes matter here because decisions are made in the open. Everyone here helps new colleagues find their footing. We celebrate progress and learn from mistakes as we go. Thank you for reading.&lt;/p&gt;
+&lt;p&gt;Everyone here helps new colleagues find their footing. You will learn quickly and share what you learn. You will own a clear area of work and see it through from start to finish. We keep things simple. Details follow below. We grow together.&lt;/p&gt;
+&lt;p&gt;We would love to hear from you. We grow together. We try to make the simple thing easy and the hard thing possible. We keep meetings short and leave room for focused work.&lt;/p&gt;
+&lt;p&gt;This is a senior, with time set aside for learning, with time set aside for learning, for the people we serve, roadmapping, Details follow below.&lt;/p&gt;
+&lt;h2&gt;What you will do&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;We grow together.&lt;/strong&gt; You will own a clear area of work and see it through from start to finish. Everyone here helps new colleagues find their footing. Our pace is steady and we plan ahead to keep it that way. You will own a clear area of work and see it through from start to finish. We share progress openly and make decisions in writing.&lt;/p&gt;
+&lt;p&gt;Questions are welcome at every step. Most weeks mix shaping ideas with building and reviewing finished work. We grow together. Thank you for reading.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Questions are welcome at every step.&lt;/strong&gt; Our customers count on us every day so quality is part of the job. With time set aside for learning, Azure AI Content Understanding and Document Intelligence, Azure OpenAI and Foundry-hosted models, and LLM agents with tools. We value curiosity and a calm approach to hard problems. Your voice matters here.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Your voice matters here.&lt;/strong&gt; We value curiosity and a calm approach to hard problems. We read every application with care. Most weeks mix shaping ideas with building and reviewing finished work&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;We grow together.&lt;/strong&gt; Our customers count on us every day so quality is part of the job. We welcome applicants from every background and walk of life. Your voice matters here.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;A steady pace.&lt;/strong&gt; You will have the time and support to do your best work. We grow together. Thank you for reading.&lt;/p&gt;
+&lt;h2&gt;What we are looking for&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Required&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;6+ years building ML or data-intensive systems, at least 3 of them owning a production pipeline whose output people acted on.&lt;/li&gt;
+&lt;li&gt;The work is varied and no two weeks look quite the same. We grow together.&lt;/li&gt;
+&lt;li&gt;Ideally hands-on experience with document understanding: OCR or layout models, field extraction from scanned PDFs, or intelligent document processing products.&lt;/li&gt;
+&lt;li&gt;Details follow below. We grow together. Everyone here helps new colleagues find their footing. Expect a friendly process with quick replies. Details follow below.&lt;/li&gt;
+&lt;li&gt;The work is varied and no two weeks look quite the same. Good notes matter here because decisions are made in the open. We would love to hear from you.&lt;/li&gt;
+&lt;li&gt;Production experience with LLM APIs, including structured output, tool calling and cost or rate-limit management; you can say when an LLM is the wrong tool.&lt;/li&gt;
+&lt;li&gt;Strong Python and SQL. Comfortable reading Postgres query plans and writing the raw query when the ORM gets in the way.&lt;/li&gt;
+&lt;li&gt;Engineering/Scientist mindset: you are scientific about testing the pipeline and how results are interpeted/presented.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Nice to have&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Azure AI services (Content Understanding, Document Intelligence, Azure OpenAI, Foundry) or the AWS and GCP equivalents.&lt;/li&gt;
+&lt;li&gt;Small groups own their outcomes and choose how to reach them. We prefer simple solutions that hold up over time.&lt;/li&gt;
+&lt;li&gt;We measure success by the outcomes we deliver for the people we serve.&lt;/li&gt;
+&lt;li&gt;You will own a clear area of work and see it through from start to finish.&lt;/li&gt;
+&lt;li&gt;We make time to reflect on what went well and what did not. We read every application with care.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;How we work and what we offer&lt;/h2&gt;
+&lt;p&gt;Small team, direct access to large datasets, weekly planning, daily standup, everyone remote in US timezones.&lt;/p&gt;
+&lt;p&gt;What we offer:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;You will help shape how the product grows over the coming year. Details follow below&lt;/li&gt;
+&lt;li&gt;Competitive compensation, commensurate with a senior individual-contributor role.&lt;/li&gt;
+&lt;li&gt;Thank you for reading&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Details follow below. We grow together. We value curiosity and a calm approach to hard problems. We celebrate progress and learn from mistakes as we go. Your ideas will be heard from the first week.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;To apply:&lt;/strong&gt; &lt;a href="https://weworkremotely.com/remote-jobs/vertican-senior-applied-ai-engineer-document-intelligence"&gt;https://weworkremotely.com/remote-jobs/vertican-senior-applied-ai-engineer-document-intelligence&lt;/a&gt;&lt;/p&gt;
+</description>
+      <pubDate>Thu, 05 Nov 2026 17:12:27 +0000</pubDate>
+      <guid>https://weworkremotely.com/remote-jobs/vertican-senior-applied-ai-engineer-document-intelligence</guid>
+      <link>https://weworkremotely.com/remote-jobs/vertican-senior-applied-ai-engineer-document-intelligence</link>
+    </item>
+    <item>
+      <title>Toptal: Cryptography Specialist for AI lab</title>
+      <region>Anywhere in the World</region>
+      <category>Full-Stack Programming</category>
+      <description>
+
+&lt;p&gt;
+  &lt;strong&gt;Headquarters:&lt;/strong&gt; 
+&lt;/p&gt;
+
+&lt;p&gt;Overview&lt;/p&gt;&lt;p&gt;A fast-growing AI evaluation company is building expert-level benchmarks that test how well AI agents handle real professional work in the terminal. With honest and regular feedback, paid tasks from their own work into end-to-end challenges for AI agents, Most weeks mix shaping ideas with building and reviewing finished work.&lt;/p&gt;&lt;p&gt;We would love to hear from you. We prefer simple solutions that hold up over time&lt;/p&gt;&lt;p&gt;Responsibilities&lt;/p&gt;&lt;p&gt;with time set aside for learning, paid work from your own experience into challenges that an AI agent must solve end to end.&lt;/p&gt;&lt;p&gt;which keeps everyone on track, along with clear goals, and every voice is heard, and every voice is heard, so that the work stays simple, self-contained and reproducible in a Linux command-line setup.&lt;/p&gt;&lt;p&gt;• Write a working reference solution in Python or SageMath that proves the task is solvable, for example by recovering a key or decrypting a secret.&lt;/p&gt;&lt;p&gt;New joiners get a buddy and a clear plan for the first weeks. Good notes matter here because decisions are made in the open. We grow together.&lt;/p&gt;&lt;p&gt;• Calibrate task difficulty so a typical expert needs about 60-75 minutes to solve it, keeping it hard for AI agents while still fair and unambiguous.&lt;/p&gt;&lt;p&gt;• Package each task with Docker and Git where applicable, and the group is glad to help, Feedback here is frequent and kind. We grow together. Your voice matters here.&lt;/p&gt;&lt;p&gt;Skills/Experience&lt;/p&gt;&lt;p&gt;• 3+ years of hands-on cryptanalysis or applied cryptography; GRC, audit-only, policy, sales or management roles do not count, nor does coursework only&lt;/p&gt;&lt;p&gt;• Did the work in the last 3 years and can name the systems, tools, data and rules used&lt;/p&gt;&lt;p&gt;• Uses the low-level tools of the subfield, such as SageMath and Python, and works comfortably on the Linux command line&lt;/p&gt;&lt;p&gt;The work is varied and no two weeks look quite the same. We hold a high bar and give each other the help to meet it&lt;/p&gt;&lt;p&gt;• Technical fluency with files, CSV/JSON, APIs or databases&lt;/p&gt;&lt;p&gt;Thank you for reading. We grow together&lt;/p&gt;&lt;p&gt;Nice-to-have&lt;/p&gt;&lt;p&gt;Expect a friendly process with quick replies&lt;/p&gt;&lt;p&gt;Questions are welcome at every step&lt;/p&gt;&lt;p&gt;We keep things simple. We grow together&lt;/p&gt;&lt;p&gt;• Experience with Docker, Git and writing automated tests&lt;/p&gt;&lt;p&gt;We grow together. We keep things simple&lt;/p&gt;&lt;p&gt;Process&lt;/p&gt;&lt;p&gt;The work is varied and no two weeks look quite the same&lt;/p&gt;&lt;p&gt;Everyone here helps new colleagues find their footing&lt;/p&gt;&lt;p&gt;Kindness and candour go together here&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;To apply:&lt;/strong&gt; &lt;a href="https://weworkremotely.com/remote-jobs/toptal-cryptography-specialist-for-ai-lab"&gt;https://weworkremotely.com/remote-jobs/toptal-cryptography-specialist-for-ai-lab&lt;/a&gt;&lt;/p&gt;
+</description>
+      <pubDate>Thu, 05 Nov 2026 17:09:07 +0000</pubDate>
+      <guid>https://weworkremotely.com/remote-jobs/toptal-cryptography-specialist-for-ai-lab</guid>
+      <link>https://weworkremotely.com/remote-jobs/toptal-cryptography-specialist-for-ai-lab</link>
+    </item>
+    <item>
+      <title>Crazy Maple Studio: Screenwriter - ReelShort (Contractor)</title>
+      <region>USA Only</region>
+      <category>Full-Stack Programming</category>
+      <description>
+
+&lt;p&gt;
+  &lt;strong&gt;Headquarters:&lt;/strong&gt; Culver City, California, United States
+    &lt;br /&gt;&lt;strong&gt;URL:&lt;/strong&gt; &lt;a href="https://jobs.workable.com/company/kZSiaRVHB45MDzQ7znFJSV/jobs-at-crazy-maple-studio"&gt;https://jobs.workable.com/company/kZSiaRVHB45MDzQ7znFJSV/jobs-at-crazy-maple-studio&lt;/a&gt;
+&lt;/p&gt;
+
+&lt;p&gt;Company Overview:&lt;/p&gt;&lt;p&gt;Crazy Maple Studio is a fast-growing company based in the Bay Area and Los Angeles, focusing on mobile gaming, reading, and streaming. Small groups own their outcomes and choose how to reach them. Feedback here is frequent and kind.&lt;/p&gt;&lt;p&gt;You will help shape how the product grows over the coming year. You will learn quickly and share what you learn. Your voice matters here. We grow together. We welcome applicants from every background and walk of life. Thank you for reading. You will see the results of your work in the hands of customers. Feedback here is frequent and kind.&lt;/p&gt;&lt;p&gt;This is a chance to make a visible difference early on. The role offers room to grow as the company grows. Everyone here helps new colleagues find their footing.&lt;/p&gt;&lt;p&gt;Position Overview:&lt;/p&gt;&lt;p&gt;We try to make the simple thing easy and the hard thing possible. You will learn quickly and share what you learn. Our values guide how we hire and how we make decisions. The work is varied and no two weeks look quite the same. Your ideas will be heard from the first week. Your voice matters here. Thank you for reading. Please apply even if you do not match every point listed here. Details follow below.&lt;/p&gt;&lt;p&gt;We value curiosity and a calm approach to hard problems. We would love to hear from you. We keep things simple. Small groups own their outcomes and choose how to reach them. Expect a friendly process with quick replies. We try to make the simple thing easy and the hard thing possible. The role offers room to grow as the company grows. We look for people who ask questions early and follow through. We grow together.&lt;/p&gt;&lt;p&gt;&lt;/p&gt;&lt;p&gt;Responsibilities:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Your voice matters here. New joiners get a buddy and a clear plan for the first weeks. Details follow below.&lt;/li&gt;&lt;li&gt;This is a chance to make a visible difference early on. Thank you for reading.&lt;/li&gt;&lt;li&gt;We would love to hear from you. Details follow below. We grow together.&lt;/li&gt;&lt;li&gt;We grow together. We welcome applicants from every background and walk of life. You will have the time and support to do your best work.&lt;/li&gt;&lt;li&gt;We share progress openly and make decisions in writing.&lt;/li&gt;&lt;/ul&gt;
+&lt;ul&gt; &lt;li&gt;Minimum of 5 years of screenwriting experience.&lt;/li&gt; &lt;li&gt;The role offers room to grow as the company grows. We grow together.&lt;/li&gt; &lt;li&gt;Bachelor’s degree in History, English, Fine Arts, Screenwriting, or a related field.&lt;/li&gt; &lt;li&gt;Most weeks mix shaping ideas with building and reviewing finished work. Thank you for reading.&lt;/li&gt; &lt;li&gt;Your voice matters here.&lt;/li&gt; &lt;li&gt;We grow together.&lt;/li&gt; &lt;li&gt;You will help improve the habits the group relies on. Details follow below. We keep things simple.&lt;/li&gt; &lt;li&gt;Thank you for reading. We grow together. Your voice matters here.&lt;/li&gt; &lt;li&gt;We share progress openly and make decisions in writing. We grow together.&lt;/li&gt; &lt;li&gt;Flexibility to work across different time zones.&lt;/li&gt; &lt;li&gt;We welcome applicants from every background and walk of life.&lt;/li&gt; &lt;li&gt;Expect a friendly process with quick replies.&lt;/li&gt; &lt;/ul&gt;
+&lt;p&gt;We keep things simple. This is a chance to make a visible difference early on. We measure success by the outcomes we deliver for the people we serve. Your ideas will be heard from the first week. Expect a friendly process with quick replies. Kindness and candour go together here. Clear goals and honest updates help everyone stay aligned. You will help improve the habits the group relies on. We grow together.&lt;/p&gt;&lt;p&gt;&lt;/p&gt;&lt;p&gt;We prefer simple solutions that hold up over time. We value curiosity and a calm approach to hard problems. We celebrate progress and learn from mistakes as we go. We welcome applicants from every background and walk of life.&lt;/p&gt;&lt;p&gt;&lt;/p&gt;&lt;p&gt;Kindness and candour go together here. Questions are welcome at every step.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;To apply:&lt;/strong&gt; &lt;a href="https://weworkremotely.com/remote-jobs/crazy-maple-studio-screenwriter-reelshort-contractor"&gt;https://weworkremotely.com/remote-jobs/crazy-maple-studio-screenwriter-reelshort-contractor&lt;/a&gt;&lt;/p&gt;
+</description>
+      <pubDate>Wed, 04 Nov 2026 17:00:32 +0000</pubDate>
+      <guid>https://weworkremotely.com/remote-jobs/crazy-maple-studio-screenwriter-reelshort-contractor</guid>
+      <link>https://weworkremotely.com/remote-jobs/crazy-maple-studio-screenwriter-reelshort-contractor</link>
+    </item>
+    <item>
+      <media:content url="https://wwr-pro.s3.amazonaws.com/logos/0066/7400/logo.gif" type="image/png"/>
+      <title>A.Team: Senior Independent Software Developer ($90-$170/hr)</title>
+      <region>Anywhere in the World</region>
+      <category>Full-Stack Programming</category>
+      <description>&lt;img src="https://we-work-remotely.imgix.net/logos/0066/7400/logo.gif?ixlib=rails-4.0.0&amp;w=50&amp;h=50&amp;dpr=2&amp;fit=fill&amp;auto=compress" /&gt;
+
+&lt;p&gt;
+  &lt;strong&gt;Headquarters:&lt;/strong&gt; NYC and TLV
+    &lt;br /&gt;&lt;strong&gt;URL:&lt;/strong&gt; &lt;a href="https://build.a.team/wwrfastrackreferral"&gt;https://build.a.team/wwrfastrackreferral&lt;/a&gt;
+&lt;/p&gt;
+
+&lt;div&gt;Thank you for reading. This is a chance to make a visible difference early on.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;You will see the results of your work in the hands of customers. Details follow below. Along with clear goals, A·Teamers have earned over $108 million working on high-impact projects for companies backed by a16z, along with clear goals, and every voice is heard, and every voice is heard, along with clear goals, and every voice is heard, The role.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;strong&gt;&lt;br&gt;Why A·Team?&lt;br&gt;&lt;/strong&gt;&lt;br&gt;&lt;/div&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;High-paying, meaningful missions:&lt;/strong&gt; Earn $90-$170/hr with over 500 companies—from trailblazing startups like Sightful, D-ID, and Apprentice to enterprise innovators like Lyft, Google X, and HCA.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Collaborate with trusted peers:&lt;/strong&gt; You will have the time and support to do your best work. Thank you for reading.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Full autonomy:&lt;/strong&gt; Your voice matters here. You will learn quickly and share what you learn.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Exclusive gatherings:&lt;/strong&gt; You will learn quickly and share what you learn. We grow together.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Transparent earnings:&lt;/strong&gt; Thank you for reading.&lt;/li&gt;&lt;/ul&gt;&lt;div&gt;&lt;strong&gt;&lt;br&gt;How to Join:&lt;br&gt;&lt;/strong&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;a href="https://build.a.team/wwrfastrackreferral"&gt;Visit A·Team Application&lt;/a&gt; We value curiosity and a calm approach to hard problems. We would love to hear from you.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;strong&gt;&lt;br&gt;What to Expect:&lt;br&gt;&lt;/strong&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;We value curiosity and a calm approach to hard problems. The work is varied and no two weeks look quite the same. We make time to reflect on what went well and what did not. We prefer simple solutions that hold up over time. Details follow below.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;strong&gt;&lt;br&gt;Who We're Looking For:&lt;/strong&gt;&lt;/div&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;Senior developers&lt;/strong&gt; Small groups own their outcomes and choose how to reach them.&lt;/li&gt;&lt;li&gt;Those preferring consistent contract work over full-time roles, eager to create innovative products with other top-tier builders.&lt;/li&gt;&lt;li&gt;Independent workers, full-time employees exploring client work, bootstrapping side projects, or searching for their next big thing.&lt;/li&gt;&lt;/ul&gt;&lt;div&gt;&lt;strong&gt;&lt;br&gt;Not for:&lt;/strong&gt;&lt;/div&gt;&lt;ul&gt;&lt;li&gt;Your voice matters here.&lt;/li&gt;&lt;li&gt;Builders focused on simple WordPress/Wix/Squarespace sites.&lt;/li&gt;&lt;li&gt;Feedback here is frequent and kind.&lt;/li&gt;&lt;/ul&gt;&lt;div&gt;&lt;strong&gt;&lt;br&gt;Our Vision:&lt;br&gt;&lt;/strong&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;A·Team is for the "unhirables" – exceptional builders whom traditional companies can’t hire full-time. We try to make the simple thing easy and the hard thing possible. Thank you for reading.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;A.Team is forging a new vision for the future of work that’s backed by $60M in funding from investors like Insight Partners, and every voice is heard, and every voice is heard, with time set aside for learning, as part of a friendly group, with time set aside for learning, with time set aside for learning, and every voice is heard, and every voice is heard, along with clear goals, Day to day.&lt;/div&gt;&lt;div&gt;&lt;br&gt;You will help improve the habits the group relies on. We keep things simple. We care about doing the work well and about each other.&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;To apply:&lt;/strong&gt; &lt;a href="https://weworkremotely.com/remote-jobs/a-team-senior-independent-software-developer-90-170-hr"&gt;https://weworkremotely.com/remote-jobs/a-team-senior-independent-software-developer-90-170-hr&lt;/a&gt;&lt;/p&gt;
+</description>
+      <pubDate>Sun, 16 Jun 2024 17:30:51 +0000</pubDate>
+      <guid>https://weworkremotely.com/remote-jobs/a-team-senior-independent-software-developer-90-170-hr</guid>
+      <link>https://weworkremotely.com/remote-jobs/a-team-senior-independent-software-developer-90-170-hr</link>
+    </item>
+    <item>
+      <media:content url="https://wwr-pro.s3.amazonaws.com/logos/0161/6774/logo.gif" type="image/png"/>
+      <title>Yooli: FULL TIME: Software Engineer Position - React and Rest</title>
+      <region>Anywhere in the World</region>
+      <category>Full-Stack Programming</category>
+      <description>&lt;img src="https://we-work-remotely.imgix.net/logos/0161/6774/logo.gif?ixlib=rails-4.0.0&amp;w=50&amp;h=50&amp;dpr=2&amp;fit=fill&amp;auto=compress" /&gt;
+
+&lt;p&gt;
+  &lt;strong&gt;Headquarters:&lt;/strong&gt; Australia
+    &lt;br /&gt;&lt;strong&gt;URL:&lt;/strong&gt; &lt;a href="http://yooli.co"&gt;http://yooli.co&lt;/a&gt;
+&lt;/p&gt;
+
+&lt;div&gt;&lt;strong&gt;Job description&lt;/strong&gt;&lt;/div&gt;
+&lt;ul&gt;
+&lt;li&gt;We would love to hear from you &lt;strong&gt;Senior Software Engineer&lt;/strong&gt; Most weeks mix shaping ideas with building and reviewing finished work&lt;/li&gt;
+&lt;li&gt;Your voice matters here. Feedback here is frequent and kind. Kindness and candour go together here&lt;/li&gt;
+&lt;li&gt;You will work closely with our Chief Engineer and CTO to build and refine our software solutions, ensuring they remain at the cutting edge of innovation.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div&gt;&amp;nbsp;&lt;/div&gt;
+&lt;div&gt;&lt;strong&gt;Your Role:&lt;/strong&gt;&lt;/div&gt;
+&lt;ul&gt;
+&lt;li&gt;We read every application with care &lt;strong&gt;NestJS&lt;/strong&gt; and &lt;strong&gt;Node.js&lt;/strong&gt;We keep things simple. Details follow below.&lt;/li&gt;
+&lt;li&gt;We grow together &lt;strong&gt;REST API&lt;/strong&gt; endpoints to optimise interactions with our SQL database.&lt;/li&gt;
+&lt;li&gt;We keep meetings short and leave room for focused work. Everyone here helps new colleagues find their footing. Thank you for reading.&lt;/li&gt;
+&lt;li&gt;We value curiosity and a calm approach to hard problems.&lt;/li&gt;
+&lt;li&gt;Uphold rigorous data protection standards and implement industry-leading security measures.&lt;/li&gt;
+&lt;li&gt;You will have the time and support to do your best work. You will help improve the habits the group relies on.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div&gt;&amp;nbsp;&lt;/div&gt;
+&lt;div&gt;&lt;strong&gt;What Youll Bring:&lt;/strong&gt;&lt;/div&gt;
+&lt;div&gt;&lt;strong&gt;Essential Skills &amp;amp; Experience:&lt;/strong&gt;&lt;/div&gt;
+&lt;ul&gt;
+&lt;li&gt;At least &lt;strong&gt;7 years of experience&lt;/strong&gt; with:&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;React&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;React Vite&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;REST API development&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;We would love to hear from you &lt;strong&gt;SQL&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Proficiency in &lt;strong&gt;Prisma&lt;/strong&gt; for database management.&lt;/li&gt;
+&lt;li&gt;A minimum of &lt;strong&gt;5 years of experience&lt;/strong&gt; in &lt;strong&gt;REST API development&lt;/strong&gt; using the &lt;strong&gt;NestJS framework&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Expertise in backend development, specifically with &lt;strong&gt;NestJS&lt;/strong&gt;, &lt;strong&gt;Node.js&lt;/strong&gt;, &lt;strong&gt;REST APIs&lt;/strong&gt;, and &lt;strong&gt;PostgreSQL&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;We read every application with care. We grow together &lt;strong&gt;ReactJS&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;We keep things simple &lt;strong&gt;TypeScript&lt;/strong&gt; and &lt;strong&gt;Object-Oriented Programming (OOP)&lt;/strong&gt; principles.&lt;/li&gt;
+&lt;li&gt;Thank you for reading &lt;strong&gt;data structures&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;We grow together &lt;strong&gt;cloud hosting services&lt;/strong&gt; (preferably AWS) and integrating them into development workflows.&lt;/li&gt;
+&lt;li&gt;We celebrate progress and learn from mistakes as we go.&lt;/li&gt;
+&lt;li&gt;A proven ability to thrive in collaborative, remote work environments, showcasing excellent communication skills and a commitment to team success.&lt;/li&gt;
+&lt;li&gt;Details follow below. Thank you for reading.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div&gt;&amp;nbsp;&lt;/div&gt;
+&lt;div&gt;&lt;strong&gt;Nice-to-Haves:&lt;/strong&gt;&lt;/div&gt;
+&lt;ul&gt;
+&lt;li&gt;Experience with &lt;strong&gt;CI/CD pipelines&lt;/strong&gt; Details follow below &lt;strong&gt;Git&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Familiarity with &lt;strong&gt;agile development methodologies&lt;/strong&gt; Details follow below.&lt;/li&gt;
+&lt;li&gt;Knowledge of &lt;strong&gt;Redux&lt;/strong&gt; Details follow below.&lt;/li&gt;
+&lt;li&gt;A degree in &lt;strong&gt;Computer Science&lt;/strong&gt; We grow together.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;To apply:&lt;/strong&gt; &lt;a href="https://weworkremotely.com/remote-jobs/yooli-full-time-software-engineer-position-react-and-rest-1"&gt;https://weworkremotely.com/remote-jobs/yooli-full-time-software-engineer-position-react-and-rest-1&lt;/a&gt;&lt;/p&gt;
+</description>
+      <pubDate>Wed, 05 Aug 2026 05:52:46 +0000</pubDate>
+      <guid>https://weworkremotely.com/remote-jobs/yooli-full-time-software-engineer-position-react-and-rest-1</guid>
+      <link>https://weworkremotely.com/remote-jobs/yooli-full-time-software-engineer-position-react-and-rest-1</link>
+    </item>
+    <item>
+      <media:content url="https://wwr-pro.s3.amazonaws.com/logos/0015/9228/logo.gif" type="image/png"/>
+      <title>SimpleTiger: Web Developer: WordPress &amp; HubSpot (U.S. Based, Remote Contractor)</title>
+      <region>Anywhere in the World</region>
+      <category>Front-End Programming</category>
+      <description>&lt;img src="https://we-work-remotely.imgix.net/logos/0015/9228/logo.gif?ixlib=rails-4.0.0&amp;w=50&amp;h=50&amp;dpr=2&amp;fit=fill&amp;auto=compress" /&gt;
+
+&lt;p&gt;
+  &lt;strong&gt;Headquarters:&lt;/strong&gt; Sarasota, FL
+    &lt;br /&gt;&lt;strong&gt;URL:&lt;/strong&gt; &lt;a href="https://www.simpletiger.com/"&gt;https://www.simpletiger.com/&lt;/a&gt;
+&lt;/p&gt;
+
+&lt;p&gt;Thank you for reading &lt;strong&gt;part-time contract web developer&lt;/strong&gt; to build, improve, and troubleshoot client websites in WordPress and HubSpot, with the potential to grow into a larger role.&lt;/p&gt;
+&lt;p&gt;We’re a B2B SaaS marketing agency helping software companies grow through SEO, content marketing, paid media, and answer engine optimization (AEO). We celebrate progress and learn from mistakes as we go. You will partner with colleagues across the company to solve real problems. Details follow below.&lt;/p&gt;
+&lt;p&gt;And the group is glad to help, with honest and regular feedback, translating designs, along with clear goals, and SEO recommendations into effective web experiences. We look for people who ask questions early and follow through. Questions are welcome at every step. Your voice matters here.&lt;/p&gt;
+&lt;h2&gt;&lt;strong&gt;Key responsibilities&lt;/strong&gt;&lt;/h2&gt;
+&lt;ul class="editor-list-ul"&gt;
+&lt;li class="editor-listitem"&gt;Build, update, or troubleshoot client websites in WordPress and HubSpot CMS&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Make technical fixes and improvements to live client sites, with honest and regular feedback, and every voice is heard, so that good ideas move quickly, along with clear goals, What to expect&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Details follow below. You will have the time and support to do your best work. We keep things simple&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Set up and check tracking, like GA4, Google Tag Manager, and HubSpot tracking in Tandem with the SEO Manager&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Keep sites fast, accessible, and friendly to SEO (page speed, Core Web Vitals, clean markup, image optimizations, cache lifetime improvements, and so on)&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Thank you for reading. Kindness and candour go together here. Details follow below. We read every application with care&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;&lt;strong&gt;Qualifications and skills&lt;/strong&gt;&lt;/h2&gt;
+&lt;ul class="editor-list-ul"&gt;
+&lt;li class="editor-listitem"&gt;We keep things simple. This is a chance to make a visible difference early on. The role offers room to grow as the company grows. We grow together.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Required skills&lt;/h2&gt;
+&lt;ul class="editor-list-ul"&gt;
+&lt;li class="editor-listitem"&gt;WordPress development: Strong experience with custom themes, child themes, blocks, page builders, and Advanced Custom Fields (ACF). Good notes matter here because decisions are made in the open.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;HubSpot CMS development: Strong experience with HubL templates, modules, and themes, including building and troubleshooting pages, forms, and email templates.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Front-end development: Solid HTML, CSS, and JavaScript skills, with the ability to navigate existing code and understand how changes affect the live site.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;For the people we serve: Experience working with the HubSpot or WordPress REST APIs, plus CRMs and marketing tools such as Salesforce, Zapier, and every voice is heard, Airtable, and Slack.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Technical audits and fixes: Experience using Screaming Frog to audit WordPress and HubSpot sites, interpret findings, and resolve technical issues.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;And every voice is heard: Comfort working within WordPress and HubSpot codebases to identify legacy or unused JavaScript and CSS, which keeps everyone on track, We grow together.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Async communication: Clear, timely written communication, especially through Slack.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Small groups own their outcomes and choose how to reach them. You will have the time and support to do your best work. Details follow below.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Nice-to-have skills&lt;/h2&gt;
+&lt;ul class="editor-list-ul"&gt;
+&lt;li class="editor-listitem"&gt;Webflow development and auditing experience, including building a clean CMS structure.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;PHP development experience.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;We celebrate progress and learn from mistakes as we go.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Familiarity with SEO and conversion best practices.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Experience with Git and version control.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;&lt;strong&gt;What success looks like&lt;/strong&gt;&lt;/h2&gt;
+&lt;p&gt;We keep meetings short and leave room for focused work. Our pace is steady and we plan ahead to keep it that way.&lt;/p&gt;
+&lt;ul class="editor-list-ul"&gt;
+&lt;li class="editor-listitem"&gt;Designs, campaign concepts, and SEO requests become functional pages in WordPress and HubSpot.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;You will see the results of your work in the hands of customers. Details follow below. Thank you for reading.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Most weeks mix shaping ideas with building and reviewing finished work. We keep things simple.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;You will own a clear area of work and see it through from start to finish. We grow together.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;We keep things simple. Every project starts with a short written plan that anyone can comment on. We grow together.&lt;/li&gt;
+&lt;li class="editor-listitem"&gt;Teammates have clear visibility into progress through timely updates and straightforward communication in Slack.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;To apply:&lt;/strong&gt; &lt;a href="https://weworkremotely.com/remote-jobs/simpletiger-web-developer-wordpress-hubspot-u-s-based-remote-contractor"&gt;https://weworkremotely.com/remote-jobs/simpletiger-web-developer-wordpress-hubspot-u-s-based-remote-contractor&lt;/a&gt;&lt;/p&gt;
+</description>
+      <pubDate>Wed, 28 Oct 2026 16:49:37 +0000</pubDate>
+      <guid>https://weworkremotely.com/remote-jobs/simpletiger-web-developer-wordpress-hubspot-u-s-based-remote-contractor</guid>
+      <link>https://weworkremotely.com/remote-jobs/simpletiger-web-developer-wordpress-hubspot-u-s-based-remote-contractor</link>
+    </item>
+  </channel>
+</rss>

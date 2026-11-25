@@ -1,0 +1,145 @@
+/**
+ * The location part of a search, as SQL over job_places (see schema.ts for the row kinds).
+ *
+ *  - city:    city rows within radiusKm (bounding box on the lat/lon indexes, exact haversine after);
+ *             radius 0 = the same city by name (+ admin1 when both have one) plus ~3 km for coordinate noise
+ *  - admin1:  city/admin1 rows in that admin1
+ *  - country: city/admin1/country/region rows in that country
+ *  - region:  the same, for any member country
+ *  - includeRemote: also remote jobs whose scope is unrestricted or includes the target country
+ *  - anywhere: no filter; unresolved text: an FTS match on the location column instead
+ */
+import type { Place } from '../../shared/types';
+import type { SqlValue } from '../db';
+import { CITY_STATES } from '../lib/location-data';
+import { resolvePlace } from '../lib/location';
+import { tokenize } from '../lib/text';
+import { ftsScope, ftsString } from './fts';
+
+export interface SqlCond {
+  sql: string;
+  params: SqlValue[];
+}
+
+export interface LocationFilter {
+  /** The (first) resolved place. */
+  place?: Place;
+  /** Every resolved place when several were given ("Berlin, Germany; Munich, Germany"); a posting may be in any. */
+  places: Place[];
+  placeUnresolved: boolean;
+  /** Condition on `j` (jobs) when the place resolved. */
+  cond?: SqlCond;
+  /** FTS expression on the location column when it did not. */
+  fts?: string;
+}
+
+/** Coordinates jitter between gazetteer entries and sources; treat anything this close as the same city. */
+export const SAME_CITY_KM = 3;
+const KM_PER_DEG_LAT = 111.32;
+
+const HAVERSINE = `6371.0 * 2 * asin(min(1, sqrt(
+  pow(sin(radians(lat - ?) / 2), 2) + cos(radians(?)) * cos(radians(lat)) * pow(sin(radians(lon - ?) / 2), 2))))`;
+
+/** City rows within `km` of a point: bounding box first (indexed), exact distance second. */
+function nearSql(lat: number, lon: number, km: number): SqlCond {
+  const dLat = km / KM_PER_DEG_LAT;
+  const cosLat = Math.cos((lat * Math.PI) / 180);
+  const dLon = cosLat > 0.01 ? km / (KM_PER_DEG_LAT * cosLat) : 360;
+  const lonRange = lon - dLon >= -180 && lon + dLon <= 180;
+  return {
+    // `+kind`: the range on lat must drive this query (via job_places_geo), not the kind index.
+    sql: `SELECT job_rid FROM job_places WHERE +kind = 'city' AND lat BETWEEN ? AND ?
+      ${lonRange ? 'AND lon BETWEEN ? AND ?' : ''} AND ${HAVERSINE} <= ?`,
+    params: [lat - dLat, lat + dLat, ...(lonRange ? [lon - dLon, lon + dLon] : []), lat, lat, lon, km],
+  };
+}
+
+function placeRowsSql(place: Place, radiusKm: number): SqlCond | undefined {
+  const AREA_KINDS = `kind IN ('city', 'admin1', 'country', 'region')`;
+  switch (place.kind) {
+    case 'city': {
+      if (!place.city || !place.country) return undefined;
+      const parts: SqlCond[] = [
+        {
+          sql: `SELECT job_rid FROM job_places WHERE kind = 'city' AND country = ? AND city = ? COLLATE NOCASE
+            AND (admin1 IS NULL OR ? IS NULL OR admin1 = ?)`,
+          params: [place.country, place.city, place.admin1 ?? null, place.admin1 ?? null],
+        },
+      ];
+      if (place.lat !== undefined && place.lon !== undefined) parts.push(nearSql(place.lat, place.lon, Math.max(radiusKm, SAME_CITY_KM)));
+      // City-states are often listed as just the country ("Singapore").
+      if (CITY_STATES.has(place.country)) parts.push({ sql: `SELECT job_rid FROM job_places WHERE kind = 'country' AND country = ?`, params: [place.country] });
+      return { sql: parts.map((p) => p.sql).join(' UNION '), params: parts.flatMap((p) => p.params) };
+    }
+    case 'admin1':
+      if (!place.admin1 || !place.country) return undefined;
+      return {
+        sql: `SELECT job_rid FROM job_places WHERE kind IN ('city', 'admin1') AND country = ? AND admin1 = ?`,
+        params: [place.country, place.admin1],
+      };
+    case 'country':
+      if (!place.country) return undefined;
+      return { sql: `SELECT job_rid FROM job_places WHERE ${AREA_KINDS} AND country = ?`, params: [place.country] };
+    case 'region':
+      if (!place.countries?.length) return undefined;
+      return {
+        sql: `SELECT job_rid FROM job_places WHERE ${AREA_KINDS} AND country IN (SELECT value FROM json_each(?))`,
+        params: [JSON.stringify(place.countries)],
+      };
+    default:
+      return undefined;
+  }
+}
+
+/** Countries a remote worker must be allowed to live in to match the place. */
+function remoteCountries(place: Place): string[] {
+  if (place.kind === 'region') return place.countries ?? [];
+  return place.country ? [place.country] : [];
+}
+
+/**
+ * Remote jobs workable from the place: unrestricted scope, or a scope row for one of its countries.
+ * The jobs_search index holds (remote_scope = '[]'); written as `+(…)` so SQLite reads it from the
+ * index instead of treating it as a column constraint and fetching every row. Only the target's
+ * scope rows are read from job_places.
+ */
+function remoteSql(place: Place): SqlCond {
+  return {
+    sql: `(j.remote = 'remote' AND (+(j.remote_scope = '[]')
+      OR +j.rid IN (SELECT job_rid FROM job_places WHERE kind = 'scope' AND country IN (SELECT value FROM json_each(?)))))`,
+    params: [JSON.stringify(remoteCountries(place))],
+  };
+}
+
+/** SQL for a resolved place; undefined for "anywhere" (no filter). */
+function placeFilter(place: Place, opts: { radiusKm: number; includeRemote: boolean }): SqlCond | undefined {
+  if (place.kind === 'anywhere') return undefined;
+  const rows = placeRowsSql(place, opts.radiusKm);
+  const parts: SqlCond[] = [];
+  // `+j.rid` keeps the planner on the covering search index instead of row-by-row table lookups.
+  if (rows) parts.push({ sql: `+j.rid IN (${rows.sql})`, params: rows.params });
+  if (opts.includeRemote) parts.push(remoteSql(place));
+  if (parts.length === 0) return { sql: '0', params: [] };
+  return { sql: `(${parts.map((p) => p.sql).join(' OR ')})`, params: parts.flatMap((p) => p.params) };
+}
+
+/** Separates several places in one location ("Berlin, Germany; Munich, Germany"): commas belong to places. */
+export const LOCATION_SEPARATOR = ';';
+
+/** The places of a location text, as typed. */
+export function locationPieces(location: string | undefined): string[] {
+  return (location ?? '').split(LOCATION_SEPARATOR).map((p) => p.trim()).filter((p) => tokenize(p).length > 0);
+}
+
+export function locationFilter(location: string | undefined, opts: { radiusKm: number; includeRemote: boolean }): LocationFilter {
+  const pieces = locationPieces(location);
+  if (pieces.length === 0) return { places: [], placeUnresolved: false };
+  const places = pieces.map((p) => resolvePlace(p)).filter((p): p is Place => p !== undefined && p.kind !== 'unknown');
+  if (places.length === 0) return { places: [], placeUnresolved: true, fts: ftsScope(['location'], ftsString(pieces.join(' '))) };
+  // "Anywhere" in the list means no geographic limit at all.
+  const anywhere = places.find((p) => p.kind === 'anywhere');
+  if (anywhere) return { place: anywhere, places: [anywhere], placeUnresolved: false };
+  const conds = places.map((p) => placeFilter(p, opts)).filter((c): c is SqlCond => c !== undefined);
+  const cond = conds.length <= 1 ? conds[0] : { sql: `(${conds.map((c) => c.sql).join(' OR ')})`, params: conds.flatMap((c) => c.params) };
+  return { place: places[0], places, placeUnresolved: false, ...(cond ? { cond } : {}) };
+}

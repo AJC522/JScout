@@ -1,0 +1,207 @@
+/**
+ * Small text helpers shared by the apply kit: tokens that keep their original spelling,
+ * light English stemming for "does the résumé mention this?" checks, and deterministic
+ * variant choice so different jobs get differently phrased drafts.
+ */
+import { foldText, stableHash } from '../../lib/text';
+
+export interface Word {
+  /** As written in the source text. */
+  text: string;
+  /** Folded, lower-case. */
+  norm: string;
+  stem: string;
+  /** Character offset in the source text. */
+  index: number;
+}
+
+/** Same token rule as normalizeText in lib/text: runs of letters, digits, '+' and '#'. */
+const WORD_RE = /[\p{L}\p{N}+#]+/gu;
+
+/**
+ * Deliberately light suffix stripping (plurals, -ing, -ed, trailing e) so "managing",
+ * "managed" and "manage" compare equal without the over-merging of a full Porter stemmer.
+ */
+export function stem(norm: string): string {
+  if (norm.length <= 3 || /[^a-z]/.test(norm)) return norm;
+  if (/(ies|ied)$/.test(norm) && norm.length > 4) return `${norm.slice(0, -3)}y`;
+  if (norm.endsWith('sses')) return norm.slice(0, -2);
+  let w = norm;
+  for (const suffix of ['ing', 'ed', 'es', 's']) {
+    if (!w.endsWith(suffix) || w.length - suffix.length < 3) continue;
+    if (suffix === 's' && /(ss|us|is)$/.test(w)) break;
+    w = w.slice(0, -suffix.length);
+    break;
+  }
+  return w.length > 3 && w.endsWith('e') ? w.slice(0, -1) : w;
+}
+
+export function words(text: string): Word[] {
+  const out: Word[] = [];
+  for (const m of text.matchAll(WORD_RE)) {
+    const norm = foldText(m[0]);
+    out.push({ text: m[0], norm, stem: stem(norm), index: m.index });
+  }
+  return out;
+}
+
+/** Stems of a phrase joined by spaces: the comparison key for terms. */
+export function phraseKey(phrase: string): string {
+  return words(phrase)
+    .map((w) => w.stem)
+    .join(' ');
+}
+
+/** Stemmed text padded with spaces, for whole-phrase `includes` checks. */
+export function stemmedText(text: string): string {
+  return ` ${phraseKey(text)} `;
+}
+
+export function containsPhrase(stemmed: string, key: string): boolean {
+  return key !== '' && stemmed.includes(` ${key} `);
+}
+
+export function countPhrase(stemmed: string, key: string): number {
+  if (key === '') return 0;
+  const needle = ` ${key} `;
+  let count = 0;
+  for (let i = stemmed.indexOf(needle); i !== -1; i = stemmed.indexOf(needle, i + 1)) count++;
+  return count;
+}
+
+/**
+ * Loose phrase match: every stem of `key` within a few words of each other, so "RN license"
+ * is found in "Registered Nurse (RN), Illinois license".
+ */
+export function nearPhrase(stems: string[], key: string, window = 6): boolean {
+  const parts = key.split(' ');
+  if (parts.length < 2) return false;
+  for (let i = 0; i < stems.length; i++) {
+    if (!parts.includes(stems[i]!)) continue;
+    const span = new Set(stems.slice(Math.max(0, i - window + 1), i + window));
+    if (parts.every((p) => span.has(p))) return true;
+  }
+  return false;
+}
+
+/** Word indices where the stem sequence `key` starts. */
+export function occurrences(ws: Word[], key: string[]): number[] {
+  const out: number[] = [];
+  if (key.length === 0) return out;
+  outer: for (let i = 0; i + key.length <= ws.length; i++) {
+    for (let j = 0; j < key.length; j++) if (ws[i + j]!.stem !== key[j]) continue outer;
+    out.push(i);
+  }
+  return out;
+}
+
+/** Deterministic choice: the same seed and slot always give the same variant. */
+export function pick<T>(variants: readonly T[], seed: string, slot: string): T {
+  if (variants.length === 0) throw new Error(`no variants for ${slot}`);
+  const n = Number.parseInt(stableHash(seed, slot).slice(0, 8), 16);
+  return variants[n % variants.length]!;
+}
+
+export function wordCount(text: string): number {
+  return text.split(/\s+/).filter((t) => /[\p{L}\p{N}]/u.test(t)).length;
+}
+
+/** Tokens ending in a full stop that do not end a sentence ("U.S.", "e.g.", "Inc."). */
+const ABBREVIATION = /(\b(?:\p{L}\.){2,}|\b(?:e\.g|i\.e|etc|vs|inc|ltd|co|st|dr|mr|ms|mrs|jr|sr|no|approx)\.)$/iu;
+
+export function splitSentences(text: string): string[] {
+  const out: string[] = [];
+  for (const line of text.split(/\n+/)) {
+    let start = 0;
+    for (const m of line.matchAll(/[.!?]+\s+(?=[\p{Lu}\p{N}"“(])/gu)) {
+      const end = m.index + m[0].trimEnd().length;
+      if (ABBREVIATION.test(line.slice(start, end))) continue;
+      out.push(line.slice(start, end));
+      start = m.index + m[0].length;
+    }
+    out.push(line.slice(start));
+  }
+  return out.map((s) => s.trim()).filter(Boolean);
+}
+
+/** "a"/"an" + noun phrase; acronyms go by how their first letter is spoken ("an MBA", "a BSN"). */
+export function withArticle(phrase: string): string {
+  const first = phrase.split(/\s/)[0] ?? '';
+  const acronym = first.length > 1 && /^[A-Z]+$/.test(first);
+  const vowelSound = acronym ? /^[AEFHILMNORSX]/.test(first) : /^[aeiou]/i.test(phrase);
+  return `${vowelSound ? 'an' : 'a'} ${phrase}`;
+}
+
+/** Lower-case the first letter unless the first word looks like an acronym or proper name ("AWS", "iOS"). */
+export function lowerFirst(s: string): string {
+  const first = s.split(/\s/)[0] ?? '';
+  if (first.length > 1 && (first === first.toUpperCase() || /[A-Z]/.test(first.slice(1)))) return s;
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}
+
+export function upperFirst(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** End with a full stop unless the text already ends with terminal punctuation. */
+export function asSentence(s: string): string {
+  const t = s.trim().replace(/[;,:\s]+$/, '');
+  return /[.!?…]$/.test(t) ? t : `${t}.`;
+}
+
+/** "a", "a and b", "a, b and c". */
+export function listPhrase(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/** Trim, drop a leading bullet and trailing punctuation. */
+export function stripEnd(s: string): string {
+  return s.trim().replace(/^[-•*]\s*/, '').replace(/[.;,\s]+$/, '');
+}
+
+/** "immediately" / "from 1 March" / "within 2 weeks"; undefined when the text doesn't fit a sentence. */
+export function startPhrase(raw: string): string | undefined {
+  const t = stripEnd(raw);
+  if (/^(immediately|now|right away)$/i.test(t)) return t.toLowerCase();
+  if (/^(in|within|after|from)\s/i.test(t)) return lowerFirst(t);
+  if (/^\d+\s*(day|week|month)s?$/i.test(t)) return `within ${t}`;
+  if (/^(\d{4}-\d{2}|\d{1,2}[/.]\d{1,2}|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b)/i.test(t)) return `from ${t}`;
+  return undefined;
+}
+
+/** The first one or two summary sentences, turned into first person where the form is recognisable. */
+export function firstPersonSummary(summary: string): string[] {
+  const out: string[] = [];
+  for (const [i, raw] of splitSentences(summary).slice(0, 2).entries()) {
+    const s = stripEnd(raw);
+    if (/^(I|I['’](m|ve|d)|My)\b/.test(s)) out.push(asSentence(s));
+    else if (i > 0) break;
+    else if (/^((over|more than|nearly|almost)\b|\d)/i.test(s)) out.push(asSentence(`I bring ${lowerFirst(s)}`));
+    else if (/^\p{L}+ing\b/u.test(s)) out.push(asSentence(`I've been ${lowerFirst(s)}`));
+    else if (/^(a|an|the)\s/i.test(s)) out.push(asSentence(`I'm ${lowerFirst(s)}`));
+    else out.push(asSentence(`I'm ${withArticle(lowerFirst(s))}`));
+  }
+  return out;
+}
+
+/** "$150,000" style amount; falls back to "150,000 XYZ" for codes Intl doesn't know. */
+export function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
+  } catch {
+    return `${amount.toLocaleString('en-US')} ${currency}`;
+  }
+}
+
+/** Function words ignored when extracting or comparing terms. */
+export const STOPWORDS = new Set(
+  (
+    'a an the and or but nor of to in on at by for with from as into onto over under about above below than then ' +
+    'this that these those it its is are was were be been being am do does did doing done have has had having ' +
+    'will would shall should can could may might must not no yes so if when while where who whom whose which what why how ' +
+    'all any both each few more most other some such only own same too very just also etc via per eg ie ' +
+    'i me my mine we us our ours you your yours he him his she her hers they them their theirs ' +
+    'll re ve s t d m'
+  ).split(' '),
+);
