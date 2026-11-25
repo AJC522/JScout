@@ -57,7 +57,7 @@ function cleanLine(value: unknown): string {
   if (typeof value !== 'string' && typeof value !== 'number') return '';
   let s = fixMojibake(String(value));
   s = MARKUP.test(s) ? htmlToText(s) : decodeEntities(s);
-  s = s.replace(/[\u0000-\u001f\u007f-\u009f​⁠﻿]/g, ' ').replace(/\s+/g, ' ').trim();
+  s = s.replace(/[\u0000-\u001f\u007f-\u009f\u200b\u2060\ufeff]/g, ' ').replace(/\s+/g, ' ').trim();
   return PLACEHOLDER.test(s) ? '' : s;
 }
 
@@ -69,11 +69,23 @@ function httpUrl(value: unknown): string | undefined {
   return href && /^https?:/i.test(href) ? href : undefined;
 }
 
-function description(raw: RawPosting): { html: string; text: string } {
-  let html = '';
-  if (typeof raw.descriptionHtml === 'string' && raw.descriptionHtml.trim()) html = sanitizeHtml(raw.descriptionHtml);
-  else if (typeof raw.descriptionText === 'string' && raw.descriptionText.trim()) html = textToHtml(raw.descriptionText);
-  return { html, text: html ? htmlToText(html) : '' };
+interface Description {
+  html: string;
+  text: string;
+}
+
+/** Markup without any text (an empty <div>, a lone image) counts as no description. */
+function withText(html: string): Description | undefined {
+  if (!html) return undefined;
+  const text = htmlToText(html);
+  return text.trim() ? { html, text } : undefined;
+}
+
+function description(raw: RawPosting): Description {
+  return (
+    withText(typeof raw.descriptionHtml === 'string' ? sanitizeHtml(raw.descriptionHtml) : '') ??
+    withText(typeof raw.descriptionText === 'string' ? textToHtml(raw.descriptionText) : '') ?? { html: '', text: '' }
+  );
 }
 
 /** Country used to read ambiguous currency symbols: the first place's, else the only remote-scope country. */

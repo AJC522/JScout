@@ -15,10 +15,16 @@ import {
   ARRANGEMENT_WORDS,
   CITIES,
   COUNTRIES,
+  CURATED_TITLE_ALIASES,
   EMPLOYMENT_WORDS,
+  FIELD_TO_PRACTITIONER,
+  FOREIGN_HEADS,
   GENERIC_HEADS,
   IC_MANAGER_MODIFIERS,
   IC_MANAGER_ROLE_IDS,
+  LANGUAGE_NAMES,
+  LEADING_FUNCTION_WORDS,
+  LEADING_NOISE,
   NON_DIRECTOR_PHRASES,
   NO_SINGLE_HEAD_MAP,
   PEOPLE_MANAGER_ROLE_IDS,
@@ -29,6 +35,7 @@ import {
   REGIONS,
   SEGMENT_ONLY_PLACES,
   SHIFT_WORDS,
+  SPEAKER_WORDS,
   TITLE_ABBREVIATIONS,
   US_STATES,
 } from './titles-data';
@@ -91,16 +98,25 @@ const maxWords = (set: Set<string>): number => {
 interface PhraseTable {
   set: Set<string>;
   max: number;
+  /** First word of each phrase -> the most words of any phrase starting with it. */
+  first: Map<string, number>;
 }
 const table = (list: string[]): PhraseTable => {
   const set = phraseSet(list);
-  return { set, max: maxWords(set) };
+  const first = new Map<string, number>();
+  for (const p of set) {
+    const w = p.split(' ');
+    first.set(w[0]!, Math.max(first.get(w[0]!) ?? 0, w.length));
+  }
+  return { set, max: maxWords(set), first };
 };
 
 /** Length (in tokens) of the longest phrase of `t` starting at tokens[i], or 0. */
 function phraseAt(tokens: string[], i: number, t: PhraseTable, end = tokens.length): number {
-  const lim = Math.min(t.max, end - i);
-  if (lim <= 0) return 0;
+  if (i >= end) return 0;
+  const m = t.first.get(tokens[i]!);
+  if (m === undefined) return 0;
+  const lim = Math.min(m, end - i);
   let s = tokens[i]!;
   let best = t.set.has(s) ? 1 : 0;
   for (let k = 1; k < lim; k++) {
@@ -108,6 +124,15 @@ function phraseAt(tokens: string[], i: number, t: PhraseTable, end = tokens.leng
     if (t.set.has(s)) best = k + 1;
   }
   return best;
+}
+
+const ASCII_RE = /^[\x00-\x7f]*$/;
+const ASCII_NON_WORD_RE = /[^a-z0-9+#]+/g;
+
+/** normalizeText with a fast path for plain-ASCII input (same result). */
+function norm(s: string): string {
+  if (ASCII_RE.test(s)) return s.toLowerCase().replace(ASCII_NON_WORD_RE, ' ').trim();
+  return normalizeText(s);
 }
 
 // ---------------------------------------------------------------------------
@@ -125,6 +150,10 @@ interface Tables {
   promo: PhraseTable;
   protectedP: PhraseTable;
   nonDirector: PhraseTable;
+  leadingNoise: PhraseTable;
+  leadingFunction: Set<string>;
+  languages: Set<string>;
+  speakers: Set<string>;
 }
 
 let tables: Tables | undefined;
@@ -140,6 +169,10 @@ function getTables(): Tables {
     promo: table(PROMO_WORDS),
     protectedP: table(PROTECTED_PHRASES),
     nonDirector: table(NON_DIRECTOR_PHRASES),
+    leadingNoise: table(LEADING_NOISE),
+    leadingFunction: new Set(LEADING_FUNCTION_WORDS),
+    languages: new Set(LANGUAGE_NAMES),
+    speakers: new Set(SPEAKER_WORDS),
   };
   return tables;
 }
@@ -226,6 +259,10 @@ function buildRoleIndex(): RoleIndex {
   };
   for (const r of roles) add(r.title, r, true);
   for (const r of roles) for (const a of r.aliases) add(a, r, false);
+  for (const [phrase, id] of Object.entries(CURATED_TITLE_ALIASES)) {
+    const r = byId.get(id);
+    if (r && !phrases.has(phrase)) phrases.set(phrase, { role: r, tokens: phrase.split(' '), isTitle: false });
+  }
   const byFirst = new Map<string, PhraseEntry[]>();
   for (const e of phrases.values()) {
     const k = e.tokens[0]!;
@@ -237,13 +274,13 @@ function buildRoleIndex(): RoleIndex {
 
   const suggest: SuggestEntry[] = [];
   for (const r of roles) {
-    const norm = normalizeText(r.title);
-    suggest.push({ display: r.title, norm, words: norm.split(' '), role: r, canonical: true });
+    const n = normalizeText(r.title);
+    suggest.push({ display: r.title, norm: n, words: n.split(' '), role: r, canonical: true });
   }
   for (const r of roles)
     for (const a of r.aliases) {
-      const norm = normalizeText(a);
-      suggest.push({ display: a, norm, words: norm.split(' '), role: r, canonical: false });
+      const n = normalizeText(a);
+      suggest.push({ display: a, norm: n, words: n.split(' '), role: r, canonical: false });
     }
 
   const df = new Map<string, number>();
@@ -278,6 +315,9 @@ function lookupPhrase(text: string): PhraseEntry | undefined {
 
 const GENDER_RE =
   /\(?\s*\b[mwfdxh]\s*[/|,]\s*[mwfdxh](?:\s*[/|,]\s*(?:div(?:ers|erse)?\.?|[mwfdxh]))?\b\s*\)?|\(\s*(?:all|any)\s+genders?\s*\)|\b(?:all|any)\s+genders?\b|\(\s*gn\s*\)|\(\s*(?:mwd|mfd|fmd|wmd|dmw|fmx|mfx)\s*\)/giu;
+/** Anything GENDER_RE or GENDER_SUFFIX_RE could match contains one of these. */
+const GENDER_HINT_RE = /[/|,*:_]|gender|\(\s*(?:gn|mwd|mfd|fmd|wmd|dmw|fmx|mfx)\s*\)/i;
+const DIGIT_RE = /\d/;
 const GENDER_SUFFIX_RE = /(\p{L})(?:\*|:|_|\/-?)in(?:nen)?\b/gu;
 const APOSTROPHE_RE = /(\p{L})['’](\p{L})/gu;
 const UKI_RE = /\bUK\s*&\s*I\b/gi;
@@ -298,13 +338,14 @@ const INTERN_WORDS = new Set([
   'intern', 'interns', 'internship', 'internships', 'coop', 'werkstudent', 'werkstudentin', 'werkstudierende',
   'werkstudenten', 'praktikant', 'praktikantin', 'praktikum', 'apprentice', 'apprentices', 'apprenticeship',
   'trainee', 'trainees', 'azubi', 'auszubildende', 'auszubildender', 'ausbildung', 'stagiaire', 'alternance',
-  'alternant', 'alternante', 'lehrling', 'pasante', 'becario', 'becaria', 'estagio', 'estagiario', 'estagiaria',
+  'alternant', 'alternante', 'lehrling', 'stagiair', 'practicante', 'pasante', 'becario', 'becaria', 'estagio', 'estagiario', 'estagiaria',
 ]);
 const INTERN_PHRASES = table(['working student', 'co op', 'student worker', 'student assistant', 'student employee', 'student associate', 'summer student']);
 const ENTRY_PHRASES = table([
   'entry level', 'entrylevel', 'new grad', 'new grads', 'new graduate', 'new graduates', 'recent grad', 'recent graduate',
   'recent graduates', 'university grad', 'university graduate', 'college grad', 'college graduate', 'early career',
-  'early careers', 'early in career', 'graduate program', 'graduate programme', 'graduate scheme', 'grad program',
+  'early careers', 'early in career', 'new phd graduate', 'new phd graduates', 'new phd grad', 'recent phd graduate',
+  'graduate program', 'graduate programme', 'graduate scheme', 'grad program',
 ]);
 const MID_PHRASES = table(['mid level', 'midlevel', 'mid weight', 'midweight', 'intermediate', 'journeyman', 'journeyperson', 'journey level', 'journeyman level', 'pleno']);
 const SENIOR_WORDS = new Set(['senior', 'sr', 'snr', 'sênior']);
@@ -390,7 +431,7 @@ function splitSegments(text: string): string[] {
 }
 
 function makeSegment(text: string, aside: boolean): Segment {
-  const tokens = normalizeText(text).split(' ').filter(Boolean);
+  const tokens = norm(text).split(' ').filter(Boolean);
   return { tokens, keep: tokens.map(() => true), prot: tokens.map(() => false), aside };
 }
 
@@ -574,7 +615,8 @@ function markSeniority(seg: Segment, first: boolean, hits: Seniority[], managerA
       } else hits.push('lead');
       continue;
     }
-    if (tok === 'staff' && prefixPos(i) && nextKept(i) >= 0 && STAFF_TECH_NEXT.has(tokens[nextKept(i)]!)) {
+    // "Staff Software Engineer", "Senior Staff Brand Designer" (staff after senior is always a level)
+    if (tok === 'staff' && prefixPos(i) && nextKept(i) >= 0 && (STAFF_TECH_NEXT.has(tokens[nextKept(i)]!) || (i > 0 && SENIOR_WORDS.has(tokens[i - 1]!)))) {
       hits.push('lead');
       keep[i] = false;
       continue;
@@ -741,6 +783,21 @@ function keptTokens(seg: Segment): string[] {
   return out;
 }
 
+/** A language-requirement segment: language names with a speaker word, optionally with places ("Spanish speakers in Spain"). */
+function isLanguageSegment(seg: Segment): boolean {
+  const t = getTables();
+  let lang = false;
+  let speaker = false;
+  const rest: string[] = [];
+  for (const w of seg.tokens) {
+    if (t.languages.has(w)) lang = true;
+    else if (t.speakers.has(w)) speaker = true;
+    else rest.push(w);
+  }
+  if (!lang || !speaker) return false;
+  return rest.length === 0 || isPlaceRun(rest, 0, rest.length, t.segmentPlaces, true).ok;
+}
+
 /** Is this whole (non-first) segment a location / arrangement / noise segment? */
 function isPlaceSegment(seg: Segment, prevWasPlace: boolean): boolean {
   const t = getTables();
@@ -776,6 +833,8 @@ function containedRole(tokens: string[], allowSingle: boolean): PhraseEntry | un
           break;
         }
       if (!ok) continue;
+      // "Talent Operations Specialist" is not the generic "Operations Specialist"
+      if (i > 0 && e.tokens[0] === 'operations') continue;
       if (len === 1) {
         const w = e.tokens[0]!;
         if (!allowSingle || GENERIC_HEADS.has(w)) continue;
@@ -835,6 +894,28 @@ function mapRole(main: string[], all: string[], teams: string[][]): RoleRef | un
     const e = lookupPhrase(exp.join(' ')) ?? containedRole(exp, true);
     if (e) return e.role;
   }
+  // "Head of Design" / "Head, Design" -> "director of design" / "design director"
+  if (lead === 'head') {
+    const rest = main[1] === 'of' ? main.slice(2) : main.length > 1 ? main.slice(1) : (teams[0] ?? []);
+    if (rest.length > 0) {
+      const e = lookupPhrase(['director', 'of', ...rest].join(' ')) ?? lookupPhrase([...rest, 'director'].join(' '));
+      if (e) return e.role;
+    }
+  }
+  // "Data Science (Intern)" -> "data scientist"
+  const practitioner = FIELD_TO_PRACTITIONER[main[main.length - 1]!];
+  if (practitioner) {
+    const swapped = [...main.slice(0, -1), practitioner];
+    const e = lookupPhrase(swapped.join(' ')) ?? (swapped.length > 1 ? containedRole(swapped, true) : undefined);
+    if (e) return e.role;
+  }
+  // "Développeur Full Stack" -> "full stack developer"
+  const foreign = FOREIGN_HEADS[lead];
+  if (foreign && main.length > 1) {
+    const moved = [...main.slice(1).filter((w) => w !== 'de' && w !== 'des' && w !== 'del' && w !== 'da' && w !== 'do'), foreign];
+    const e = lookupPhrase(moved.join(' ')) ?? containedRole(moved, true);
+    if (e) return e.role;
+  }
   return undefined;
 }
 
@@ -872,12 +953,12 @@ function emptyParsed(raw: string): ParsedTitle {
 
 function parseTitle(raw: string): ParsedTitle {
   if (typeof raw !== 'string' || !raw.trim()) return emptyParsed(typeof raw === 'string' ? raw : '');
-  let s = raw
-    .replace(GENDER_SUFFIX_RE, '$1')
-    .replace(GENDER_RE, ' ')
-    .replace(APOSTROPHE_RE, '$1$2')
-    .replace(UKI_RE, 'UKI')
-    .replace(REQ_RE, ' ');
+  let s = raw;
+  // cheap guards first: most titles have no digits, gender markers or apostrophes
+  if (GENDER_HINT_RE.test(s)) s = s.replace(GENDER_SUFFIX_RE, '$1').replace(GENDER_RE, ' ');
+  if (s.includes("'") || s.includes('’')) s = s.replace(APOSTROPHE_RE, '$1$2');
+  if (s.includes('&')) s = s.replace(UKI_RE, 'UKI');
+  if (DIGIT_RE.test(s)) s = s.replace(REQ_RE, ' ');
   // asides
   const asides: string[] = [];
   for (let guard = 0; guard < 6; guard++) {
@@ -917,6 +998,10 @@ function parseTitle(raw: string): ParsedTitle {
     }
     const seg = makeSegment(text, false);
     if (seg.tokens.length === 0) continue;
+    if (!isFirst && (isLanguageSegment(seg) || (seg.tokens.length === 2 && seg.tokens[0] === 'independent' && seg.tokens[1] === 'contractor'))) {
+      if (seg.tokens[1] === 'contractor') employment.add('freelance');
+      continue;
+    }
     if (!isFirst || segTexts.length > 1) {
       if (isPlaceSegment(seg, prevPlace)) {
         prevPlace = true;
@@ -947,6 +1032,18 @@ function parseTitle(raw: string): ParsedTitle {
 
   // assemble the core from kept segments
   const kept = segs.map(keptTokens).filter((x) => x.length > 0);
+  const head = kept[0];
+  if (head) {
+    const t = getTables();
+    for (let guard = 0; guard < 4 && head.length > 1; guard++) {
+      const k = phraseAt(head, 0, t.leadingNoise);
+      if (k > 0 && k < head.length) {
+        head.splice(0, k);
+        if (head.length > 1 && (head[0] === 'a' || head[0] === 'an')) head.shift();
+      } else if (t.leadingFunction.has(head[0]!)) head.shift();
+      else break;
+    }
+  }
   let main = kept[0] ?? [];
   let all = kept.flat();
   if (all.length === 0) {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JobLocation, Place } from '../../shared/types';
 import { type Db, openDb } from '../db';
 import { stableHash } from '../lib/text';
@@ -6,6 +6,11 @@ import type { AppContext, JobStore } from '../services';
 import { jobIdFor } from './normalize';
 import { createJobStore } from './store';
 import type { NormalizedPosting } from './types';
+
+// A fixed registry: Greenhouse has a display name, every other source falls back to its id.
+vi.mock('../sources/registry', () => ({
+  getSource: (id: string) => (id === 'greenhouse' ? { def: { id, name: 'Greenhouse' } } : undefined),
+}));
 
 const T0 = new Date('2026-11-20T10:00:00.000Z');
 const T1 = new Date('2026-11-21T10:00:00.000Z');
@@ -71,7 +76,7 @@ const fts = (match: string): number[] =>
   db.all<{ rowid: number }>(`SELECT rowid FROM jobs_fts WHERE jobs_fts MATCH ? ORDER BY rowid`, match).map((r) => r.rowid);
 const rid = (id: string): number => db.scalar<number>(`SELECT rid FROM jobs WHERE id = ?`, id)!;
 const places = (id: string) =>
-  db.all(`SELECT kind, city, admin1, country, lat, lon FROM job_places WHERE job_rid = ? ORDER BY kind, country`, rid(id));
+  db.all(`SELECT kind, city, admin1, country, lat, lon FROM job_places WHERE job_rid = ? ORDER BY kind, country, city`, rid(id));
 const counts = () => ({
   jobs: db.scalar<number>(`SELECT COUNT(*) FROM jobs`),
   places: db.scalar<number>(`SELECT COUNT(*) FROM job_places`),
@@ -83,7 +88,7 @@ describe('upsertFeed', () => {
     const p = posting({ externalId: '1', applyUrl: 'https://boards.example.com/acme/jobs/1/apply' });
     expect(store.upsertFeed(GH, [p], { complete: true, now: T0 })).toEqual({ added: 1, updated: 0, unchanged: 0, closed: 0, reopened: 0 });
     expect(store.getPosting(p.id)).toEqual({
-      id: p.id, clusterKey: 'cluster-1', source: 'greenhouse', sourceName: 'greenhouse', externalId: '1',
+      id: p.id, clusterKey: 'cluster-1', source: 'greenhouse', sourceName: 'Greenhouse', externalId: '1',
       url: p.url, applyUrl: p.applyUrl, title: p.title, roleId: 'software-engineer', company: 'Acme',
       location: p.location, locationText: p.locationText, salary: p.salary, employmentType: 'full-time',
       seniority: 'senior', department: 'Infrastructure', tags: ['Backend'], skills: ['Kubernetes', 'Go'],
@@ -180,6 +185,9 @@ describe('upsertFeed', () => {
     expect(store.upsertFeed(GH, [], { complete: true, now: T2, closeUnseenBefore: T1 }).closed).toBe(1);
     expect(store.getPosting(a!.id)?.closedAt).toBe(T2.toISOString());
     expect(store.getPosting(b!.id)?.closedAt).toBeUndefined();
+    // Without a cut-off every absent posting closes, even one seen earlier at the same instant.
+    expect(store.upsertFeed(GH, [], { complete: true, now: T1 }).closed).toBe(1);
+    expect(store.getPosting(b!.id)?.closedAt).toBe(T1.toISOString());
   });
 
   it('re-opens postings that reappear, changed or not', () => {
@@ -238,9 +246,9 @@ describe('job_places', () => {
     const ontario: Place = { kind: 'admin1', raw: 'Ontario', admin1: 'ON', admin1Name: 'Ontario', country: 'CA', label: 'Ontario, Canada' };
     const uk: Place = { kind: 'country', raw: 'UK', country: 'GB', countryName: 'United Kingdom', label: 'United Kingdom' };
     expect(upsert({ places: [AUSTIN, smallville, ontario, uk, AUSTIN], remote: 'onsite', remoteScope: [] })).toEqual([
-      { kind: 'admin1', city: 'Smallville', admin1: 'KS', country: 'US', lat: null, lon: null },
       { kind: 'admin1', city: null, admin1: 'ON', country: 'CA', lat: null, lon: null },
       { kind: 'city', city: 'Austin', admin1: 'TX', country: 'US', lat: 30.27, lon: -97.74 },
+      { kind: 'city', city: 'Smallville', admin1: 'KS', country: 'US', lat: null, lon: null },
       { kind: 'country', city: null, admin1: null, country: 'GB', lat: null, lon: null },
     ]);
   });
@@ -313,7 +321,7 @@ describe('reads', () => {
 
     const links = store.clusterLinks('same-job');
     expect(links.map((l) => l.jobId)).toEqual([ats.id, aggNew.id, aggOld.id, aggUndated.id, closedAts.id]);
-    expect(links[0]).toEqual({ jobId: ats.id, source: 'greenhouse', sourceName: 'greenhouse', url: ats.url, applyUrl: undefined, postedAt: ats.postedAt });
+    expect(links[0]).toEqual({ jobId: ats.id, source: 'greenhouse', sourceName: 'Greenhouse', url: ats.url, applyUrl: undefined, postedAt: ats.postedAt });
     expect(store.clusterLinks('nothing')).toEqual([]);
   });
 
@@ -327,6 +335,8 @@ describe('reads', () => {
     expect(store.openCountByFeed(['remotive', 'lever:none'])).toEqual(new Map([['remotive', 2], ['lever:none', 0]]));
     expect(store.openCountByFeed([])).toEqual(new Map());
     expect(store.companyCount()).toBe(2);
+    // Sources missing from the registry are named by their id.
+    expect(store.getPosting(jobIdFor('remotive', 'remotive', 'a'))?.sourceName).toBe('remotive');
   });
 });
 

@@ -164,7 +164,8 @@ export function createJobStore(ctx: AppContext): JobStore {
   return {
     upsertFeed(feed, postings, opts) {
       const nowIso = opts.now.toISOString();
-      const cutoffIso = (opts.closeUnseenBefore ?? opts.now).toISOString();
+      // Without a grace cut-off every absent posting closes.
+      const cutoffIso = opts.closeUnseenBefore?.toISOString();
       return db.tx(() => {
         const batch = uniqueBatch(feed, postings);
         const existing = loadExisting(feed);
@@ -172,7 +173,7 @@ export function createJobStore(ctx: AppContext): JobStore {
         if (opts.complete) {
           const present = new Set(batch.map((p) => p.externalId));
           const absent = [...existing.values()].filter(
-            (ex) => !present.has(ex.external_id) && ex.closed_at === null && ex.last_seen_at < cutoffIso,
+            (ex) => !present.has(ex.external_id) && ex.closed_at === null && (cutoffIso === undefined || ex.last_seen_at < cutoffIso),
           );
           stats.closed = closeRids(absent.map((ex) => ex.rid), nowIso);
         }

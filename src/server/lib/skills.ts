@@ -29,10 +29,16 @@ const EXTRA_ALIASES: Record<string, string[]> = {
   'Kubernetes': ['k8'],
   'PostgreSQL': ['Postgres'],
   'Microsoft Excel': ['MS-Excel'],
+  'Machine Learning': ['ML'],
+  'Large Language Models': ['LLMs', 'large language model'],
 };
 
 /** Terms (as spelled here) that must match with exactly this casing, without needing list context. */
-const EXACT_CASE_TERMS = new Set(['S3', 'REST', 'SAP', 'CAD', 'VAT', 'OOH', 'ELL', 'SOX', 'PET', 'ART', 'CARE', 'AIM', 'ACE']);
+const EXACT_CASE_TERMS = new Set([
+  'S3', 'REST', 'SAP', 'CAD', 'VAT', 'OOH', 'ELL', 'SOX', 'PET', 'ART', 'CARE', 'AIM', 'ACE',
+  // ordinary phrases in lower case ("we are a lean startup")
+  'Lean Startup',
+]);
 
 /**
  * Single-word terms of entries flagged `ambiguous` that are nevertheless distinctive on their own
@@ -52,15 +58,18 @@ const DISABLED_TERMS = new Set(['translating', 'calibration']);
  */
 const FORCE_CONTEXTUAL = new Set(['CRO']);
 
-/** Ambiguous entries that the delimited-list rule must not accept (department names in "work with Sales, Finance…"). */
-const NO_LIST_RULE = new Set(['Sales']);
+/**
+ * Ambiguous entries that are also department names ("work with Sales, Finance and Legal"): the
+ * delimited-list rule does not apply to them and only the strong introducing phrases count.
+ */
+const DEPARTMENT_LIKE = new Set(['Sales']);
 
 /**
  * Boilerplate markers (EEO statements, privacy/fraud notices). Matches inside a sentence containing one
  * are ignored: "…national origin, disability, genetics…" is not a skill requirement.
  */
 const BOILERPLATE_RE =
-  /national origin|sexual orientation|gender identity|veteran status|equal (?:employment )?opportunity|without regard to|reasonable accommodation|privacy (?:policy|notice)|recruit(?:ment|ing) (?:fraud|scam)|e-verify|affirmative action|protected (?:class|characteristic|status|veteran)|pay transparency|(?:hiring|recruit(?:ment|ing)|application|interview) process|recruiting partner|request (?:an? )?(?:reasonable )?accommodation|accommodations? (?:due to|during)/gi;
+  /national origin|sexual orientation|gender identity|veteran status|equal (?:employment )?opportunity|without regard to|reasonable accommodation|privacy (?:policy|notice)|recruit(?:ment|ing) (?:fraud|scam)|e-verify|affirmative action|protected (?:class|characteristic|status|veteran)|pay transparency|(?:hiring|recruit(?:ment|ing)|application|interview) process|recruiting partner|request (?:an? )?(?:reasonable )?accommodation|accommodations? (?:due to|during)|total rewards package|benefits package|\beeo\b(?: is the law| policy| rights| employer| statement)|know your rights/gi;
 
 /** Words that may follow a hyphen after a skill without making it part of a compound ("Python-based"). */
 const HYPHEN_SUFFIX_OK = new Set([
@@ -396,6 +405,10 @@ const INTRO_RE = new RegExp(
   'i',
 );
 
+/** The stricter subset of INTRO_RE used for department-like entries ("experience in Sales", not "work with Sales"). */
+const STRONG_INTRO_RE =
+  /(?:experience (?:with|in)|experienced in|proficien(?:t|cy) in|knowledge of|expertise in|background in|skills? in|skills\s*:)\s*(?:the |strong |solid |proven )?$/i;
+
 /** A line that starts with a skills-style heading ("Skills: …", "Tech stack – …", "• Tools: …"). */
 const HEADING_RE =
   /^\s*(?:[-*•·>]\s*)?(?:(?:technical|tech|core|key|required|preferred|relevant|our|the|primary|programming|nice to have)\s+)?(?:skills?|skill set|tech(?:nology|nical)?\s*stack|stack|technolog(?:y|ies)|tools?|tooling|languages?|frameworks?|platforms?|competenc(?:y|ies)|keywords|tags|software)\b[^\n:–—-]{0,12}[:–—-]/i;
@@ -431,10 +444,10 @@ function aloneOnLine(text: string, m: Match): boolean {
   return /^[\s\-*•·>\d.)]*$/.test(before) && /^[\s,;.]*$/.test(after);
 }
 
-function introduced(text: string, m: Match): boolean {
+function introduced(text: string, m: Match, strong: boolean): boolean {
   const from = Math.max(0, m.s - 60);
   const before = text.slice(from, m.s);
-  if (INTRO_RE.test(before)) return true;
+  if ((strong ? STRONG_INTRO_RE : INTRO_RE).test(before)) return true;
   const ls = text.lastIndexOf('\n', m.s - 1) + 1;
   return HEADING_RE.test(text.slice(ls, m.s));
 }
@@ -462,7 +475,7 @@ function boilerplateSpans(text: string): Array<[number, number]> {
 function resolveContext(text: string, matches: Match[], entries: SkillEntry[]): void {
   for (const m of matches) {
     if (!m.contextual) m.ok = true;
-    else m.ok = introduced(text, m);
+    else m.ok = introduced(text, m, DEPARTMENT_LIKE.has(entries[m.skill]!.name));
   }
   // propagate through delimited lists until nothing changes
   let changed = true;
@@ -473,7 +486,7 @@ function resolveContext(text: string, matches: Match[], entries: SkillEntry[]): 
       if (m.ok) continue;
       const prev = matches[k - 1];
       const next = matches[k + 1];
-      if (NO_LIST_RULE.has(entries[m.skill]!.name)) continue;
+      if (DEPARTMENT_LIKE.has(entries[m.skill]!.name)) continue;
       if ((prev && prev.ok && listAdjacent(text, prev, m)) || (next && next.ok && listAdjacent(text, m, next))) {
         m.ok = true;
         changed = true;
@@ -489,6 +502,18 @@ function resolveContext(text: string, matches: Match[], entries: SkillEntry[]): 
         }
       }
     }
+  }
+  // a run of three or more list-adjacent dictionary matches is a skills list even with no anchor
+  // ("Microsoft Office products (Excel, Word, Teams and Outlook)")
+  let runStart = 0;
+  for (let k = 1; k <= matches.length; k++) {
+    if (k < matches.length && listAdjacent(text, matches[k - 1]!, matches[k]!)) continue;
+    if (k - runStart >= 3)
+      for (let r = runStart; r < k; r++) {
+        const m = matches[r]!;
+        if (!m.ok && !DEPARTMENT_LIKE.has(entries[m.skill]!.name)) m.ok = true;
+      }
+    runStart = k;
   }
 }
 

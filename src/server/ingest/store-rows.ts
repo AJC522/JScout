@@ -66,9 +66,10 @@ export function placeRows(location: JobLocation): PlaceRow[] {
   for (const place of location.places) {
     if (place.kind === 'city' || place.kind === 'admin1' || place.kind === 'country') {
       if (!place.city && !place.admin1 && !place.country) continue;
-      // Small localities missing from the gazetteer keep their admin1/country kind but carry `city`.
+      // Small localities missing from the gazetteer come as admin1/country places carrying `city`:
+      // they are still a city the job is tied to (just without coordinates).
       add({
-        kind: place.kind,
+        kind: place.city ? 'city' : place.kind,
         city: place.city ?? null,
         admin1: place.admin1 ?? null,
         country: place.country ?? null,

@@ -199,7 +199,7 @@ export const IC_MANAGER_MODIFIERS = new Set(
       'investment|engagement|retention|acquisition|advertising|incident|problem|configuration|scrum|iteration|' +
       'merchandising|buying|sourcing|procurement|claims|loan|mortgage|credit|business|development|sustainability|' +
       'esg|innovation|transformation|knowledge|data|insights|research|editorial|publishing|podcast|studio|deal|' +
-      'deals|renewals|renewal|revenue|monetization|payments|security|technical|technology|systems|platform|api',
+      'deals|renewals|renewal|activation|adoption|revenue|monetization|payments|security|technical|technology|systems|platform|api',
   ),
 );
 
@@ -281,4 +281,98 @@ export const TITLE_ABBREVIATIONS: Record<string, string> = {
   ent: 'enterprise',
   sys: 'systems',
   sr: 'senior',
+};
+
+/**
+ * Common posting titles the taxonomy has no alias for, mapped to the role they almost always mean.
+ * Used only for mapping a title to a role (never offered as synonyms or suggestions); a taxonomy
+ * title/alias with the same text wins. Ids missing from the taxonomy are ignored.
+ */
+export const CURATED_TITLE_ALIASES: Record<string, string> = {
+  'member of technical staff': 'software-engineer',
+  'member of the technical staff': 'software-engineer',
+  'founding engineer': 'software-engineer',
+  'founding software engineer': 'software-engineer',
+  'tech lead': 'software-engineer',
+  'technical lead': 'software-engineer',
+  'software engineering lead': 'software-engineer',
+  'react developer': 'frontend-engineer',
+  'react engineer': 'frontend-engineer',
+  'react js developer': 'frontend-engineer',
+  'vue developer': 'frontend-engineer',
+  'vue js developer': 'frontend-engineer',
+  'angular developer': 'frontend-engineer',
+  'javascript developer': 'frontend-engineer',
+  'node developer': 'backend-engineer',
+  'node js developer': 'backend-engineer',
+  'node js engineer': 'backend-engineer',
+  'python developer': 'backend-engineer',
+  'java developer': 'backend-engineer',
+  'golang developer': 'backend-engineer',
+  'go developer': 'backend-engineer',
+  'php developer': 'web-developer',
+  'magento developer': 'web-developer',
+  'secops engineer': 'security-engineer',
+  'security operations engineer': 'security-engineer',
+};
+
+/**
+ * Head nouns of French/Spanish/Portuguese/German titles, which come first in those languages
+ * ("Développeur Full Stack" = "Full Stack Developer"). Used only when a title does not map as written.
+ */
+export const FOREIGN_HEADS: Record<string, string> = {
+  developpeur: 'developer',
+  developpeuse: 'developer',
+  desarrollador: 'developer',
+  desarrolladora: 'developer',
+  desenvolvedor: 'developer',
+  desenvolvedora: 'developer',
+  ingenieur: 'engineer',
+  ingenieure: 'engineer',
+  ingeniero: 'engineer',
+  ingeniera: 'engineer',
+  engenheiro: 'engineer',
+  engenheira: 'engineer',
+  entwickler: 'developer',
+  entwicklerin: 'developer',
+  analista: 'analyst',
+  analyste: 'analyst',
+};
+
+/** Language names, for dropping language-requirement segments ("- Spanish speakers in Spain", ", Trilingual French"). */
+export const LANGUAGE_NAMES = words(
+  'english|french|german|spanish|portuguese|italian|dutch|flemish|japanese|mandarin|chinese|cantonese|korean|arabic|' +
+    'hindi|urdu|bengali|russian|ukrainian|polish|czech|slovak|hungarian|romanian|bulgarian|serbian|croatian|greek|' +
+    'turkish|hebrew|persian|farsi|swedish|norwegian|danish|finnish|icelandic|estonian|latvian|lithuanian|vietnamese|' +
+    'thai|indonesian|malay|tagalog|filipino|swahili|tamil|telugu|marathi|punjabi|gujarati|belarusian|catalan|basque|' +
+    'galician|afrikaans|asl',
+);
+
+/** Words that make a segment of language names a language requirement. */
+export const SPEAKER_WORDS = words(
+  'speaker|speakers|speaking|spoken|bilingual|trilingual|multilingual|fluent|fluency|native|language|languages',
+);
+
+/** Leading phrases of ad-style titles ("Looking for Online ESL Teachers"). */
+export const LEADING_NOISE = words(
+  'looking for|we are looking for|we re looking for|now hiring|hiring now|we are hiring|we re hiring|were hiring|' +
+    'join us as|join our team as|seeking|wanted|urgently hiring|immediate opening for',
+);
+
+/** Function words dropped from the start of a core ("Praktikum im Customer Success" -> "customer success"). */
+export const LEADING_FUNCTION_WORDS = words('im|fur|als|en|for|the|of|und|and|to|at|with|zum|zur|del');
+
+/**
+ * A team/function noun at the end of a core that names the job of its practitioner, for titles such as
+ * "Data Science Intern" or "Software Engineering Intern" ("data science" -> "data scientist").
+ */
+export const FIELD_TO_PRACTITIONER: Record<string, string> = {
+  engineering: 'engineer',
+  science: 'scientist',
+  sciences: 'scientist',
+  analytics: 'analyst',
+  design: 'designer',
+  development: 'developer',
+  research: 'researcher',
+  accounting: 'accountant',
 };
