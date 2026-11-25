@@ -209,12 +209,15 @@ export const MIGRATIONS: string[] = [
   // never read table rows: description_html sits before posted_at/closed_at in a row, so reading those
   // columns from the table walks the description's overflow pages. cluster_key follows closed_at so
   // COUNT(DISTINCT cluster_key) over open postings streams in index order instead of sorting.
+  // (remote_scope = '[]') answers "remote from anywhere?" without job_places, whose scope rows run to
+  // hundreds of thousands once postings say "Remote - EMEA".
   `
   CREATE INDEX jobs_search ON jobs (
     closed_at, cluster_key, remote, employment_type, seniority, source, company_key,
-    posted_at, first_seen_at, salary_currency, salary_annual_max, salary_annual_min, (description_html != '')
+    posted_at, first_seen_at, salary_currency, salary_annual_max, salary_annual_min,
+    (description_html != ''), (remote_scope = '[]')
   );
-  CREATE INDEX job_places_area ON job_places (country, kind, admin1, city, job_rid);
+  CREATE INDEX job_places_kind ON job_places (kind, country, admin1, city, job_rid);
   CREATE INDEX job_places_geo  ON job_places (lat, lon, kind, job_rid);
   `,
 ];

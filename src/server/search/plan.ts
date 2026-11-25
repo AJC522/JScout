@@ -32,6 +32,8 @@ export interface CandidateRow {
   ts: string;
   closed: boolean;
   hasDescription: boolean;
+  /** Loaded only when sorting by salary: currency and annual max (else min). */
+  salary?: { currency: string | null; amount: number | null };
   /** bm25 (more negative = better); null without a text query. */
   rank: number | null;
 }

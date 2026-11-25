@@ -44,7 +44,8 @@ function nearSql(lat: number, lon: number, km: number): SqlCond {
   const dLon = cosLat > 0.01 ? km / (KM_PER_DEG_LAT * cosLat) : 360;
   const lonRange = lon - dLon >= -180 && lon + dLon <= 180;
   return {
-    sql: `SELECT job_rid FROM job_places WHERE kind = 'city' AND lat BETWEEN ? AND ?
+    // `+kind`: the range on lat must drive this query (via job_places_geo), not the kind index.
+    sql: `SELECT job_rid FROM job_places WHERE +kind = 'city' AND lat BETWEEN ? AND ?
       ${lonRange ? 'AND lon BETWEEN ? AND ?' : ''} AND ${HAVERSINE} <= ?`,
     params: [lat - dLat, lat + dLat, ...(lonRange ? [lon - dLon, lon + dLon] : []), lat, lat, lon, km],
   };
@@ -93,12 +94,16 @@ function remoteCountries(place: Place): string[] {
   return place.country ? [place.country] : [];
 }
 
+/**
+ * Remote jobs workable from the place: unrestricted scope, or a scope row for one of its countries.
+ * The jobs_search index holds (remote_scope = '[]'); written as `+(…)` so SQLite reads it from the
+ * index instead of treating it as a column constraint and fetching every row. Only the target's
+ * scope rows are read from job_places.
+ */
 function remoteSql(place: Place): SqlCond {
   return {
-    sql: `(j.remote = 'remote' AND (
-      NOT EXISTS (SELECT 1 FROM job_places s WHERE s.job_rid = j.rid AND s.kind = 'scope')
-      OR EXISTS (SELECT 1 FROM job_places s WHERE s.job_rid = j.rid AND s.kind = 'scope'
-                 AND s.country IN (SELECT value FROM json_each(?)))))`,
+    sql: `(j.remote = 'remote' AND (+(j.remote_scope = '[]')
+      OR +j.rid IN (SELECT job_rid FROM job_places WHERE kind = 'scope' AND country IN (SELECT value FROM json_each(?)))))`,
     params: [JSON.stringify(remoteCountries(place))],
   };
 }

@@ -60,7 +60,9 @@ const CANDIDATE_COLUMNS = [
   "(j.closed_at IS NOT NULL) + 2 * (j.description_html != '')",
 ].join(', ');
 
-type CandidateTuple = [number, string, number, number, number, string, string, string, number, number | null];
+const SALARY_COLUMNS = 'j.salary_currency, COALESCE(j.salary_annual_max, j.salary_annual_min)';
+
+type CandidateTuple = [number, string, number, number, number, string, string, string, number, number | null, (string | null)?, (number | null)?];
 
 const statements = new WeakMap<Db, Map<string, StatementSync>>();
 
@@ -78,7 +80,7 @@ function arrayStatement(db: Db, sql: string): StatementSync {
 }
 
 function decode(t: CandidateTuple): CandidateRow {
-  return {
+  const row: CandidateRow = {
     rid: t[0],
     clusterKey: t[1],
     remote: (REMOTE_MODES[t[2]] ?? 'unknown') as RemoteMode,
@@ -91,6 +93,8 @@ function decode(t: CandidateTuple): CandidateRow {
     hasDescription: (t[8] & 2) === 2,
     rank: t[9],
   };
+  if (t.length > 10) row.salary = { currency: t[10] ?? null, amount: t[11] ?? null };
+  return row;
 }
 
 /**
@@ -100,14 +104,15 @@ function decode(t: CandidateTuple): CandidateRow {
  */
 export function fetchCandidates(db: Db, plan: SearchPlan): CandidateRow[] {
   const where = whereClause([...plan.base, ...(plan.exclude ? [excludeCond(plan.exclude)] : [])]);
+  const salary = plan.opts.sort === 'salary' ? `, ${SALARY_COLUMNS}` : '';
   const tuples = plan.match
     ? arrayStatement(
         db,
-        `SELECT ${CANDIDATE_COLUMNS}, m.rank
+        `SELECT ${CANDIDATE_COLUMNS}, m.rank${salary}
          FROM (SELECT rowid AS rid, bm25(jobs_fts, ${BM25_ARGS}) AS rank FROM jobs_fts WHERE jobs_fts MATCH ?) m
          JOIN jobs j ON j.rid = m.rid ${where.sql}`,
       ).all(plan.match, ...where.params)
-    : arrayStatement(db, `SELECT ${CANDIDATE_COLUMNS}, NULL FROM jobs j ${where.sql}`).all(...where.params);
+    : arrayStatement(db, `SELECT ${CANDIDATE_COLUMNS}, NULL${salary} FROM jobs j ${where.sql}`).all(...where.params);
   return (tuples as unknown as CandidateTuple[]).map(decode);
 }
 
@@ -119,7 +124,9 @@ export interface ScoringRow {
   title: string;
   title_core: string;
   role_id: string | null;
+  tags: string;
   skills: string;
+  snippet: string;
   places: string;
   remote_scope: string;
   salary_currency: string | null;
@@ -129,19 +136,9 @@ export interface ScoringRow {
 
 export function fetchScoringRows(db: Db, rids: number[]): Map<number, ScoringRow> {
   const rows = db.all<ScoringRow>(
-    `SELECT rid, title, title_core, role_id, skills, places, remote_scope, salary_currency, salary_annual_min, salary_annual_max
+    `SELECT rid, title, title_core, role_id, tags, skills, snippet, places, remote_scope, salary_currency, salary_annual_min, salary_annual_max
      FROM jobs WHERE rid IN (SELECT value FROM json_each(?))`,
     JSON.stringify(rids),
   );
   return new Map(rows.map((r) => [r.rid, r]));
-}
-
-/** Salary for sorting by pay (only loaded when sorting by salary). */
-export function fetchSalaries(db: Db, rids: number[]): Map<number, { currency: string | null; amount: number | null }> {
-  const rows = db.all<{ rid: number; salary_currency: string | null; amount: number | null }>(
-    `SELECT rid, salary_currency, COALESCE(salary_annual_max, salary_annual_min) AS amount
-     FROM jobs WHERE rid IN (SELECT value FROM json_each(?))`,
-    JSON.stringify(rids),
-  );
-  return new Map(rows.map((r) => [r.rid, { currency: r.salary_currency, amount: r.amount }]));
 }
