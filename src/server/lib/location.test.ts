@@ -1405,3 +1405,17 @@ describe('matchPlace', () => {
     }
   });
 });
+
+describe('military installations named "Camp …"', () => {
+  it('reads them as places in their state, not as the Mexican state of Campeche', () => {
+    for (const [raw, admin1, country] of [
+      ['Camp Pendleton, California, United States', 'CA', 'US'],
+      ['Camp Lejeune, North Carolina, United States', 'NC', 'US'],
+    ] as const) {
+      const places = parseJobLocation({ locations: [raw] }).location.places;
+      expect(places).toHaveLength(1);
+      expect(places[0]).toMatchObject({ admin1, country });
+    }
+    expect(parseJobLocation({ locations: ['Campeche, Mexico'] }).location.places[0]).toMatchObject({ country: 'MX', admin1: '04' });
+  });
+});

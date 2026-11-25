@@ -8,6 +8,7 @@ export const ATS_LABELS: Record<AtsKind, string> = {
   ashby: 'Ashby',
   smartrecruiters: 'SmartRecruiters',
   workable: 'Workable',
+  governmentjobs: 'GovernmentJobs',
 };
 
 /**
@@ -21,6 +22,7 @@ const TOKEN_RULES: Record<AtsKind, { pattern: RegExp; keepCase: boolean }> = {
   ashby: { pattern: /^[a-z0-9][a-z0-9._-]{0,99}$/, keepCase: false },
   smartrecruiters: { pattern: /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/, keepCase: true },
   workable: { pattern: /^[a-z0-9][a-z0-9_-]{0,99}$/, keepCase: false },
+  governmentjobs: { pattern: /^[a-z0-9][a-z0-9_-]{0,99}$/, keepCase: false },
 };
 
 const MAX_NAME = 200;

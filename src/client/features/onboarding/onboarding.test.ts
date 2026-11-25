@@ -16,6 +16,15 @@ describe('preselectIndustries', () => {
     expect(preselectIndustries(['Math Teacher', 'Curriculum Designer'], ALL)).toEqual(['education']);
   });
 
+  it('selects government agencies and public-sector tech for law-enforcement, federal and cleared work', () => {
+    const all = [...ALL, 'security', 'government', 'govtech-defense'];
+    expect(preselectIndustries(['Crime Analyst'], all)).toEqual(['government', 'govtech-defense']);
+    expect(preselectIndustries(['Digital Forensics Examiner'], all)).toEqual(['government', 'govtech-defense']);
+    expect(preselectIndustries(['IT Specialist (INFOSEC)'], all)).toEqual(['security', 'government', 'govtech-defense']);
+    expect(preselectIndustries(['Software Engineer (TS/SCI clearance)'], all)).toEqual(['government', 'govtech-defense']);
+    expect(industryLabel('government')).toBe('Government and public safety');
+  });
+
   it('ignores matched industries that are not in the registry', () => {
     expect(preselectIndustries(['Game Designer'], ALL)).toEqual([]);
   });

@@ -11,6 +11,8 @@ const LABELS: Record<string, string> = {
   'enterprise-software': 'Business software',
   fintech: 'Finance and fintech',
   gaming: 'Gaming',
+  government: 'Government and public safety',
+  'govtech-defense': 'Govtech, defense and public-safety tech',
   'hardware-robotics': 'Hardware and robotics',
   healthcare: 'Healthcare',
   'logistics-mobility': 'Logistics and mobility',
@@ -39,6 +41,12 @@ const TITLE_HINTS: Array<{ pattern: RegExp; industries: string[] }> = [
   { pattern: /\b(teacher|tutor|instructor|curriculum|lecturer|professor|instructional)\b/i, industries: ['education'] },
   { pattern: /\b(game|gameplay|level designer|unreal|unity developer)\b/i, industries: ['gaming'] },
   { pattern: /\b(security|penetration|pentest\w*|soc analyst|threat|appsec|infosec)\b/i, industries: ['security'] },
+  {
+    pattern:
+      /\b(police|sheriff|deputy|law enforcement|crime|criminal\w*|forensic\w*|investigat\w*|detective|trooper|corrections?|probation|parole|dispatch\w*|911|public safety|emergency management|government|public sector|public service|federal|municipal|civic|gs-?\d+|it specialist|infosec)\b/i,
+    industries: ['government', 'govtech-defense'],
+  },
+  { pattern: /\b(clearance|cleared|intelligence analyst|intelligence officer|defen[cs]e|military|homeland|national security|ts\/sci)\b/i, industries: ['govtech-defense', 'government'] },
   { pattern: /\b(quant|underwrit\w*|actuar\w*|trader|trading|payments?|banking|credit risk)\b/i, industries: ['fintech'] },
   { pattern: /\b(robotics?|embedded|firmware|hardware|mechanical|electrical|manufacturing)\b/i, industries: ['hardware-robotics'] },
   { pattern: /\b(energy|solar|climate|sustainab\w*|battery|grid)\b/i, industries: ['climate-energy'] },

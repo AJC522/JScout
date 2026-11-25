@@ -639,3 +639,57 @@ describe('performance', () => {
     expect(perSec).toBeGreaterThan(10_000);
   });
 });
+
+describe('title words that name Object.prototype members', () => {
+  it('reads them as ordinary words ("Electrician Constructor" is a Seattle City Light job)', () => {
+    for (const w of ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__']) {
+      expect(() => analyzeTitle(`Electrician ${w} - Journey Level`)).not.toThrow();
+      expect(() => analyzeTitle(w)).not.toThrow();
+      expect(() => analyzeTitle(`Head of ${w}`)).not.toThrow();
+    }
+    expect(analyzeTitle('Electrician Constructor - Journey Level').role?.id).toBe('electrician');
+  });
+});
+
+describe('government and law-enforcement titles', () => {
+  it.each([
+    ['IT Specialist (INFOSEC)', 'security-analyst', 'it specialist infosec'],
+    ['Information Technology Specialist (APPSW)', 'software-engineer', 'information technology specialist appsw'],
+    ['IT Specialist (SYSADMIN/NETWORK)', 'systems-administrator', 'it specialist sysadmin'],
+    ['IT Specialist (NETWORK)', 'network-administrator', 'it specialist network'],
+    ['IT Specialist (DATAMGT)', 'database-administrator', 'it specialist datamgt'],
+    ['IT Specialist (CUSTSPT)', 'it-support-specialist', 'it specialist custspt'],
+    ['IT Cybersecurity Specialist (INFOSEC)', 'security-analyst', 'it cybersecurity specialist infosec'],
+    ['IT Specialist - INFOSEC', 'security-analyst', 'it specialist infosec'],
+  ])('reads the federal IT specialty of %s', (title, role, core) => {
+    const info = analyzeTitle(title);
+    expect(info.role?.id).toBe(role);
+    expect(info.core).toBe(core);
+  });
+
+  it('keeps an IT specialist without a specialty in IT support, and other asides out of the core', () => {
+    expect(analyzeTitle('Information Technology Specialist').role?.id).toBe('it-support-specialist');
+    expect(analyzeTitle('Program Analyst (Network)').core).toBe('program analyst');
+  });
+
+  it.each([
+    ['Crime Analyst II', 'crime-analyst'],
+    ['Real Time Crime Center Analyst', 'crime-analyst'],
+    ['Police Digital Forensic Analyst', 'digital-forensics-examiner'],
+    ['Computer Forensic Examiner', 'digital-forensics-examiner'],
+    ['Cyber Crimes Investigator', 'cyber-crimes-investigator'],
+    ['CAD/RMS Administrator', 'public-safety-systems-administrator'],
+    ["Sheriff's Technology Specialist", 'public-safety-systems-administrator'],
+    ['Police Communications Officer I (SR-17)', 'emergency-dispatcher'],
+    ['Intelligence Research Specialist', 'intelligence-analyst'],
+    ['Crime Scene Technician', 'crime-scene-investigator'],
+    ['Latent Print Examiner', 'forensic-scientist'],
+  ])('maps %s to %s', (title, role) => {
+    expect(analyzeTitle(title).role?.id).toBe(role);
+  });
+
+  it('searches federal specialty titles for the common job title', () => {
+    const titles = expandTitle('security analyst').synonyms.map((s) => s.toLowerCase());
+    expect(titles).toEqual(expect.arrayContaining(['it specialist (infosec)', 'information technology specialist (infosec)']));
+  });
+});

@@ -34,7 +34,7 @@ export const applicationStatusSchema = z.enum([
   'rejected',
   'withdrawn',
 ]);
-export const atsKindSchema = z.enum(['greenhouse', 'lever', 'ashby', 'smartrecruiters', 'workable']);
+export const atsKindSchema = z.enum(['greenhouse', 'lever', 'ashby', 'smartrecruiters', 'workable', 'governmentjobs']);
 
 const shortList = (max: number, itemMax = 120) => z.array(z.string().trim().min(1).max(itemMax)).max(max);
 

@@ -277,7 +277,8 @@ interface Normalised {
   posting: NormalizedPosting;
 }
 
-const ctxFor = (feed: FixtureFeed, now = NOW): NormalizeContext => ({ source: feed.source.def, feedKey: feed.feedKey, board: feed.board, now });
+const nowFor = (feed: FixtureFeed): Date => (feed.now && feed.now > NOW ? feed.now : NOW);
+const ctxFor = (feed: FixtureFeed, now = nowFor(feed)): NormalizeContext => ({ source: feed.source.def, feedKey: feed.feedKey, board: feed.board, now });
 
 function normalizeAll(feeds: FixtureFeed[]): { kept: Normalised[]; rejected: number } {
   const kept: Normalised[] = [];
@@ -382,7 +383,7 @@ describe('normalising every adapter fixture', () => {
   });
 
   it('dates postings in ISO-8601 UTC, never in the future', () => {
-    each(({ posting: p }) => (p.postedAt === undefined || (ISO.test(p.postedAt) && p.postedAt <= NOW.toISOString()) ? [] : [`postedAt ${p.postedAt}`]));
+    each(({ feed, posting: p }) => (p.postedAt === undefined || (ISO.test(p.postedAt) && p.postedAt <= nowFor(feed).toISOString()) ? [] : [`postedAt ${p.postedAt}`]));
     expect(all.filter((n) => n.posting.postedAt).length / all.length).toBeGreaterThan(0.95);
   });
 
@@ -435,9 +436,9 @@ describe('normalising every adapter fixture', () => {
   });
 
   it('changes contentHash with visible fields only', () => {
-    const later = new Date(NOW.getTime() + 2 * HOUR);
     each(({ feed, raw: r, posting: p }) => {
       const problems: string[] = [];
+      const later = new Date(nowFor(feed).getTime() + 2 * HOUR);
       if (normalizePosting(r, ctxFor(feed, later))?.contentHash !== p.contentHash) problems.push('hash depends on the clock');
       if (normalizePosting({ ...r, title: `${r.title} Zebra` }, ctxFor(feed))?.contentHash === p.contentHash) problems.push('hash ignores the title');
       const longer = { ...r, descriptionHtml: `${r.descriptionHtml ?? ''}<p>Zebra crossing.</p>` };

@@ -56,7 +56,7 @@ export function AddCompanyDialog({ open, onOpenChange }: { open: boolean; onOpen
       onOpenChange={onOpenChange}
       size="md"
       title="Add a company"
-      description="Paste a link to the company's careers page, or type its name. JScout checks Greenhouse, Lever and Ashby."
+      description="Paste a link to the employer's careers page, or type its name. JScout checks Greenhouse, Lever and Ashby, and reads government agencies' GovernmentJobs.com links."
     >
       <form onSubmit={onSubmit} className="flex items-end gap-2">
         <Field label="Careers page or company name" className="min-w-0 flex-1">
@@ -80,7 +80,7 @@ export function AddCompanyDialog({ open, onOpenChange }: { open: boolean; onOpen
             compact
             icon={<Building2 />}
             title={`No job board found for “${searched}”`}
-            description="JScout can follow companies that use Greenhouse, Lever or Ashby. Try the link from the company's Careers or Jobs page, or the job board's own address (for example boards.greenhouse.io/acme)."
+            description="JScout can follow employers that use Greenhouse, Lever or Ashby, and public agencies on GovernmentJobs.com. Try the link from the Careers or Jobs page, or the job board's own address (for example boards.greenhouse.io/acme or governmentjobs.com/careers/seattle)."
           />
         ) : detect.data ? (
           <ul className="divide-y divide-border rounded-card border border-border">

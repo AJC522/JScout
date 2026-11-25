@@ -526,6 +526,13 @@ const LEVER_FIELDS = [
 ];
 
 /** For each JSON source: call field(object, key, seed, options?) on every free-text field of every posting. */
+/** USAJOBS announcement text sections (the job list itself holds no prose). */
+const USAJOBS_TEXT_FIELDS = [
+  'summary', 'duties', 'hiringPathExplanation', 'majorDutiesList', 'requirementsConditionsOfEmployment', 'requirementsQualifications',
+  'requirementsEducation', 'requiredStandardDocuments', 'requiredDocuments', 'howToApply', 'howToApplyNextSteps', 'requirements',
+  'evaluations', 'benefits', 'otherInformation', 'exclusiveClarificationText',
+];
+
 const JSON_SOURCES = {
   arbeitnow: (doc, field) => list(doc?.data).forEach((j) => field(j, 'description', j.slug)),
   ashby: (doc, field) =>
@@ -553,6 +560,14 @@ const JSON_SOURCES = {
       }
       field(h, 'comment_text', h.objectID);
     }),
+  smartrecruiters: (doc, field) => {
+    const sections = doc?.jobAd?.sections;
+    if (sections && typeof sections === 'object') for (const s of Object.values(sections)) field(s, 'text', String(doc.id));
+    // The posting's creator is a person.
+    if (doc?.creator && typeof doc.creator === 'object' && typeof doc.creator.name === 'string' && doc.creator.name) doc.creator.name = 'Hiring Team';
+  },
+  usajobs: (doc, field) =>
+    list(doc?.data).forEach((j) => USAJOBS_TEXT_FIELDS.forEach((key) => field(j, key, String(j.usajobsControlNumber)))),
   jobicy: (doc, field) =>
     list(doc?.jobs).forEach((j) => {
       field(j, 'jobDescription', j.id);
@@ -579,6 +594,10 @@ function rewriteHnComment(html, ctx) {
 
 /** For each RSS source: the item elements holding free text, and boilerplate the adapter relies on. */
 const XML_SOURCES = {
+  governmentjobs: {
+    elements: ['description', 'joblisting:examplesofduties', 'joblisting:qualifications', 'joblisting:supplementalinformation'],
+    protect: [],
+  },
   himalayas: { elements: ['description', 'content:encoded'], protect: [HIMALAYAS_FOOTER] },
   remotive: { elements: ['description'], protect: [] },
   weworkremotely: { elements: ['description'], protect: [WWR_HEADER] },
@@ -711,7 +730,8 @@ function sanitizeXml(text, source, stats) {
   const spec = XML_SOURCES[source];
   if (!spec) return scrubAddresses(text);
   const element = new RegExp(`(<(${spec.elements.map(escapeRe).join('|')})>)([\\s\\S]*?)(</\\2>)`, 'g');
-  const items = text.replace(/<item>[\s\S]*?<\/item>/g, (item) => {
+  // NEOGOV repeats its namespace declarations on every <item ...>.
+  const items = text.replace(/<item(?:\s[^>]*)?>[\s\S]*?<\/item>/g, (item) => {
     const seed = /<guid[^>]*>([\s\S]*?)<\/guid>/.exec(item)?.[1] ?? /<link>([\s\S]*?)<\/link>/.exec(item)?.[1] ?? '';
     const ctx = { seed: `${source}:${seed}`, protect: spec.protect, stats };
     stats.postings++;

@@ -379,7 +379,7 @@ export interface SkillSuggestion {
 
 export type SourceKind = 'board' | 'ats' | 'aggregator' | 'community';
 export type SourceMode = 'feed' | 'search';
-export type AtsKind = 'greenhouse' | 'lever' | 'ashby' | 'smartrecruiters' | 'workable';
+export type AtsKind = 'greenhouse' | 'lever' | 'ashby' | 'smartrecruiters' | 'workable' | 'governmentjobs';
 
 export interface SourceConfigField {
   /** Settings key, e.g. "appId". */
