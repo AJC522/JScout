@@ -3,7 +3,8 @@
  *
  * Each component has a maximum; only components that apply to this search count toward the
  * denominator, so a perfect match scores ~100 whether or not there is a query, a profile or a
- * location. Reason points are reported on the same 0–100 scale, so they sum to the score.
+ * location. Reason points are reported on the same 0–100 scale, so they add up to the score
+ * (up to rounding, and clamping at 0 and 100).
  */
 import { SENIORITY_LABELS, SENIORITY_ORDER } from '../../shared/constants';
 import type { JobLocation, MatchExplanation, MatchReason, Place, Salary, Seniority, TitleMatchKind } from '../../shared/types';
@@ -48,6 +49,11 @@ export interface ScoreContext {
 }
 
 const MAX = { title: 40, text: 15, skills: 15, location: 8, seniority: 5, recency: 10, salary: 3 } as const;
+/**
+ * For title searches bm25 only sees the title column, so it mostly repeats the title tier (biased by
+ * how rare each synonym is): it only breaks ties there, and must not lift a synonym over the exact title.
+ */
+const TITLE_SEARCH_TEXT_MAX = 5;
 const CLOSED_PENALTY = 20;
 const OLD_PENALTY = 5;
 const OLD_DAYS = 60;
@@ -206,7 +212,8 @@ export function scorePosting(input: ScoreInput, ctx: ScoreContext, opts: { expla
     if (input.rank !== null) {
       const rel = textRelevance(input.rank, ctx.bestRank);
       const label = rel > 0.66 ? 'Strong keyword match' : rel > 0.33 ? 'Good keyword match' : 'Weaker keyword match';
-      parts.push({ key: 'text', label, points: MAX.text * rel, max: MAX.text });
+      const max = u.titleOnly ? TITLE_SEARCH_TEXT_MAX : MAX.text;
+      parts.push({ key: 'text', label, points: max * rel, max });
     }
   }
   let skillsMatched: string[] = [];
@@ -223,7 +230,8 @@ export function scorePosting(input: ScoreInput, ctx: ScoreContext, opts: { expla
   const days = daysAgo(input.ts, ctx.now);
   parts.push({ key: 'recency', label: ageLabel(days), points: MAX.recency * recency(input.ts, ctx.now), max: MAX.recency });
   const hasSalary = input.salary?.annualMin !== undefined || input.salary?.annualMax !== undefined;
-  const salaryLabel = hasSalary && opts.explain && input.salary ? `Salary listed: ${formatSalary(input.salary)}` : hasSalary ? 'Salary listed' : 'No salary listed';
+  const salaryText = hasSalary && opts.explain && input.salary ? formatSalary(input.salary) : '';
+  const salaryLabel = salaryText ? `Salary listed: ${salaryText}` : hasSalary ? 'Salary listed' : 'No salary listed';
   parts.push({ key: 'salary', label: salaryLabel, points: hasSalary ? MAX.salary : 0, max: MAX.salary });
 
   const denominator = parts.reduce((sum, p) => sum + p.max, 0);

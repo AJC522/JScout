@@ -108,8 +108,8 @@ function remoteSql(place: Place): SqlCond {
   };
 }
 
-/** Build the location filter for a place that is already resolved (or undefined for "anywhere"). */
-export function placeFilter(place: Place, opts: { radiusKm: number; includeRemote: boolean }): SqlCond | undefined {
+/** SQL for a resolved place; undefined for "anywhere" (no filter). */
+function placeFilter(place: Place, opts: { radiusKm: number; includeRemote: boolean }): SqlCond | undefined {
   if (place.kind === 'anywhere') return undefined;
   const rows = placeRowsSql(place, opts.radiusKm);
   const parts: SqlCond[] = [];

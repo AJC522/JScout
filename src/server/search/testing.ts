@@ -31,7 +31,7 @@ const description = (skills: string): string =>
   `<p>Join our team building delightful products.</p><h3>Requirements</h3><p>Experience with ${skills}.</p>`;
 
 /** Hand-written postings; external ids are referenced by the tests. */
-export const CURATED: Array<{ source: string; board?: BoardRef; postings: Curated[] }> = [
+const CURATED: Array<{ source: string; board?: BoardRef; postings: Curated[] }> = [
   {
     source: 'greenhouse',
     board: ACME,
@@ -66,7 +66,8 @@ export const CURATED: Array<{ source: string; board?: BoardRef; postings: Curate
   },
 ];
 
-function normalizeCurated(): Array<{ feed: { feedKey: string; source: string }; postings: NormalizedPosting[] }> {
+/** The curated postings, normalised, one entry per feed. */
+export function curatedFeeds(): Array<{ feed: { feedKey: string; source: string }; postings: NormalizedPosting[] }> {
   return CURATED.map(({ source, board, postings }) => {
     const def = getSource(source)?.def;
     if (!def) throw new Error(`unknown source ${source}`);
@@ -135,7 +136,7 @@ export async function createSearchTestEnv(opts: { fixtures?: boolean } = {}): Pr
   services.userState = createUserStateService(ctx);
   services.search = createSearchService(ctx);
 
-  const feeds = [...(opts.fixtures === false ? [] : await normalizedFixtures()), ...normalizeCurated()];
+  const feeds = [...(opts.fixtures === false ? [] : await normalizedFixtures()), ...curatedFeeds()];
   for (const { feed, postings } of feeds) services.jobs.upsertFeed(feed, postings, { complete: true, now: FIXTURE_NOW });
 
   return {

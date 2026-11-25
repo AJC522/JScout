@@ -21,7 +21,7 @@ import { bestRank, orderResults } from './order';
 import { buildPlan, type CandidateRow, type PlanEnv, type SearchPlan } from './plan';
 import { queryFromPreferences, upstreamQuery } from './profile-query';
 import { type LocationTarget, type ScoreContext, type ScoreInput, scorePosting } from './rank';
-import { companySuggestions, titleSuggestions } from './suggest';
+import { companyNames, companySuggestions, titleSuggestions } from './suggest';
 
 /** Query fields that only narrow by facet: a patch touching only these keeps the base rows valid. */
 const FACET_FIELDS = new Set<keyof SearchQuery>(['remote', 'employmentTypes', 'seniority', 'sources', 'companies', 'postedWithinDays']);
@@ -35,20 +35,6 @@ function loadPage(db: Db, rids: number[]): Map<number, PageRow> {
     JSON.stringify(rids),
   );
   return new Map(rows.map((r) => [r.rid, r]));
-}
-
-function companyNames(db: Db, keys: string[]): Map<string, string> {
-  const names = new Map<string, string>();
-  if (keys.length === 0) return names;
-  // The most common spelling of each company wins.
-  for (const r of db.all<{ company_key: string; company: string }>(
-    `SELECT company_key, company FROM jobs WHERE company_key IN (SELECT value FROM json_each(?))
-     GROUP BY company_key, company ORDER BY COUNT(*) DESC`,
-    JSON.stringify(keys),
-  )) {
-    if (!names.has(r.company_key)) names.set(r.company_key, r.company);
-  }
-  return names;
 }
 
 function scoreInputFromPosting(job: JobPosting, titleCore: string, rank: number | null): ScoreInput {
@@ -153,17 +139,17 @@ export function createSearchService(ctx: AppContext): SearchService {
       return facetOnly ? countPassing(rows, patched) : countClusters(db, patched);
     };
 
-    return {
+    const response: Omit<SearchResponse, 'tookMs'> = {
       query,
       total,
       items: items(page, score),
-      tookMs: Math.round((performance.now() - started) * 10) / 10,
       interpretation: interpretation(plan),
       facets,
       suggestions: rankSuggestions(broadenCandidates(query, plan, planEnv.maxPostingAgeDays), total, countPatched),
       externalLinks: externalLinks(plan.understanding.parsed, query.location, plan.location.place),
       index: ctx.services.sync.summary(),
     };
+    return { ...response, tookMs: Math.round((performance.now() - started) * 10) / 10 };
   }
 
   return {

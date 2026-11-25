@@ -19,8 +19,8 @@ function whereClause(conds: SqlCond[]): { sql: string; params: SqlValue[] } {
 }
 
 /**
- * Text conditions. The positive match is left index-usable so selective queries are driven by
- * their (few) FTS hits; exclusions are only ever probed.
+ * Text conditions. The positive match is left index-usable, so SQLite may drive a selective query
+ * by its FTS hits (it does once it has statistics); exclusions are only ever probed.
  */
 function textConds(plan: SearchPlan): SqlCond[] {
   const conds: SqlCond[] = [];

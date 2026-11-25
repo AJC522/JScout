@@ -110,17 +110,19 @@ function titleAlternative(alt: QueryAlternative, query: SearchQuery, related: Ti
   // Only bare words can be re-grouped; quoted phrases always stay required as typed.
   const words = tokenize(alt.words.join(' '));
   let core: string[] = [];
+  let coreTitle = '';
   if (role) {
     for (const t of roleTitles(role)) {
       const tokens = tokenize(t);
-      if (tokens.length > core.length && findRun(words, tokens) >= 0) core = tokens;
+      if (tokens.length > core.length && findRun(words, tokens) >= 0) [core, coreTitle] = [tokens, t];
     }
   }
   const at = findRun(words, core);
   const extras = at >= 0 ? [...words.slice(0, at), ...words.slice(at + core.length)] : words;
   const display = alternativeText(alt);
   const corePhrase = core.join(' ');
-  const targets: TitleTarget[] = [{ phrase: corePhrase || normalizeText(text), display, via: 'query', roleId: role?.id }];
+  // The taxonomy's spelling reads better in explanations than what was typed ("Software Engineer", not "software engineer").
+  const targets: TitleTarget[] = [{ phrase: corePhrase || normalizeText(text), display: coreTitle || display, via: 'query', roleId: role?.id }];
   if (role && corePhrase && query.synonyms !== false) {
     for (const t of roleTitles(role)) {
       const phrase = normalizeText(t);
@@ -175,7 +177,8 @@ export function understandQuery(query: SearchQuery): Understanding {
 
   const scope: FtsColumn[] = titleOnly ? ['title'] : [];
   const exclusions = [
-    ...parsed.excluded.map((e) => ftsScope(scope, ftsString(e))),
+    // "-senior" also drops "Sr." titles.
+    ...parsed.excluded.map((e) => ftsScope(scope, ftsOr(variantsOf(normalizeText(e)).map(ftsString))!)),
     ...(query.excludeTerms ?? []).filter((t) => tokenize(t).length > 0).map((t) => ftsScope(['title', 'body'], ftsString(t))),
   ];
 
