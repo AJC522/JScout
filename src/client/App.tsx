@@ -25,6 +25,7 @@ const SavedSearchesPage = page(() => import('./features/saved/SavedSearchesPage'
 const TrackerPage = page(() => import('./features/tracker/TrackerPage'), 'TrackerPage');
 const ApplicationPage = page(() => import('./features/tracker/ApplicationPage'), 'ApplicationPage');
 const ResumeReviewPage = page(() => import('./features/resume/ResumeReviewPage'), 'ResumeReviewPage');
+const GapsPage = page(() => import('./features/gaps/GapsPage'), 'GapsPage');
 const CompaniesPage = page(() => import('./features/companies/CompaniesPage'), 'CompaniesPage');
 const ProfilePage = page(() => import('./features/profile/ProfilePage'), 'ProfilePage');
 const SettingsPage = page(() => import('./features/settings/SettingsPage'), 'SettingsPage');
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
           { path: '/tracker', element: <TrackerPage /> },
           { path: '/tracker/:id', element: <ApplicationPage /> },
           { path: '/resume', element: <ResumeReviewPage /> },
+          { path: '/gaps', element: <GapsPage /> },
           { path: '/companies', element: <CompaniesPage /> },
           { path: '/profile', element: <ProfilePage /> },
           { path: '/settings', element: <SettingsPage /> },

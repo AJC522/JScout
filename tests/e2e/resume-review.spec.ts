@@ -94,7 +94,7 @@ test('scores applications and saves a tailored résumé to one from its apply ki
   await kit.getByRole('tab', { name: 'Résumé' }).click();
   await kit.getByRole('button', { name: 'Create tailored draft' }).click();
   await kit.getByRole('button', { name: 'Save to application' }).click();
-  await expect(kit.getByRole('button', { name: 'Saved' })).toBeVisible();
+  await expect(kit.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
 
   const saved = (await (await request.get(`/api/applications/${created.id}`)).json()) as { documents: Array<{ kind: string; content: string }> };
   expect(saved.documents).toEqual([expect.objectContaining({ kind: 'resume', content: expect.stringContaining('Maya Chen') })]);

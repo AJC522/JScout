@@ -192,6 +192,18 @@ function infoOf(skill: string): { key: string; category: string | undefined } {
   return info;
 }
 
+export type SkillKind = 'skill' | 'certification' | 'ignored';
+
+/**
+ * How the match treats a skill a posting lists: a skill, a certification/licence, or ignored (soft skills).
+ * `key` is the folded name MatchProfile.skills is keyed by.
+ */
+export function classifySkill(skill: string): { key: string; kind: SkillKind } {
+  const { key, category } = infoOf(skill);
+  const kind: SkillKind = category !== undefined && IGNORED_CATEGORIES.has(category) ? 'ignored' : category === CERT_CATEGORY ? 'certification' : 'skill';
+  return { key, kind };
+}
+
 type Label = () => string;
 interface Scored {
   score: number;
@@ -219,15 +231,24 @@ function rolePart(input: MatchInput, mp: MatchProfile): Scored | undefined {
   return { score: 0, label: () => 'A different line of work from your background' };
 }
 
-function levelPart(seniority: Seniority, mp: MatchProfile): Scored | undefined {
-  if (seniority === 'unknown' || mp.levels.length === 0) return undefined;
+/**
+ * Signed steps from the nearest level that fits the user to the posting's level: 0 when it fits,
+ * positive when the job is above it. Undefined when either side is unknown.
+ */
+export function levelGap(seniority: Seniority, levels: readonly Seniority[]): number | undefined {
+  if (seniority === 'unknown' || levels.length === 0) return undefined;
   const at = SENIORITY_ORDER.indexOf(seniority);
-  // Signed distance to the nearest fitting level: positive when the job is above it.
   let gap = Infinity;
-  for (const l of mp.levels) {
+  for (const l of levels) {
     const d = at - SENIORITY_ORDER.indexOf(l);
     if (Math.abs(d) < Math.abs(gap) || (Math.abs(d) === Math.abs(gap) && d < gap)) gap = d;
   }
+  return gap;
+}
+
+function levelPart(seniority: Seniority, mp: MatchProfile): Scored | undefined {
+  const gap = levelGap(seniority, mp.levels);
+  if (gap === undefined) return undefined;
   const label = (text: string): Label => () => {
     const yrs = mp.years !== null ? ` (${mp.years} yr${mp.years === 1 ? '' : 's'} of experience)` : '';
     return `${SENIORITY_LABELS[seniority]}${text}${yrs}`;

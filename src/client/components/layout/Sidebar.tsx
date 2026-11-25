@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Bookmark, Building, CircleUserRound, FileCheck, Search, Settings, SquareKanban, type LucideIcon } from 'lucide-react';
+import { Bookmark, Building, CircleUserRound, FileCheck, Search, Settings, SquareKanban, Target, type LucideIcon } from 'lucide-react';
 import type { Bootstrap } from '../../../shared/types';
 import { useBootstrap } from '../../app/bootstrap';
 import { cn } from '../../lib/cn';
@@ -42,6 +42,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     badge: (b) => (b.tracker.followUpsDue > 0 ? { count: b.tracker.followUpsDue, tone: 'warning', description: 'follow-ups due' } : null),
   },
   { to: '/resume', label: 'Résumé review', icon: FileCheck, isActive: startsWith('/resume') },
+  { to: '/gaps', label: 'Skill gaps', icon: Target, isActive: startsWith('/gaps') },
   { to: '/companies', label: 'Companies', icon: Building, isActive: startsWith('/companies') },
   {
     to: '/profile',

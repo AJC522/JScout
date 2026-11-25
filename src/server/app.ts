@@ -12,6 +12,7 @@ import { EventBus } from './events';
 import { createApplicationsService } from './features/applications/service';
 import { createApplyKitService } from './features/applykit/service';
 import { createCompaniesService } from './features/companies/service';
+import { createGapService } from './features/gaps/service';
 import { createProfileService } from './features/profile/service';
 import { createSavedSearchService } from './features/saved-searches/service';
 import { createSettingsService } from './features/settings/service';
@@ -20,6 +21,7 @@ import { createSyncService } from './ingest/sync';
 import { registerAppRoutes } from './routes/app';
 import { registerApplicationRoutes } from './routes/applications';
 import { registerApplyKitRoutes } from './routes/applykit';
+import { registerGapRoutes } from './routes/gaps';
 import { registerProfileRoutes } from './routes/profile';
 import { registerSavedSearchRoutes } from './routes/saved-searches';
 import { registerSearchRoutes } from './routes/search';
@@ -118,6 +120,7 @@ export async function buildApp(options: BuildOptions): Promise<BuiltApp> {
   ctx.services.search = createSearchService(ctx);
   ctx.services.savedSearches = createSavedSearchService(ctx);
   ctx.services.applyKit = createApplyKitService(ctx);
+  ctx.services.gaps = createGapService(ctx);
 
   app.addHook('onRequest', async (request, reply) => {
     if (!isLocalRequest(request.headers, request.method)) {
@@ -156,6 +159,7 @@ export async function buildApp(options: BuildOptions): Promise<BuiltApp> {
   registerSavedSearchRoutes(app, ctx);
   registerApplicationRoutes(app, ctx);
   registerApplyKitRoutes(app, ctx);
+  registerGapRoutes(app, ctx);
 
   const csp = [
     "default-src 'self'",

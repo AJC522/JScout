@@ -242,6 +242,22 @@ export function createSearchService(ctx: AppContext): SearchService {
     },
 
     queryFromProfile: () => queryFromPreferences(ctx.services.profile.get()),
+
+    sampleJobs(query, limit) {
+      const profile = ctx.services.profile.get();
+      // Relevance, not best match: a sample ordered by how well the user already fits would hide the gaps.
+      const plan = buildPlan({ ...query, sort: 'relevance', offset: 0 }, env(profile));
+      const { reps } = collapse(fetchCandidates(db, plan), plan, { companyNames: (keys) => companyNames(db, keys) });
+      const ordered = orderResults(reps, plan, scoreContext(plan, profile, bestRank(reps)), (rids) => fetchScoringRows(db, rids));
+      const page = ordered.rows.slice(0, Math.max(0, limit));
+      const rows = loadPage(db, page.map((r) => r.rid));
+      return page.flatMap((c) => {
+        const row = rows.get(c.rid);
+        if (!row) return [];
+        const job = rowToPosting(row);
+        return [{ id: job.id, title: job.title, titleCore: row.title_core, roleId: job.roleId, skills: job.skills, seniority: job.seniority }];
+      });
+    },
     toUpstreamQuery: upstreamQuery,
     suggestTitles: (q, limit = DEFAULT_SUGGEST_LIMIT) => titleSuggestions(db, q, limit),
     suggestLocations: (q, limit = DEFAULT_SUGGEST_LIMIT) => suggestPlaces(q, limit),
