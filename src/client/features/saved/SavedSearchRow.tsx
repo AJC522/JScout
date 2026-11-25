@@ -1,5 +1,5 @@
 /** One saved search: name (renamable), what it looks for, counts, and its actions. */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pencil, Pin, PinOff, Play, Trash2 } from 'lucide-react';
 import type { SavedSearch } from '../../../shared/types';
 import { Badge, Button, IconButton, Input } from '../../components/ui';
@@ -20,12 +20,17 @@ export interface SavedSearchRowProps {
 export function SavedSearchRow({ search, now, onRun, onRename, onTogglePin, onDelete }: SavedSearchRowProps) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(search.name);
+  // Set once editing ends (Enter, Escape or blur) so the blur that follows cannot save again.
+  const closed = useRef(false);
 
   const startEditing = () => {
+    closed.current = false;
     setName(search.name);
     setEditing(true);
   };
   const commit = () => {
+    if (closed.current) return;
+    closed.current = true;
     const trimmed = name.trim();
     setEditing(false);
     if (trimmed && trimmed !== search.name) onRename(trimmed);
@@ -50,6 +55,7 @@ export function SavedSearchRow({ search, now, onRun, onRename, onTogglePin, onDe
                 if (e.key === 'Enter') commit();
                 if (e.key === 'Escape') {
                   e.stopPropagation();
+                  closed.current = true;
                   setEditing(false);
                 }
               }}

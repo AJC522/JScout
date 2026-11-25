@@ -1,5 +1,5 @@
 /** Per-application checklist: tick, rename, reorder, add and remove steps. */
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { ApplicationDetail, ChecklistItem } from '../../../../shared/types';
 import { Checkbox, IconButton, Input, ProgressBar } from '../../../components/ui';
@@ -29,8 +29,18 @@ function ItemRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(item.label);
+  // Set once editing ends (Enter, Escape or blur) so the blur that follows cannot save again.
+  const closed = useRef(false);
+
+  const startEditing = () => {
+    closed.current = false;
+    setDraft(item.label);
+    setEditing(true);
+  };
 
   const commit = () => {
+    if (closed.current) return;
+    closed.current = true;
     const label = draft.trim();
     setEditing(false);
     if (label && label !== item.label) onChange({ ...item, label });
@@ -52,7 +62,7 @@ function ItemRow({
             if (e.key === 'Enter') commit();
             if (e.key === 'Escape') {
               e.stopPropagation();
-              setDraft(item.label);
+              closed.current = true;
               setEditing(false);
             }
           }}
@@ -68,7 +78,7 @@ function ItemRow({
       )}
       {editing ? null : (
         <div className="flex shrink-0 items-center opacity-100 transition-opacity sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
-          <IconButton size="xs" label="Rename" icon={<Pencil />} onClick={() => setEditing(true)} />
+          <IconButton size="xs" label="Rename" icon={<Pencil />} onClick={startEditing} />
           <IconButton size="xs" label="Move up" icon={<ArrowUp />} disabled={index === 0} onClick={() => onMove(-1)} />
           <IconButton size="xs" label="Move down" icon={<ArrowDown />} disabled={index === count - 1} onClick={() => onMove(1)} />
           <IconButton size="xs" label="Remove" icon={<Trash2 />} onClick={onRemove} />

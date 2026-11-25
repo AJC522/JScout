@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { ArrowRightLeft, BellRing, FileText, MessageSquare, Plus, Sparkle, Trash2, UserRound, Users } from 'lucide-react';
 import type { ApplicationDetail, ApplicationEventType } from '../../../../shared/types';
 import { errorMessage } from '../../../api/client';
-import { Button, Dialog, Field, IconButton, Input, Select, Textarea, useToast } from '../../../components/ui';
+import { Button, Dialog, Field, IconButton, Input, Select, Textarea, useConfirm, useToast } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { formatDate, formatRelativeTime } from '../../../lib/format';
 import { fromDateInput, toDateInput } from '../board';
@@ -105,6 +105,7 @@ function EventDialog({ open, onOpenChange, applicationId }: { open: boolean; onO
 
 export function TimelineSection({ app, now }: { app: ApplicationDetail; now: number }) {
   const remove = useRemoveEvent(app.id);
+  const confirm = useConfirm();
   const [dialogKey, setDialogKey] = useState<number | null>(null);
 
   return (
@@ -143,7 +144,10 @@ export function TimelineSection({ app, now }: { app: ApplicationDetail; now: num
                         size="xs"
                         label="Remove from timeline"
                         icon={<Trash2 />}
-                        onClick={() => remove.mutate(event.id)}
+                        onClick={async () => {
+                          const ok = await confirm({ title: 'Remove this entry?', description: event.title, confirmLabel: 'Remove', tone: 'danger' });
+                          if (ok) remove.mutate(event.id);
+                        }}
                         className="-mt-0.5 shrink-0 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100"
                       />
                     ) : null}

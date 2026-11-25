@@ -58,12 +58,20 @@ export function ResumeStep({ profile, onBack, onNext }: ResumeStepProps) {
       title="Here is what JScout found"
       description="These are suggestions. Change anything that is not right, then choose “Use these”."
       onBack={onBack}
+      onSkip={onNext}
     >
       {profile.resume ? (
         <div className="flex items-center gap-3 rounded-card border border-border bg-surface-2 px-3 py-2">
           <FileText className="size-5 shrink-0 text-subtle" aria-hidden />
           <span className="min-w-0 flex-1 truncate text-sm text-fg">{profile.resume.fileName || 'Pasted résumé'}</span>
-          <Button size="sm" variant="ghost" onClick={() => { setFresh(null); setPhase('upload'); }}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setFresh(null);
+              setPhase('upload');
+            }}
+          >
             Use a different résumé
           </Button>
         </div>
@@ -75,12 +83,10 @@ export function ResumeStep({ profile, onBack, onNext }: ResumeStepProps) {
           profile={profile}
           onApply={apply}
           applying={save.isPending}
-          onPasteInstead={() => { setFresh(null); setPhase('paste'); }}
-          secondaryAction={
-            <Button variant="ghost" onClick={onNext}>
-              Continue without these
-            </Button>
-          }
+          onPasteInstead={() => {
+            setFresh(null);
+            setPhase('paste');
+          }}
         />
       ) : stored.isError ? (
         <ErrorState compact title="Could not load what was found" error={stored.error} onRetry={() => void stored.refetch()} retrying={stored.isFetching} />

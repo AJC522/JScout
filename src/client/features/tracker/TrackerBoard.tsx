@@ -196,6 +196,13 @@ export function TrackerBoard({ apps, now, onOpen, scrollRef, onlyStatus }: Track
     move.mutate({ ...plan, columnOrder: ordered });
   };
 
+  const toggleClosed = () => {
+    const opening = !closedOpen;
+    setClosedOpen(opening);
+    // Bring the newly shown columns into view; they start past the right edge on most screens.
+    if (opening) requestAnimationFrame(() => scrollRef.current?.scrollTo({ left: scrollRef.current.scrollWidth, behavior: 'smooth' }));
+  };
+
   const active = activeId ? byId.get(activeId) : undefined;
   const activeStatuses = onlyStatus ? [onlyStatus] : ACTIVE_STATUSES;
   const showClosed = !onlyStatus;
@@ -222,9 +229,6 @@ export function TrackerBoard({ apps, now, onOpen, scrollRef, onlyStatus }: Track
         {activeStatuses.map((status) => (
           <BoardColumn key={status} status={status} ids={ids[status]} byId={byId} now={now} onOpen={onOpen} />
         ))}
-        {showClosed && closedOpen
-          ? CLOSED_STATUSES.map((status) => <BoardColumn key={status} status={status} ids={ids[status]} byId={byId} now={now} onOpen={onOpen} />)
-          : null}
         {showClosed ? (
           <section aria-label="Closed" className={cn('flex shrink-0 snap-start flex-col self-start', closedOpen ? 'w-10' : 'w-[17rem] sm:w-40')}>
             <div className={cn('mb-2 flex h-7 items-center gap-1', closedOpen ? 'justify-center' : 'justify-between px-1')}>
@@ -233,7 +237,7 @@ export function TrackerBoard({ apps, now, onOpen, scrollRef, onlyStatus }: Track
                 size="xs"
                 label={closedOpen ? 'Collapse closed columns' : 'Expand closed columns'}
                 icon={closedOpen ? <ChevronsLeft /> : <ChevronsRight />}
-                onClick={() => setClosedOpen((v) => !v)}
+                onClick={toggleClosed}
                 aria-expanded={closedOpen}
               />
             </div>
@@ -246,6 +250,9 @@ export function TrackerBoard({ apps, now, onOpen, scrollRef, onlyStatus }: Track
             )}
           </section>
         ) : null}
+        {showClosed && closedOpen
+          ? CLOSED_STATUSES.map((status) => <BoardColumn key={status} status={status} ids={ids[status]} byId={byId} now={now} onOpen={onOpen} />)
+          : null}
       </div>
       <DragOverlay dropAnimation={{ duration: 160, easing: 'ease-out' }}>{active ? <ApplicationCardView app={active} now={now} overlay /> : null}</DragOverlay>
     </DndContext>

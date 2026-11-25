@@ -8,7 +8,7 @@ import { cn } from '../../lib/cn';
 import { formatDate, formatRelativeTime } from '../../lib/format';
 import { useLocalStorage } from '../../lib/hooks';
 import { ClosedBadge, FollowUpBadge } from './ApplicationCard';
-import { groupByStatus, sortOrderAt } from './board';
+import { followUpState, groupByStatus, sortOrderAt } from './board';
 import { DEFAULT_LIST_SORT, nextSort, sortApplications, type ListSort, type SortKey } from './list-sort';
 import { useMoveApplication } from './queries';
 import { PRIORITY_LABELS, PRIORITY_TONES, STATUS_OPTIONS } from './status';
@@ -113,7 +113,7 @@ export function TrackerList({ apps, now, onOpen }: TrackerListProps) {
               </td>
               <td className="hidden px-3 py-2 whitespace-nowrap text-muted tabular-nums lg:table-cell">{formatDate(app.appliedAt, 'short') || '–'}</td>
               <td className="hidden px-3 py-2 whitespace-nowrap sm:table-cell">
-                {app.followUpAt ? <FollowUpBadge app={app} now={now} /> : <span className="text-muted">–</span>}
+                {followUpState(app, now) ? <FollowUpBadge app={app} now={now} /> : <span className="text-muted">–</span>}
               </td>
               <td className="hidden px-3 py-2 lg:table-cell">
                 {app.priority > 0 ? (

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ChevronDown, FileText, Pencil, Trash2 } from 'lucide-react';
 import type { ApplicationDetail, ApplicationDocument, DocumentKind } from '../../../../shared/types';
 import { errorMessage } from '../../../api/client';
-import { Badge, Button, CopyButton, IconButton, Textarea, useConfirm, useToast } from '../../../components/ui';
+import { Button, CopyButton, IconButton, Textarea, useConfirm, useToast } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { formatRelativeTime } from '../../../lib/format';
 import { useDeleteDocument, useUpdateDocument } from '../queries';

@@ -1,4 +1,5 @@
 /** The apply kit as one tabbed panel: fit, cover letter, answers and quick-fill. */
+import { useState, type ReactNode } from 'react';
 import { ClipboardList, Gauge, MessageSquareText, PenLine } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui';
 import { useLocalStorage } from '../../lib/hooks';
@@ -22,9 +23,24 @@ export interface ApplyKitPanelProps {
 }
 
 export function ApplyKitPanel({ target, company, className }: ApplyKitPanelProps) {
-  const [tab, setTab] = useLocalStorage<ApplyKitTab>('jscout.applykit.tab', 'fit');
+  const [stored, setTab] = useLocalStorage<ApplyKitTab>('jscout.applykit.tab', 'fit');
+  const tab = isTab(stored) ? stored : 'fit';
+  // Tabs mount when first opened (so text areas measure themselves while visible) and then stay
+  // mounted, so a draft survives switching tabs.
+  const [visited, setVisited] = useState<ReadonlySet<ApplyKitTab>>(() => new Set([tab]));
+  const select = (value: string) => {
+    if (!isTab(value)) return;
+    setTab(value);
+    setVisited((v) => (v.has(value) ? v : new Set(v).add(value)));
+  };
+  const panel = (value: ApplyKitTab, content: ReactNode) => (
+    <TabsContent value={value} forceMount className="data-[state=inactive]:hidden">
+      {visited.has(value) ? content : null}
+    </TabsContent>
+  );
+
   return (
-    <Tabs value={isTab(tab) ? tab : 'fit'} onValueChange={(v) => isTab(v) && setTab(v)} className={className}>
+    <Tabs value={tab} onValueChange={select} className={className}>
       <TabsList aria-label="Apply kit">
         <TabsTrigger value="fit" icon={<Gauge />}>
           Fit
@@ -39,19 +55,10 @@ export function ApplyKitPanel({ target, company, className }: ApplyKitPanelProps
           Quick fill
         </TabsTrigger>
       </TabsList>
-      {/* Kept mounted so a draft survives switching tabs. */}
-      <TabsContent value="fit" forceMount className="data-[state=inactive]:hidden">
-        <FitPanel target={target} />
-      </TabsContent>
-      <TabsContent value="letter" forceMount className="data-[state=inactive]:hidden">
-        <CoverLetterPanel target={target} company={company} />
-      </TabsContent>
-      <TabsContent value="answers" forceMount className="data-[state=inactive]:hidden">
-        <AnswerHelper target={target} />
-      </TabsContent>
-      <TabsContent value="quick-fill" forceMount className="data-[state=inactive]:hidden">
-        <QuickFillPanel />
-      </TabsContent>
+      {panel('fit', <FitPanel target={target} />)}
+      {panel('letter', <CoverLetterPanel target={target} company={company} />)}
+      {panel('answers', <AnswerHelper target={target} />)}
+      {panel('quick-fill', <QuickFillPanel />)}
     </Tabs>
   );
 }

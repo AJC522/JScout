@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Monitor, Moon, RefreshCw, Sun } from 'lucide-react';
 import type { AppSettings, AppSettingsUpdate, ThemePreference } from '../../../shared/types';
@@ -14,7 +15,7 @@ const THEME_OPTIONS = [
   { value: 'system', label: 'System', icon: <Monitor /> },
   { value: 'light', label: 'Light', icon: <Sun /> },
   { value: 'dark', label: 'Dark', icon: <Moon /> },
-] satisfies Array<{ value: ThemePreference; label: string; icon: React.ReactNode }>;
+] satisfies Array<{ value: ThemePreference; label: string; icon: ReactNode }>;
 
 export function AppearanceSection() {
   const { theme, setTheme } = useTheme();

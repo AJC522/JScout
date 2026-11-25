@@ -63,7 +63,7 @@ export function AiDraftButton({ onClick, loading, disabled, children }: { onClic
   const hintId = useId();
   const configured = status.data?.configured === true;
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col items-start gap-1.5">
       <Button
         size="sm"
         variant="secondary"

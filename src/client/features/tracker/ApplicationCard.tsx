@@ -12,7 +12,7 @@ import { formatDate } from '../../lib/format';
 import { daysSince, followUpState, type FollowUpState } from './board';
 import { PRIORITY_LABELS, PRIORITY_TONES } from './status';
 
-export function followUpLabel(state: FollowUpState, followUpAt: string): string {
+function followUpLabel(state: FollowUpState, followUpAt: string): string {
   if (state.kind === 'overdue') return state.days === 1 ? 'Follow up: 1 day late' : `Follow up: ${state.days} days late`;
   if (state.kind === 'today') return 'Follow up today';
   return `Follow up ${formatDate(followUpAt, 'short')}`;
@@ -147,14 +147,13 @@ export function SortableCard({ app, now, onOpen }: SortableCardProps) {
   );
 }
 
-/** Where the application page's "Back" link should return to: the tracker with the filters that were set. */
-export function useTrackerReturnPath(): string {
-  const location = useLocation();
-  return `${location.pathname}${location.search}`;
-}
-
+/**
+ * Opens an application, remembering the tracker URL (with its filters) so the application
+ * page's "Back to tracker" link returns to the same view.
+ */
 export function useOpenApplication() {
   const navigate = useNavigate();
-  const from = useTrackerReturnPath();
-  return (id: string) => navigate(`/tracker/${id}`, { state: { from } });
+  const location = useLocation();
+  const from = `${location.pathname}${location.search}`;
+  return (id: string) => void navigate(`/tracker/${id}`, { state: { from } });
 }

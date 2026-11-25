@@ -28,7 +28,7 @@ export function AnswerHelper({ target }: { target: ApplyKitTarget }) {
 
   const trimmed = question.trim();
   const run = (mode: 'bank' | 'ai') => {
-    if (!trimmed) return;
+    if (!trimmed || generate.isPending) return;
     generate.mutate(
       { ...targetBody(target), question: trimmed, mode },
       {

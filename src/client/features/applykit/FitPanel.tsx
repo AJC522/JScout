@@ -109,7 +109,7 @@ function FitResult({ fit }: { fit: FitAnalysis }) {
           </div>
         )}
         {fit.skillsMissing.length > 0 ? (
-          <p className="text-xs text-muted">Crossed-out skills are asked for in the posting but not on your profile or résumé.</p>
+          <p className="text-xs text-muted">Skills marked ✕ are asked for in the posting but are not on your profile or résumé.</p>
         ) : null}
       </section>
 
