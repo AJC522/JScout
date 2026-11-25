@@ -4,8 +4,10 @@ import type { AppSettings, AppSettingsUpdate } from '../../../shared/types';
 
 /** What the server will store for `update`; the key itself never reaches the client, only whether one is saved. */
 export function applySettingsUpdate(settings: AppSettings, update: AppSettingsUpdate): AppSettings {
-  const { ai, ...rest } = update;
+  const { ai, email, ...rest } = update;
   const next: AppSettings = { ...settings, ...rest, ai: { ...settings.ai } };
+  // An account patch carries the password: never merge it into the cached settings; the server's reply replaces them.
+  if (email === null) next.email = null;
   if (ai?.model !== undefined) next.ai.model = ai.model;
   if (ai?.apiKey !== undefined) {
     const saved = ai.apiKey !== null && ai.apiKey.trim() !== '';

@@ -44,7 +44,7 @@ let settings: SettingsService;
 function makeService() {
   store = new Map();
   settings = {
-    getApp: () => ({ theme: 'system', autoSync: true, closedRetentionDays: 30, maxPostingAgeDays: 60, ai: { hasKey: Boolean(apiKey), keySource: apiKey ? ('saved' as const) : null, model: '' } }),
+    getApp: () => ({ theme: 'system', autoSync: true, closedRetentionDays: 30, maxPostingAgeDays: 60, ai: { hasKey: Boolean(apiKey), keySource: apiKey ? ('saved' as const) : null, model: '' }, email: null }),
     getSecret: () => apiKey,
     getJson: <T>(key: string) => store.get(key) as T | undefined,
     setJson: vi.fn((key: string, value: unknown) => void store.set(key, value)),

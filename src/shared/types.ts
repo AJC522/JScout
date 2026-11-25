@@ -286,9 +286,22 @@ export interface SearchResultItem {
   userState: JobUserState;
 }
 
+/** An address the posting says to send applications to. */
+export interface ApplyEmail {
+  address: string;
+  /** The sentence that gives it. */
+  evidence: string;
+  /** True when the posting says outright to apply by email ("Send your résumé to …"). */
+  explicit: boolean;
+  /** Subject line the posting asks for, if any. */
+  subject?: string;
+}
+
 export interface JobDetail extends SearchResultItem {
   /** Sanitised HTML, safe to inject. */
   descriptionHtml: string;
+  /** Present when the posting takes applications by email. */
+  applyEmail?: ApplyEmail;
   /** Result of the most recent liveness check, if any. */
   liveness?: LivenessResult;
 }
@@ -1082,6 +1095,8 @@ export interface AppSettings {
     keySource: 'saved' | 'environment' | null;
     model: string;
   };
+  /** The account applications are emailed from; null until set up. */
+  email: EmailAccountView | null;
 }
 
 export interface AppSettingsUpdate {
@@ -1090,6 +1105,77 @@ export interface AppSettingsUpdate {
   closedRetentionDays?: number;
   maxPostingAgeDays?: number;
   ai?: { apiKey?: string | null; model?: string };
+  /** null removes the email account (and its password). */
+  email?: EmailAccountUpdate | null;
+}
+
+/** The user's own email account, used to send applications (SMTP). */
+export interface EmailAccount {
+  /** Outgoing mail server, e.g. "smtp.gmail.com". */
+  host: string;
+  port: number;
+  /** TLS from the first byte (usually port 465); otherwise STARTTLS is required (usually 587). */
+  secure: boolean;
+  /** Sign-in name, usually the email address. */
+  user: string;
+  /** Address applications are sent from. */
+  fromAddress: string;
+  /** Name shown to the recipient; the profile's name when empty. */
+  fromName: string;
+}
+
+export interface EmailAccountView extends EmailAccount {
+  /** The password is never sent to the client. */
+  hasPassword: boolean;
+}
+
+export interface EmailAccountUpdate extends Partial<EmailAccount> {
+  /** An app password; null or '' removes it. */
+  password?: string | null;
+}
+
+// --- applying by email -------------------------------------------------------
+
+export interface EmailAttachmentInfo {
+  kind: 'resume';
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** True when this is the résumé text as a .txt file (no original file was uploaded). */
+  fromText: boolean;
+}
+
+/** An application email ready to edit and send. */
+export interface EmailApplicationDraft {
+  /** The address the posting gives (empty when it gives none). */
+  to: string;
+  /** Other addresses worth offering: the posting's, the application's contacts. */
+  suggestions: Array<{ address: string; label: string }>;
+  applyEmail?: ApplyEmail;
+  subject: string;
+  body: string;
+  /** Where the body came from: a cover letter saved on the application, or a template. */
+  bodySource: 'saved-letter' | 'template';
+  resume?: EmailAttachmentInfo;
+  /** Whether an email account is set up to send from. */
+  canSend: boolean;
+  fromAddress?: string;
+}
+
+export interface EmailApplicationSend {
+  jobId?: string;
+  applicationId?: string;
+  to: string;
+  cc?: string;
+  subject: string;
+  body: string;
+  attachResume: boolean;
+}
+
+export interface EmailApplicationResult {
+  application: ApplicationDetail;
+  to: string;
+  sentAt: IsoDate;
 }
 
 // --- skill gaps ----------------------------------------------------------------

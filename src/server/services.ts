@@ -20,6 +20,9 @@ import type {
 } from '../shared/api';
 import type {
   AiStatus,
+  EmailApplicationDraft,
+  EmailApplicationResult,
+  EmailApplicationSend,
   AnswerDraftRequest,
   AnswerDraftResult,
   AppSettings,
@@ -83,7 +86,7 @@ export interface SettingsService {
   getApp(): AppSettings;
   updateApp(patch: AppSettingsUpdate): AppSettings;
   /** Secrets never leave the server. Known keys: 'ai.apiKey'. */
-  getSecret(key: 'ai.apiKey'): string | undefined;
+  getSecret(key: 'ai.apiKey' | 'email.password'): string | undefined;
   getSourceState(sourceId: string): SourceState;
   setSourceState(sourceId: string, patch: SourcePatch): SourceState;
   /** Generic JSON key/value storage for features (keys are namespaced, e.g. 'ai.lastError'). */
@@ -336,6 +339,17 @@ export interface ApplyKitService {
   aiTest(): Promise<AiStatus>;
 }
 
+// --- applying by email -------------------------------------------------------------------------
+
+export interface EmailApplyService {
+  /** An application email for a job or tracked application, ready to edit. */
+  draft(target: { jobId?: string; applicationId?: string }): Promise<EmailApplicationDraft>;
+  /** Send it from the user's email account, then record it in the tracker as applied. */
+  send(request: EmailApplicationSend): Promise<EmailApplicationResult>;
+  /** Send a test message to the account's own address. */
+  test(): Promise<{ to: string }>;
+}
+
 // --- skill gaps ------------------------------------------------------------------------------
 
 export interface GapService {
@@ -356,6 +370,7 @@ export interface Services {
   search: SearchService;
   savedSearches: SavedSearchService;
   applyKit: ApplyKitService;
+  emailApply: EmailApplyService;
   gaps: GapService;
 }
 

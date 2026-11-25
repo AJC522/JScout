@@ -15,6 +15,7 @@ import { FIXTURE_NOW, fetchFixtureFeeds } from '../../../src/server/ingest/testi
 import type { NormalizedPosting } from '../../../src/server/ingest/types';
 import { curatedFeeds } from '../../../src/server/search/testing';
 import { greenhouseSource } from '../../../src/server/sources/greenhouse';
+import { remotiveSource } from '../../../src/server/sources/remotive';
 import type { RawPosting } from '../../../src/server/sources/types';
 import type { AppContext, Services } from '../../../src/server/services';
 
@@ -62,6 +63,26 @@ function clearanceFeed() {
   };
 }
 
+/**
+ * A remote job that takes applications by email (apply-by-email.spec.ts); its title appears nowhere else.
+ * Added to the curated Remotive feed: feeds are stored as complete snapshots, so a feed of its own
+ * under the same key would close the others' postings.
+ */
+function emailPosting(): NormalizedPosting {
+  const raw: RawPosting = {
+    externalId: 'e2e-orbital',
+    url: 'https://remotive.com/remote-jobs/software-dev/orbital-dynamics-engineer-e2e',
+    title: 'Orbital Dynamics Engineer',
+    company: 'Lumen Orbital',
+    locations: ['Remote - US'],
+    remote: 'remote',
+    postedAt: FIXTURE_NOW.toISOString(),
+    descriptionHtml:
+      '<p>Model spacecraft trajectories in Python and C++.</p><p>To apply, send your résumé to <a href="mailto:jobs@lumen-orbital.example">jobs@lumen-orbital.example</a> with the subject line "Orbital Dynamics Engineer".</p>',
+  };
+  return normalizePosting(raw, { source: remotiveSource.def, feedKey: 'remotive', now: FIXTURE_NOW })!;
+}
+
 const fixtures = await fetchFixtureFeeds();
 const feeds = [
   // Himalayas is a live-search source that is off until the user adds a key; it has no place in a fresh index.
@@ -73,7 +94,7 @@ const feeds = [
         .map((raw) => normalizePosting(raw, { source: f.source.def, feedKey: f.feedKey, board: f.board, now: FIXTURE_NOW }))
         .filter((p): p is NormalizedPosting => p !== null),
     })),
-  ...curatedFeeds(),
+  ...curatedFeeds().map((f) => (f.feed.feedKey === 'remotive' ? { ...f, postings: [...f.postings, emailPosting()] } : f)),
   clearanceFeed(),
 ];
 

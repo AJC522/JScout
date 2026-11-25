@@ -2,7 +2,7 @@
  * Everything about one job: facts, actions (apply, save, hide, check), why it matches, the full
  * description and the apply kit. Used by the split view, the narrow-screen drawer and /jobs/:id.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
   Activity,
@@ -17,6 +17,7 @@ import {
   Eye,
   EyeOff,
   Laptop,
+  Mail,
   Maximize2,
   MoreHorizontal,
   SearchX,
@@ -32,6 +33,7 @@ import { ApiRequestError, errorMessage } from '../../api/client';
 import {
   Badge,
   Button,
+  Dialog,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -51,7 +53,7 @@ import {
 } from '../../components/ui';
 import { useCopyToClipboard } from '../../lib/hooks';
 import { formatDate, formatRelativeTime, formatSalary, initials } from '../../lib/format';
-import { ApplyKitPanel } from '../applykit';
+import { ApplyKitPanel, EmailApplyPanel } from '../applykit';
 import { ClearanceBadge, hasPercent, IconLink, payLabel, RemoteBadge, StatusBadge, useHeldClearance } from './job-bits';
 import { useCheckLiveness, useJobDetail, useSources } from './queries';
 import type { JobActions } from './use-job-actions';
@@ -224,11 +226,30 @@ function ActionRow({ data, actions, showFullPageLink, onCheck, checking }: Actio
   const toast = useToast();
   const { copy } = useCopyToClipboard();
   const saved = Boolean(userState.applicationStatus);
+  const [emailing, setEmailing] = useState(false);
+  const byEmail = data.applyEmail;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button variant="primary" trailingIcon={<ArrowUpRight />} onClick={() => actions.apply(data)}>
-        Apply
+      {byEmail ? (
+        <Dialog
+          open={emailing}
+          onOpenChange={setEmailing}
+          size="lg"
+          title="Apply by email"
+          description={`${job.title} at ${job.company}. Sent from your own email account, with your résumé attached.`}
+          dismissible={false}
+          trigger={
+            <Button variant="primary" leadingIcon={<Mail />}>
+              Apply by email
+            </Button>
+          }
+        >
+          <EmailApplyPanel target={{ jobId: job.id, applicationId: userState.applicationId }} />
+        </Dialog>
+      ) : null}
+      <Button variant={byEmail ? 'secondary' : 'primary'} trailingIcon={<ArrowUpRight />} onClick={() => actions.apply(data)}>
+        {byEmail ? 'Open posting' : 'Apply'}
       </Button>
       {saved && userState.applicationId ? (
         <Button asChild variant="secondary" leadingIcon={<BookmarkCheck className="text-primary" />}>

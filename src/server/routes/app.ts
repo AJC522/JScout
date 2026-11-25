@@ -18,6 +18,18 @@ const settingsPatchSchema = z.strictObject({
       model: z.string().trim().min(1).max(100).optional(),
     })
     .optional(),
+  email: z
+    .strictObject({
+      host: z.string().trim().max(253).optional(),
+      port: z.number().int().min(1).max(65535).optional(),
+      secure: z.boolean().optional(),
+      user: z.string().trim().max(254).optional(),
+      fromAddress: z.string().trim().max(254).optional(),
+      fromName: z.string().trim().max(120).optional(),
+      password: z.string().max(400).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 });
 
 /** Health, bootstrap, settings and the server-sent event stream. */

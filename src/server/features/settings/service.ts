@@ -1,12 +1,14 @@
 import type { SourcePatch } from '../../../shared/api';
 import { DEFAULT_AI_MODEL } from '../../../shared/constants';
-import type { AppSettings, AppSettingsUpdate, ThemePreference } from '../../../shared/types';
+import type { AppSettings, AppSettingsUpdate, EmailAccount, EmailAccountUpdate, EmailAccountView, ThemePreference } from '../../../shared/types';
 import type { Db } from '../../db';
 import { badRequest } from '../../errors';
 import type { AppContext, SettingsService, SourceState } from '../../services';
 
 const APP_KEY = 'settings.app';
 const AI_KEY_KEY = 'settings.secret.aiApiKey';
+const EMAIL_KEY = 'settings.email';
+const EMAIL_PASSWORD_KEY = 'settings.secret.emailPassword';
 const sourceKey = (id: string) => `settings.source.${id}`;
 
 const THEMES: readonly ThemePreference[] = ['system', 'light', 'dark'];
@@ -44,6 +46,41 @@ function readStoredApp(value: unknown): StoredApp {
     maxPostingAgeDays: isDayCount(v.maxPostingAgeDays, 3650) ? v.maxPostingAgeDays : APP_DEFAULTS.maxPostingAgeDays,
     aiModel: isModel(v.aiModel) ? v.aiModel.trim() : APP_DEFAULTS.aiModel,
   };
+}
+
+const HOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$/;
+const ADDRESS = /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/;
+
+/** A stored email account, or null when there is none (or it is malformed). */
+function readEmailAccount(value: unknown): EmailAccount | null {
+  if (!isRecord(value) || typeof value.host !== 'string' || !HOST.test(value.host)) return null;
+  const port = typeof value.port === 'number' && Number.isInteger(value.port) && value.port > 0 && value.port < 65536 ? value.port : 587;
+  const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  return {
+    host: value.host,
+    port,
+    secure: typeof value.secure === 'boolean' ? value.secure : port === 465,
+    user: str(value.user),
+    fromAddress: str(value.fromAddress),
+    fromName: str(value.fromName),
+  };
+}
+
+/** The stored account with a patch applied; throws on values that cannot work. */
+function mergeEmailAccount(current: EmailAccount | null, patch: EmailAccountUpdate): EmailAccount {
+  const next: EmailAccount = current ? { ...current } : { host: '', port: 587, secure: false, user: '', fromAddress: '', fromName: '' };
+  if (patch.host !== undefined) next.host = patch.host.trim().toLowerCase();
+  if (patch.port !== undefined) next.port = patch.port;
+  if (patch.secure !== undefined) next.secure = patch.secure;
+  if (patch.user !== undefined) next.user = patch.user.trim();
+  if (patch.fromAddress !== undefined) next.fromAddress = patch.fromAddress.trim();
+  if (patch.fromName !== undefined) next.fromName = patch.fromName.trim().replace(/[\r\n]+/g, ' ');
+  if (!HOST.test(next.host)) throw badRequest('email.host must be a mail server name, e.g. smtp.gmail.com');
+  if (!Number.isInteger(next.port) || next.port < 1 || next.port > 65535) throw badRequest('email.port must be between 1 and 65535');
+  if (!ADDRESS.test(next.fromAddress)) throw badRequest('email.fromAddress must be an email address');
+  // Most providers sign in with the address itself.
+  if (!next.user) next.user = next.fromAddress;
+  return next;
 }
 
 function readSourceState(value: unknown): SourceState {
@@ -128,9 +165,18 @@ export function createSettingsService(ctx: AppContext): SettingsService {
     return env ? { key: env, source: 'environment' } : undefined;
   }
 
-  function getSecret(key: 'ai.apiKey'): string | undefined {
-    if (key !== 'ai.apiKey') return undefined;
-    return aiKey()?.key;
+  function getSecret(key: 'ai.apiKey' | 'email.password'): string | undefined {
+    if (key === 'ai.apiKey') return aiKey()?.key;
+    if (key === 'email.password') {
+      const stored = read(EMAIL_PASSWORD_KEY);
+      return typeof stored === 'string' && stored ? stored : undefined;
+    }
+    return undefined;
+  }
+
+  function emailView(): EmailAccountView | null {
+    const account = readEmailAccount(read(EMAIL_KEY));
+    return account ? { ...account, hasPassword: getSecret('email.password') !== undefined } : null;
   }
 
   function getApp(): AppSettings {
@@ -144,6 +190,7 @@ export function createSettingsService(ctx: AppContext): SettingsService {
         const source = aiKey()?.source ?? null;
         return { hasKey: source !== null, keySource: source, model: app.aiModel };
       })(),
+      email: emailView(),
     };
   }
 
@@ -177,13 +224,33 @@ export function createSettingsService(ctx: AppContext): SettingsService {
         apiKey = patch.ai.apiKey?.trim() || null;
       }
     }
+    // Email account: null removes it; a patch is merged into the stored account and checked.
+    let account: EmailAccount | null | undefined;
+    let password: string | null | undefined;
+    if (patch.email === null) {
+      account = null;
+      password = null;
+    } else if (patch.email !== undefined) {
+      account = mergeEmailAccount(readEmailAccount(read(EMAIL_KEY)), patch.email);
+      if (patch.email.password !== undefined) {
+        if (patch.email.password !== null && typeof patch.email.password !== 'string') throw badRequest('email.password must be a string or null');
+        // App passwords are often shown with spaces ("abcd efgh ijkl mnop"); providers accept them without.
+        password = patch.email.password?.replace(/\s+/g, '') || null;
+      }
+    }
     const previousKey = apiKey === undefined ? undefined : read(AI_KEY_KEY);
+    const previousPassword = password === undefined ? undefined : read(EMAIL_PASSWORD_KEY);
     db.tx(() => {
       write(APP_KEY, next);
       if (apiKey === null) remove(AI_KEY_KEY);
       else if (apiKey !== undefined) write(AI_KEY_KEY, apiKey);
+      if (account === null) remove(EMAIL_KEY);
+      else if (account !== undefined) write(EMAIL_KEY, account);
+      if (password === null) remove(EMAIL_PASSWORD_KEY);
+      else if (password !== undefined) write(EMAIL_PASSWORD_KEY, password);
     });
-    if (previousKey !== undefined && previousKey !== apiKey) scrub();
+    // A removed or replaced secret must not stay readable in the database files.
+    if ((previousKey !== undefined && previousKey !== apiKey) || (previousPassword !== undefined && previousPassword !== password)) scrub();
     return getApp();
   }
 

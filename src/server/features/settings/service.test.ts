@@ -31,7 +31,21 @@ describe('app settings', () => {
       closedRetentionDays: 14,
       maxPostingAgeDays: 0,
       ai: { hasKey: false, keySource: null, model: DEFAULT_AI_MODEL },
+      email: null,
     });
+  });
+
+  it('keeps the email account’s password apart, never returns it, and forgets it on removal', () => {
+    const saved = settings.updateApp({ email: { host: 'SMTP.Gmail.com', port: 465, secure: true, fromAddress: 'maya@gmail.com', password: 'abcd efgh ijkl mnop' } });
+    expect(saved.email).toEqual({ host: 'smtp.gmail.com', port: 465, secure: true, user: 'maya@gmail.com', fromAddress: 'maya@gmail.com', fromName: '', hasPassword: true });
+    // App passwords are shown with spaces; providers want them without.
+    expect(settings.getSecret('email.password')).toBe('abcdefghijklmnop');
+    expect(JSON.stringify(saved)).not.toContain('abcd');
+    // A partial patch keeps the rest, including the password.
+    expect(settings.updateApp({ email: { fromName: 'Maya Chen' } }).email).toMatchObject({ fromName: 'Maya Chen', hasPassword: true });
+    expect(settings.updateApp({ email: null }).email).toBeNull();
+    expect(settings.getSecret('email.password')).toBeUndefined();
+    expect(() => settings.updateApp({ email: { host: 'smtp.gmail.com' } })).toThrow(/fromAddress/);
   });
 
   it('merges updates and persists them across service instances', () => {
@@ -133,7 +147,7 @@ describe('generic JSON storage', () => {
     settings.getJson('k');
     settings.getApp();
     settings.getApp();
-    expect(spy).toHaveBeenCalledTimes(2); // settings.app and the stored API key, once each
+    expect(spy).toHaveBeenCalledTimes(3); // settings.app, the stored API key and the email account, once each
   });
 
   it('does not keep values from a transaction that rolled back', () => {

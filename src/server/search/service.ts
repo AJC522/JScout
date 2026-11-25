@@ -7,7 +7,8 @@
  */
 import type { JobDetail, JobPosting, Place, Profile, ProfileFit, SearchInterpretation, SearchQuery, SearchResponse, SearchResultItem } from '../../shared/types';
 import type { Db } from '../db';
-import { POSTING_SELECT, type PostingRow, rowToPosting } from '../ingest/store-rows';
+import { isAtsSource, POSTING_SELECT, type PostingRow, rowToPosting } from '../ingest/store-rows';
+import { postingApplyEmail } from '../lib/apply-email';
 import { resolvePlace, suggestPlaces } from '../lib/location';
 import { suggestSkills } from '../lib/skills';
 import { foldText } from '../lib/text';
@@ -236,6 +237,8 @@ export function createSearchService(ctx: AppContext): SearchService {
         userState: ctx.services.userState.forCluster(job.clusterKey),
         descriptionHtml: ctx.services.jobs.getDescriptionHtml(id),
       };
+      const applyEmail = postingApplyEmail(detail.descriptionHtml, { hasForm: isAtsSource(job.source) });
+      if (applyEmail) detail.applyEmail = applyEmail;
       const liveness = ctx.services.jobs.getLiveness(id);
       if (liveness) detail.liveness = liveness;
       return detail;
