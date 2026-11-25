@@ -9,7 +9,7 @@
  */
 import { APPLICATION_STATUSES, SEARCH_DEFAULTS } from '../../shared/constants';
 import { atsKindSchema } from '../../shared/schemas';
-import type { EmploymentType, RemoteMode, SearchQuery, SearchSort, Seniority } from '../../shared/types';
+import type { ClearanceRequirement, EmploymentType, RemoteMode, SearchQuery, SearchSort, Seniority } from '../../shared/types';
 import { companyKey } from '../lib/text';
 import { ftsAnd } from './fts';
 import { type LocationFilter, locationFilter, type SqlCond } from './location-filter';
@@ -17,8 +17,8 @@ import { type Exclusion, type Understanding, understandQuery } from './understan
 
 export type { SqlCond } from './location-filter';
 
-export type FacetDim = 'remote' | 'employmentType' | 'seniority' | 'source' | 'company' | 'postedWithin';
-export const FACET_DIMS: readonly FacetDim[] = ['remote', 'employmentType', 'seniority', 'source', 'company', 'postedWithin'];
+export type FacetDim = 'remote' | 'employmentType' | 'seniority' | 'clearance' | 'source' | 'company' | 'postedWithin';
+export const FACET_DIMS: readonly FacetDim[] = ['remote', 'employmentType', 'seniority', 'clearance', 'source', 'company', 'postedWithin'];
 
 /** What the first pass loads per posting: enough to apply facet filters, de-duplicate and sort cheaply. */
 export interface CandidateRow {
@@ -27,6 +27,7 @@ export interface CandidateRow {
   remote: RemoteMode;
   employmentType: EmploymentType;
   seniority: Seniority;
+  clearance: ClearanceRequirement;
   source: string;
   companyKey: string;
   /** COALESCE(posted_at, first_seen_at), ISO-8601. */
@@ -124,6 +125,7 @@ function dimFilters(query: SearchQuery, ageCutoff: string | undefined): Partial<
   if (query.remote?.length) dims.remote = inList('j.remote', query.remote, (r) => r.remote);
   if (query.employmentTypes?.length) dims.employmentType = inList('j.employment_type', query.employmentTypes, (r) => r.employmentType);
   if (query.seniority?.length) dims.seniority = inList('j.seniority', query.seniority, (r) => r.seniority);
+  if (query.clearance?.length) dims.clearance = inList('j.clearance', query.clearance, (r) => r.clearance);
   if (query.sources?.length) dims.source = inList('j.source', query.sources, (r) => r.source);
   if (query.companies?.length) {
     dims.company = inList('j.company_key', [...new Set(query.companies.map(companyKey))], (r) => r.companyKey);

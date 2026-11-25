@@ -6,6 +6,7 @@ import type { ApplicationDetail } from '../../../../shared/types';
 import { Badge, Button, RichText } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { formatDate } from '../../../lib/format';
+import { ClearanceBadge, useHeldClearance } from '../../search/job-bits';
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -36,6 +37,7 @@ export function JobPanel({ app }: { app: ApplicationDetail }) {
   const long = job.descriptionHtml.length > FOLD_AT_CHARS;
   const [expanded, setExpanded] = useState(false);
   const remote = job.remote !== 'unknown' ? REMOTE_LABELS[job.remote] : null;
+  const held = useHeldClearance();
   const location = [job.locationText, remote].filter(Boolean).join(' · ');
 
   return (
@@ -51,6 +53,7 @@ export function JobPanel({ app }: { app: ApplicationDetail }) {
         <Fact label="Location">{location || 'Not stated'}</Fact>
         <Fact label="Salary">{job.salaryText || 'Not stated'}</Fact>
         <Fact label="Type">{EMPLOYMENT_LABELS[job.employmentType]}</Fact>
+        <Fact label="Clearance">{job.clearance ? <ClearanceBadge clearance={job.clearance} held={held} /> : 'Not mentioned'}</Fact>
         <Fact label="Posted">{formatDate(job.postedAt) || 'Unknown'}</Fact>
         <Fact label="Source">
           {job.url ? (

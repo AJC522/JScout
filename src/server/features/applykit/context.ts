@@ -5,6 +5,7 @@
 import type {
   ApplicationDetail,
   EmploymentType,
+  JobClearance,
   JobDetail,
   JobLocation,
   PastedPosting,
@@ -13,6 +14,7 @@ import type {
   Seniority,
 } from '../../../shared/types';
 import { badRequest, notFound } from '../../errors';
+import { postingClearance } from '../../ingest/normalize';
 import { htmlToText, textToHtml } from '../../lib/html';
 import { parseJobLocation } from '../../lib/location';
 import { extractSalaryFromText, parseSalaryText } from '../../lib/salary';
@@ -34,6 +36,8 @@ export interface JobContext {
   employmentType: EmploymentType;
   /** Canonical skill names, most prominent first. */
   skills: string[];
+  /** Security clearance the posting asks for, when it mentions one. */
+  clearance?: JobClearance;
   descriptionText: string;
 }
 
@@ -78,6 +82,7 @@ function fromJobDetail(detail: JobDetail): JobContext {
     seniority: job.seniority,
     employmentType: job.employmentType,
     skills: job.skills.length > 0 ? job.skills : extractSkills(`${job.title}\n${text}`),
+    ...(job.clearance ? { clearance: job.clearance } : {}),
     descriptionText: text,
   };
 }
@@ -105,9 +110,12 @@ function fromApplication(services: Pick<Services, 'jobs'>, app: ApplicationDetai
     seniority: detectSeniority(snap.title, undefined, text),
     employmentType: snap.employmentType,
     skills: snap.skills.length > 0 ? snap.skills : extractSkills(`${snap.title}\n${text}`),
+    ...withClearance(snap.clearance ?? postingClearance(snap.source, snap.title, [], text)),
     descriptionText: text,
   };
 }
+
+const withClearance = (clearance: JobClearance | undefined) => (clearance ? { clearance } : {});
 
 /**
  * A posting the user pasted. Its text goes through the HTML round trip so bullets ("•", "*",
@@ -128,6 +136,7 @@ export function fromPastedPosting(posting: PastedPosting): JobContext {
     seniority: detectSeniority(title, undefined, text),
     employmentType: 'unknown',
     skills: extractSkills(`${title}\n${text}`),
+    ...withClearance(postingClearance('pasted', title, [], text)),
     descriptionText: text,
   };
 }

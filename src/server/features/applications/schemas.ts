@@ -1,6 +1,6 @@
 /** zod schemas for the tracker's HTTP bodies and for imported backups. */
 import { z } from 'zod';
-import { applicationStatusSchema, employmentTypeSchema, isoDateSchema, remoteModeSchema } from '../../../shared/schemas';
+import { applicationStatusSchema, employmentTypeSchema, isoDateSchema, jobClearanceSchema, remoteModeSchema } from '../../../shared/schemas';
 
 export const NOTES_MAX = 20_000;
 export const DOCUMENT_CONTENT_MAX = 100_000;
@@ -143,6 +143,7 @@ const importedSnapshotSchema = z.object({
   employmentType: employmentTypeSchema.catch('unknown'),
   postedAt: isoDateSchema.optional(),
   skills: z.array(required(80)).max(100).default([]),
+  clearance: jobClearanceSchema.optional().catch(undefined),
   descriptionHtml: z.string().max(DESCRIPTION_MAX).default(''),
 });
 

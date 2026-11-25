@@ -6,7 +6,7 @@ import type { SearchResultItem } from '../../../shared/types';
 import { Badge, Button, IconButton } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatRelativeTime, formatSalary } from '../../lib/format';
-import { IconLink, locationNote, MatchScore, RemoteBadge, sourceLine, StatusBadge } from './job-bits';
+import { ClearanceBadge, IconLink, locationNote, MatchScore, RemoteBadge, sourceLine, StatusBadge, useHeldClearance } from './job-bits';
 import type { JobRef } from './use-job-actions';
 
 const MAX_SKILLS = 4;
@@ -38,6 +38,7 @@ export const ResultCard = memo(function ResultCard({ item, isNew, selected, focu
   // With a profile match, certifications you hold come first: they are rarer than skills.
   const skills = (fit ? [...fit.certsMatched, ...fit.skillsMatched] : match.skillsMatched).slice(0, MAX_SKILLS);
   const where = fit ? locationNote(fit.location) : undefined;
+  const held = useHeldClearance();
 
   // The whole card selects the job; buttons and links inside it keep their own behaviour.
   const onCardClick = (event: MouseEvent<HTMLElement>) => {
@@ -90,6 +91,7 @@ export const ResultCard = memo(function ResultCard({ item, isNew, selected, focu
 
       <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
         <RemoteBadge mode={job.location.remote} />
+        <ClearanceBadge clearance={job.clearance} held={held} />
         {where ? <span className={fit?.location.kind === 'local' ? 'text-fg/90' : undefined}>{where}</span> : null}
         {salary ? <span className="font-medium text-fg/90 tabular-nums">{salary}</span> : null}
         <span title={posted}>{formatRelativeTime(posted, now)}</span>

@@ -10,6 +10,7 @@ import { type Db, openDb } from './db';
 import { ApiError } from './errors';
 import { EventBus } from './events';
 import { createApplicationsService } from './features/applications/service';
+import { createEmailApplyService } from './features/apply/service';
 import { createApplyKitService } from './features/applykit/service';
 import { createCompaniesService } from './features/companies/service';
 import { createGapService } from './features/gaps/service';
@@ -20,6 +21,7 @@ import { createJobStore } from './ingest/store';
 import { createSyncService } from './ingest/sync';
 import { registerAppRoutes } from './routes/app';
 import { registerApplicationRoutes } from './routes/applications';
+import { registerApplyRoutes } from './routes/apply';
 import { registerApplyKitRoutes } from './routes/applykit';
 import { registerGapRoutes } from './routes/gaps';
 import { registerProfileRoutes } from './routes/profile';
@@ -120,6 +122,7 @@ export async function buildApp(options: BuildOptions): Promise<BuiltApp> {
   ctx.services.search = createSearchService(ctx);
   ctx.services.savedSearches = createSavedSearchService(ctx);
   ctx.services.applyKit = createApplyKitService(ctx);
+  ctx.services.emailApply = createEmailApplyService(ctx);
   ctx.services.gaps = createGapService(ctx);
 
   app.addHook('onRequest', async (request, reply) => {
@@ -159,6 +162,7 @@ export async function buildApp(options: BuildOptions): Promise<BuiltApp> {
   registerSavedSearchRoutes(app, ctx);
   registerApplicationRoutes(app, ctx);
   registerApplyKitRoutes(app, ctx);
+  registerApplyRoutes(app, ctx);
   registerGapRoutes(app, ctx);
 
   const csp = [

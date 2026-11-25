@@ -1,5 +1,8 @@
 import type {
   ApplicationStatus,
+  ClearanceLevel,
+  ClearanceRequirement,
+  PolygraphKind,
   EmploymentType,
   LetterLength,
   LetterTone,
@@ -62,6 +65,41 @@ export const SENIORITY_LABELS: Record<Seniority, string> = {
   director: 'Director',
   executive: 'Executive',
   unknown: 'Not stated',
+};
+
+/** Clearance requirements, from the least to the most demanding of the applicant. */
+export const CLEARANCE_REQUIREMENTS: ClearanceRequirement[] = ['none', 'preferred', 'sponsored', 'required', 'active'];
+/** Filter and badge labels. */
+export const CLEARANCE_LABELS: Record<ClearanceRequirement, string> = {
+  none: 'No clearance needed',
+  preferred: 'Clearance preferred',
+  sponsored: 'Clearance sponsored',
+  required: 'Clearance required (sponsorship not stated)',
+  active: 'Must already hold a clearance',
+};
+/** One sentence on what each requirement means for the applicant. */
+export const CLEARANCE_DESCRIPTIONS: Record<ClearanceRequirement, string> = {
+  none: 'You don’t need a security clearance for this job.',
+  preferred: 'You can be hired without a clearance, but having one helps.',
+  sponsored: 'A clearance is required, and the employer gets it for you after you’re hired. You must be eligible for one (usually a U.S. citizen who can pass a background investigation).',
+  required: 'A clearance is required, but the posting doesn’t say whether they sponsor one or expect you to have it already. Ask before you apply.',
+  active: 'You must already hold this clearance when you apply or start. The employer won’t sponsor it.',
+};
+/** Lowest to highest. */
+export const CLEARANCE_LEVELS: ClearanceLevel[] = ['public-trust', 'confidential', 'doe-l', 'secret', 'top-secret', 'doe-q', 'ts-sci'];
+export const CLEARANCE_LEVEL_LABELS: Record<ClearanceLevel, string> = {
+  'public-trust': 'Public Trust',
+  confidential: 'Confidential',
+  secret: 'Secret',
+  'top-secret': 'Top Secret',
+  'ts-sci': 'TS/SCI',
+  'doe-l': 'DOE L',
+  'doe-q': 'DOE Q',
+};
+export const POLYGRAPH_LABELS: Record<PolygraphKind, string> = {
+  ci: 'CI polygraph',
+  'full-scope': 'full-scope polygraph',
+  polygraph: 'polygraph',
 };
 
 /** Tracker columns, in pipeline order. */
@@ -148,6 +186,7 @@ export function emptyProfile(now: string): Profile {
       yearsExperience: null,
       workAuthorization: '',
       requiresSponsorship: null,
+      clearance: null,
       willingToRelocate: null,
       noticePeriod: '',
       earliestStart: '',

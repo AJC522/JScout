@@ -45,6 +45,19 @@ describe('broadenCandidates', () => {
     expect(c.get('drop-exclusions')?.patch).toEqual({ excludeTerms: [], excludeCompanies: [], q: 'nurse' });
   });
 
+  it('widens a clearance filter without adding jobs that need a clearance of your own', () => {
+    expect(byId({ q: 'analyst', clearance: ['none'] }).get('clearance')).toMatchObject({
+      label: 'Any job you can get without a clearance of your own',
+      patch: { clearance: ['none', 'preferred', 'sponsored', 'required'] },
+    });
+    expect(byId({ q: 'analyst', clearance: ['none', 'preferred', 'sponsored'] }).get('clearance')).toMatchObject({
+      label: 'Include “clearance required” jobs',
+      patch: { clearance: ['none', 'preferred', 'sponsored', 'required'] },
+    });
+    expect(byId({ q: 'analyst', clearance: ['none', 'preferred', 'sponsored', 'required'] }).has('clearance')).toBe(false);
+    expect(byId({ q: 'analyst', clearance: ['active'] }).get('clearance')?.patch).toEqual({ clearance: [] });
+  });
+
   it('offers older postings when the max-age setting is what limits the search', () => {
     expect(byId({ q: 'nurse' }, 30).get('date:90')?.patch).toEqual({ postedWithinDays: 90 });
     expect(byId({ q: 'nurse' }).has('date:90')).toBe(false);

@@ -4,7 +4,8 @@
  * This is the single place where untrusted source data is cleaned and
  * interpreted. Adapters stay dumb; the store stays mechanical.
  */
-import type { JobLocation, Place, Salary } from '../../shared/types';
+import type { JobClearance, JobLocation, Place, Salary } from '../../shared/types';
+import { detectClearance } from '../lib/clearance';
 import { decodeEntities, fixMojibake, htmlToText, safeHref, sanitizeHtml, textToHtml } from '../lib/html';
 import { toIsoDate } from '../lib/dates';
 import { parseJobLocation } from '../lib/location';
@@ -46,6 +47,14 @@ export function postingSkills(title: string, tags: readonly string[], descriptio
   // Tags joined by commas read as a delimited list, which lets ambiguous names ("Go", "Excel") match there.
   const text = [title, tags.join(', '), descriptionText].filter(Boolean).join('\n');
   return extractSkills(text, { limit: MAX_SKILLS });
+}
+
+/** Sources whose employer processes the clearances it requires (U.S. federal agencies hire, then investigate). */
+const SPONSORING_SOURCES: ReadonlySet<string> = new Set(['usajobs']);
+
+/** A posting's security clearance requirement (also used by the store for lazily fetched descriptions). */
+export function postingClearance(source: string, title: string, tags: readonly string[], descriptionText: string): JobClearance | undefined {
+  return detectClearance({ title, tags, text: descriptionText, sponsorsByDefault: SPONSORING_SOURCES.has(source) });
 }
 
 /** Literal placeholders sloppy upstream serialisers emit for missing values. */
@@ -205,6 +214,8 @@ export function normalizePosting(raw: RawPosting, ctx: NormalizeContext): Normal
     department: optLine(raw.department),
     tags,
     skills: postingSkills(title, tags, desc.text),
+    // Undefined (dropped by JSON.stringify) for most postings, so adding it left their content hash alone.
+    clearance: postingClearance(ctx.source.id, title, tags, desc.text),
     descriptionHtml: desc.html,
     postedAt: postedDate(raw, ctx.now),
   };

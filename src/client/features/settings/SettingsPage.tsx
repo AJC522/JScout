@@ -4,6 +4,7 @@ import { useDocumentTitle } from '../../lib/hooks';
 import { AboutSection } from './AboutSection';
 import { AiSection } from './AiSection';
 import { DataSection } from './DataSection';
+import { EmailSection } from './EmailSection';
 import { AppearanceSection, SyncSection } from './GeneralSections';
 import { useSettings } from './settings-api';
 import { SourcesSection } from './SourcesSection';
@@ -13,6 +14,7 @@ const SECTIONS = [
   { id: 'syncing', label: 'Syncing' },
   { id: 'sources', label: 'Sources' },
   { id: 'ai', label: 'AI drafting' },
+  { id: 'email', label: 'Sending applications' },
   { id: 'data', label: 'Your data' },
   { id: 'about', label: 'About' },
 ] as const;
@@ -23,7 +25,7 @@ export function SettingsPage() {
 
   return (
     <Page width="narrow">
-      <PageHeader title="Settings" description="Appearance, syncing, job sources, AI drafting and your data." />
+      <PageHeader title="Settings" description="Appearance, syncing, job sources, AI drafting, sending applications and your data." />
       <nav aria-label="Settings sections" className="sticky top-13 z-20 -mx-4 mb-5 border-b border-border bg-canvas/95 px-4 backdrop-blur-sm sm:top-0 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <ul className="flex gap-1 overflow-x-auto py-2 [scrollbar-width:none]">
           {SECTIONS.map((s) => (
@@ -51,6 +53,7 @@ export function SettingsPage() {
         )}
         <SourcesSection />
         {settings.data ? <AiSection settings={settings.data} /> : null}
+        {settings.data ? <EmailSection settings={settings.data} /> : null}
         <DataSection />
         <AboutSection />
       </div>

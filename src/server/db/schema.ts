@@ -268,4 +268,20 @@ export const MIGRATIONS: string[] = [
   `
   CREATE TABLE removed_feeds (feed_key TEXT PRIMARY KEY);
   `,
+  // 6 — security clearances (lib/clearance). clearance is the requirement (none | preferred | sponsored |
+  // active | required), a facet, so jobs_search is rebuilt with it to stay covering; clearance_detail is
+  // the JobClearance JSON (level, polygraph, evidence) or NULL. Postings indexed before this migration
+  // are classified in the background (JobStore), driven by the 'clearance' row in backfills.
+  `
+  ALTER TABLE jobs ADD COLUMN clearance TEXT NOT NULL DEFAULT 'none';
+  ALTER TABLE jobs ADD COLUMN clearance_detail TEXT;
+  DROP INDEX IF EXISTS jobs_search;
+  CREATE INDEX jobs_search ON jobs (
+    closed_at, cluster_key, remote, employment_type, seniority, source, company_key,
+    posted_at, first_seen_at, salary_currency, salary_annual_max, salary_annual_min,
+    (description_html != ''), (remote_scope = '[]'), clearance
+  );
+  CREATE TABLE backfills (name TEXT PRIMARY KEY, after_rid INTEGER NOT NULL DEFAULT 0);
+  INSERT INTO backfills (name) SELECT 'clearance' WHERE EXISTS (SELECT 1 FROM jobs);
+  `,
 ];

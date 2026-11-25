@@ -2,6 +2,7 @@
  * Answers to application questions from the user's saved answer bank: similarity ranking,
  * light adaptation to the current job, and honest outlines when nothing in the bank fits.
  */
+import { describeClearance } from '../../../shared/clearance';
 import type { Profile, SavedAnswer } from '../../../shared/types';
 import { formatSalary } from '../../lib/salary';
 import { escapeRegExp, foldText } from '../../lib/text';
@@ -27,6 +28,7 @@ export type QuestionType =
   | 'salary'
   | 'start'
   | 'authorization'
+  | 'clearance'
   | 'relocation'
   | 'behavioral'
   | 'other';
@@ -35,6 +37,7 @@ export type QuestionType =
 const QUESTION_PATTERNS: Array<[QuestionType, RegExp]> = [
   ['salary', /\b(salary|compensation|pay expectations?|desired pay|expected pay|rate expectations?|remuneration|pay range)\b/i],
   ['start', /\b(notice period|start date|when can you start|earliest (start|date|availability)|available to start|availability)\b/i],
+  ['clearance', /\b(security clearance|clearance|ts\/sci|top secret|polygraph|cleared)\b/i],
   ['authorization', /\b(authori[sz]ed to work|work authori[sz]ation|right to work|visa|sponsorship|work permit|legally (eligible|able) to work)\b/i],
   ['relocation', /\b(relocat\w*|willing to move|commute)\b/i],
   ['weaknesses', /\b(weakness(es)?|areas? (for|of) (improvement|growth|development)|improve on)\b/i],
@@ -211,6 +214,14 @@ function authorizationAnswer(profile: Profile): string[] {
   ];
 }
 
+function clearanceAnswer(profile: Profile): string[] {
+  const held = profile.work.clearance;
+  if (!held) return ["I don't currently hold a security clearance. [Whether you're eligible for one, e.g. a U.S. citizen willing to undergo a background investigation.]"];
+  return held.status === 'active'
+    ? [`Yes, I hold an active ${describeClearance(held)} clearance.`, '[Granting agency and investigation date, if they ask.]']
+    : [`I previously held a ${describeClearance(held)} clearance; it is currently inactive.`, '[When it lapsed, so they know whether it can be reinstated.]'];
+}
+
 function relocationAnswer(profile: Profile): string[] {
   const home = profile.personal.location.trim();
   const relocate = profile.work.willingToRelocate;
@@ -281,6 +292,8 @@ export function scaffoldAnswer(input: ScaffoldInput): string {
       return startAnswer(profile).join(' ');
     case 'authorization':
       return authorizationAnswer(profile).join(' ');
+    case 'clearance':
+      return clearanceAnswer(profile).join(' ');
     case 'relocation':
       return relocationAnswer(profile).join(' ');
     case 'behavioral': {

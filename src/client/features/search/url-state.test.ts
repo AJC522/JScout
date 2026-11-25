@@ -62,6 +62,14 @@ describe('URL <-> SearchQuery', () => {
     expect(queryToParams({ q: 'designer', sort: 'relevance' }).toString()).toBe('q=designer&sort=relevance');
   });
 
+  it('round-trips the clearance filter, and drops it when every requirement is ticked', () => {
+    const query = paramsToQuery(queryToParams({ q: 'analyst', clearance: ['sponsored', 'none', 'bogus' as never] }));
+    expect(query.clearance).toEqual(['none', 'sponsored']);
+    expect(queryToParams({ q: 'analyst', clearance: ['none', 'sponsored'] }).get('clr')).toBe('none,sponsored');
+    expect(queryToParams({ q: 'analyst', clearance: ['none', 'preferred', 'sponsored', 'required', 'active'] }).has('clr')).toBe(false);
+    expect(countActiveFilters({ q: '', clearance: ['none'] })).toBe(1);
+  });
+
   it('keeps commas inside free-text list values', () => {
     const params = queryToParams({ q: '', companies: ['Acme, Inc.'] });
     expect(params.getAll('co')).toEqual(['Acme, Inc.']);

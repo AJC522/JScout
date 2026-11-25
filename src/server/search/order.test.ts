@@ -8,6 +8,7 @@ const row = (rid: number, currency: string | null, amount: number | null): Candi
   remote: 'remote',
   employmentType: 'full-time',
   seniority: 'unknown',
+  clearance: 'none',
   source: 's',
   companyKey: 'k',
   ts: '2026-01-01T00:00:00.000Z',

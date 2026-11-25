@@ -8,6 +8,7 @@ const settings: AppSettings = {
   closedRetentionDays: 30,
   maxPostingAgeDays: 60,
   ai: { hasKey: false, keySource: null, model: 'claude-opus-5-5' },
+  email: null,
 };
 
 describe('keyRemovalResult', () => {

@@ -1,4 +1,5 @@
 /** The copy-paste panel used while filling in application forms. */
+import { capitalize, describeHeld } from '../../../shared/clearance';
 import type { EducationEntry, Profile, QuickFillField } from '../../../shared/types';
 
 const PARTICLES = new Set(['de', 'da', 'del', 'della', 'der', 'den', 'di', 'du', 'la', 'le', 'van', 'von', 'bin', 'al', 'dos', 'das', 'st.']);
@@ -58,6 +59,7 @@ export function buildQuickFill(profile: Profile): QuickFillField[] {
   add('work', 'yearsExperience', 'Years of experience', work.yearsExperience === null ? '' : String(work.yearsExperience));
   add('work', 'workAuthorization', 'Work authorisation', work.workAuthorization);
   add('work', 'requiresSponsorship', 'Requires visa sponsorship', yesNo(work.requiresSponsorship));
+  if (work.clearance) add('work', 'clearance', 'Security clearance', capitalize(describeHeld(work.clearance)));
   add('work', 'willingToRelocate', 'Willing to relocate', yesNo(work.willingToRelocate));
   add('work', 'noticePeriod', 'Notice period', work.noticePeriod);
   add('work', 'earliestStart', 'Earliest start date', work.earliestStart);

@@ -6,6 +6,8 @@
  * from the same rows, without one SQL query per facet.
  */
 import {
+  CLEARANCE_LABELS,
+  CLEARANCE_REQUIREMENTS,
   EMPLOYMENT_LABELS,
   EMPLOYMENT_TYPES,
   POSTED_WITHIN_OPTIONS,
@@ -36,11 +38,12 @@ export interface Collapsed {
 }
 
 type ValueDim = Exclude<FacetDim, 'postedWithin'>;
-const VALUE_DIMS: readonly ValueDim[] = ['remote', 'employmentType', 'seniority', 'source', 'company'];
+const VALUE_DIMS: readonly ValueDim[] = ['remote', 'employmentType', 'seniority', 'clearance', 'source', 'company'];
 const valueOf: Record<ValueDim, (r: CandidateRow) => string> = {
   remote: (r) => r.remote,
   employmentType: (r) => r.employmentType,
   seniority: (r) => r.seniority,
+  clearance: (r) => r.clearance,
   source: (r) => r.source,
   company: (r) => r.companyKey,
 };
@@ -110,12 +113,13 @@ export function collapse(rows: CandidateRow[], plan: SearchPlan, labels: FacetLa
   }
 
   const mainCounts: Record<ValueDim, Map<string, number>> = {
-    remote: new Map(), employmentType: new Map(), seniority: new Map(), source: new Map(), company: new Map(),
+    remote: new Map(), employmentType: new Map(), seniority: new Map(), clearance: new Map(), source: new Map(), company: new Map(),
   };
   for (const { rep } of main.values()) {
     bump(mainCounts.remote, rep.remote, 1);
     bump(mainCounts.employmentType, rep.employmentType, 1);
     bump(mainCounts.seniority, rep.seniority, 1);
+    bump(mainCounts.clearance, rep.clearance, 1);
     bump(mainCounts.source, rep.source, 1);
     bump(mainCounts.company, rep.companyKey, 1);
   }
@@ -192,6 +196,7 @@ function buildFacets(plan: SearchPlan, counts: Record<ValueDim, Map<string, numb
     remote: ordered(counts.remote, REMOTE_MODES, q.remote ?? [], (v) => REMOTE_LABELS[v as keyof typeof REMOTE_LABELS] ?? v),
     employmentType: ordered(counts.employmentType, EMPLOYMENT_TYPES, q.employmentTypes ?? [], (v) => EMPLOYMENT_LABELS[v as keyof typeof EMPLOYMENT_LABELS] ?? v),
     seniority: ordered(counts.seniority, [...SENIORITY_ORDER, 'unknown'], q.seniority ?? [], (v) => SENIORITY_LABELS[v as keyof typeof SENIORITY_LABELS] ?? v),
+    clearance: ordered(counts.clearance, CLEARANCE_REQUIREMENTS, q.clearance ?? [], (v) => CLEARANCE_LABELS[v as keyof typeof CLEARANCE_LABELS] ?? v),
     source: byCount(counts.source, q.sources ?? [], sourceName),
     // Company values are display names, as SearchQuery.companies expects.
     company: companyFacet.map((f) => {

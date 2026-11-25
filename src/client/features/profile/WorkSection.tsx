@@ -1,18 +1,41 @@
 import { useMemo } from 'react';
-import type { Profile, WorkDetails } from '../../../shared/types';
+import { CLEARANCE_LEVEL_LABELS, CLEARANCE_LEVELS } from '../../../shared/constants';
+import type { ClearanceLevel, HeldClearance, PolygraphKind, Profile, WorkDetails } from '../../../shared/types';
 import { errorMessage } from '../../api/client';
-import { Field, Input, SegmentedControl, Textarea, useToast } from '../../components/ui';
+import { Field, Input, SegmentedControl, Select, Textarea, useToast } from '../../components/ui';
 import { useSaveProfile } from './profile-api';
 import { SectionCard } from './SectionCard';
 import { useDraft, useReportDirty } from './use-draft';
 import { parseOptionalNumber } from './validation';
 
 type YesNo = 'yes' | 'no' | 'unset';
-type WorkForm = Omit<WorkDetails, 'yearsExperience' | 'requiresSponsorship' | 'willingToRelocate'> & {
+type WorkForm = Omit<WorkDetails, 'yearsExperience' | 'requiresSponsorship' | 'willingToRelocate' | 'clearance'> & {
   years: string;
   sponsorship: YesNo;
   relocate: YesNo;
+  /** '' = none. */
+  clearanceLevel: ClearanceLevel | '';
+  clearanceStatus: HeldClearance['status'];
+  /** '' = none. */
+  polygraph: PolygraphKind | '';
 };
+
+// Highest first: most people pick from the top.
+const CLEARANCE_OPTIONS = CLEARANCE_LEVELS.toReversed().map((level) => ({ value: level, label: CLEARANCE_LEVEL_LABELS[level] }));
+const POLYGRAPH_OPTIONS: Array<{ value: PolygraphKind; label: string }> = [
+  { value: 'ci', label: 'Counterintelligence (CI)' },
+  { value: 'full-scope', label: 'Full-scope / lifestyle' },
+  { value: 'polygraph', label: 'Other polygraph' },
+];
+const STATUS_OPTIONS: Array<{ value: HeldClearance['status']; label: string }> = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
+
+function toClearance(f: WorkForm): HeldClearance | null {
+  if (!f.clearanceLevel) return null;
+  return { level: f.clearanceLevel, status: f.clearanceStatus, ...(f.polygraph ? { polygraph: f.polygraph } : {}) };
+}
 
 const YES_NO_OPTIONS: Array<{ value: YesNo; label: string }> = [
   { value: 'yes', label: 'Yes' },
@@ -23,12 +46,15 @@ const YES_NO_OPTIONS: Array<{ value: YesNo; label: string }> = [
 const toYesNo = (value: boolean | null): YesNo => (value === null ? 'unset' : value ? 'yes' : 'no');
 const fromYesNo = (value: YesNo): boolean | null => (value === 'unset' ? null : value === 'yes');
 
-function toForm({ yearsExperience, requiresSponsorship, willingToRelocate, ...rest }: WorkDetails): WorkForm {
+function toForm({ yearsExperience, requiresSponsorship, willingToRelocate, clearance, ...rest }: WorkDetails): WorkForm {
   return {
     ...rest,
     years: yearsExperience === null ? '' : String(yearsExperience),
     sponsorship: toYesNo(requiresSponsorship),
     relocate: toYesNo(willingToRelocate),
+    clearanceLevel: clearance?.level ?? '',
+    clearanceStatus: clearance?.status ?? 'active',
+    polygraph: clearance?.polygraph ?? '',
   };
 }
 
@@ -50,8 +76,14 @@ export function WorkSection({ profile, onDirtyChange }: { profile: Profile; onDi
       toast.error('Check the highlighted fields');
       return;
     }
-    const { years: _years, sponsorship, relocate, ...rest } = f;
-    const work: WorkDetails = { ...rest, yearsExperience: years, requiresSponsorship: fromYesNo(sponsorship), willingToRelocate: fromYesNo(relocate) };
+    const { years: _years, sponsorship, relocate, clearanceLevel: _level, clearanceStatus: _status, polygraph: _poly, ...rest } = f;
+    const work: WorkDetails = {
+      ...rest,
+      yearsExperience: years,
+      requiresSponsorship: fromYesNo(sponsorship),
+      willingToRelocate: fromYesNo(relocate),
+      clearance: toClearance(f),
+    };
     save.mutate(
       { work },
       {
@@ -90,6 +122,31 @@ export function WorkSection({ profile, onDirtyChange }: { profile: Profile; onDi
         <Field label="Willing to relocate?">
           <SegmentedControl aria-label="Willing to relocate?" options={YES_NO_OPTIONS} value={f.relocate} onValueChange={(v) => set('relocate', v)} fullWidth />
         </Field>
+        <Field label="Security clearance" hint="Jobs that ask for one are flagged against it.">
+          <Select
+            aria-label="Security clearance"
+            placeholder="None"
+            options={CLEARANCE_OPTIONS}
+            value={f.clearanceLevel}
+            onChange={(e) => set('clearanceLevel', e.target.value as WorkForm['clearanceLevel'])}
+          />
+        </Field>
+        {f.clearanceLevel ? (
+          <>
+            <Field label="Clearance status" hint="Inactive: held before, now lapsed (often reinstatable within 2 years).">
+              <SegmentedControl aria-label="Clearance status" options={STATUS_OPTIONS} value={f.clearanceStatus} onValueChange={(v) => set('clearanceStatus', v)} fullWidth />
+            </Field>
+            <Field label="Polygraph">
+              <Select
+                aria-label="Polygraph"
+                placeholder="None"
+                options={POLYGRAPH_OPTIONS}
+                value={f.polygraph}
+                onChange={(e) => set('polygraph', e.target.value as WorkForm['polygraph'])}
+              />
+            </Field>
+          </>
+        ) : null}
         <Field label="Notice period" hint="e.g. 2 weeks">
           <Input value={f.noticePeriod} onChange={(e) => set('noticePeriod', e.target.value)} />
         </Field>

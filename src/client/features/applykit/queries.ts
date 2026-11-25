@@ -1,6 +1,6 @@
 /** Apply-kit data: fit analysis, drafts, AI status, quick-fill and the answer bank. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AnswerDraftRequest, CoverLetterRequest, SavedAnswer } from '../../../shared/types';
+import type { AnswerDraftRequest, CoverLetterRequest, EmailApplicationSend, SavedAnswer } from '../../../shared/types';
 import { api } from '../../api/client';
 import { qk } from '../../lib/query';
 
@@ -76,4 +76,36 @@ export function useSaveToAnswerBank() {
       void queryClient.invalidateQueries({ queryKey: qk.bootstrap() });
     },
   });
+}
+
+/** The application email for a job or application (refetched when the target changes). */
+export function useEmailDraft(target: ApplyKitTarget, enabled = true) {
+  return useQuery({
+    queryKey: qk.emailDraft(targetBody(target)),
+    queryFn: ({ signal }) => api('POST /api/apply/email/draft', { body: targetBody(target), signal }),
+    enabled: enabled && Boolean(target.applicationId || target.jobId),
+    // A draft is edited locally; refetching underneath the user would be confusing.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/** Send an application email; the tracker, the job and search results all change (it is now applied). */
+export function useSendEmailApplication() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: EmailApplicationSend) => api('POST /api/apply/email/send', { body }),
+    onSuccess: (result) => {
+      queryClient.setQueryData(qk.application(result.application.id), result.application);
+      void queryClient.invalidateQueries({ queryKey: qk.applications() });
+      void queryClient.invalidateQueries({ queryKey: qk.bootstrap() });
+      void queryClient.invalidateQueries({ queryKey: qk.jobs() });
+      void queryClient.invalidateQueries({ queryKey: qk.searchResults() });
+      void queryClient.invalidateQueries({ queryKey: ['profile-extras', 'email-draft'] });
+    },
+  });
+}
+
+export function useTestEmail() {
+  return useMutation({ mutationFn: () => api('POST /api/email/test') });
 }

@@ -364,6 +364,34 @@ describe('descriptions and liveness', () => {
     expect(() => store.setDescription('gone', '<p>x</p>', 'x')).not.toThrow();
   });
 
+  it('stores the clearance requirement, and setDescription re-reads it from the fetched description', () => {
+    const cleared = posting({ externalId: '1', clearance: { requirement: 'active', level: 'ts-sci', evidence: 'Active TS/SCI required.' } });
+    const later = posting({ externalId: '2', descriptionHtml: '', descriptionText: '', snippet: '', skills: [] }, { feedKey: 'usajobs', source: 'usajobs' });
+    store.upsertFeed(GH, [cleared], { complete: true, now: T0 });
+    store.upsertFeed({ feedKey: 'usajobs', source: 'usajobs' }, [later], { complete: true, now: T0 });
+    expect(store.getPosting(cleared.id)?.clearance).toEqual(cleared.clearance);
+    expect(db.scalar(`SELECT clearance FROM jobs WHERE id = ?`, cleared.id)).toBe('active');
+    expect(store.getPosting(later.id)?.clearance).toBeUndefined();
+
+    // A federal agency processes the clearance it asks for.
+    store.setDescription(later.id, '<p>This position requires a Secret clearance.</p>', 'This position requires a Secret clearance.');
+    expect(store.getPosting(later.id)?.clearance).toMatchObject({ requirement: 'sponsored', level: 'secret' });
+    expect(db.scalar(`SELECT clearance FROM jobs WHERE id = ?`, later.id)).toBe('sponsored');
+  });
+
+  it('classifies postings stored before clearance detection in the background', async () => {
+    const old = posting({ externalId: '1', descriptionHtml: '<ul><li>Must have an active Secret clearance</li></ul>', descriptionText: 'Must have an active Secret clearance' });
+    const plain = posting({ externalId: '2' });
+    store.upsertFeed(GH, [old, plain], { complete: true, now: T0 });
+    db.run(`UPDATE jobs SET clearance = 'none', clearance_detail = NULL`);
+    db.run(`INSERT INTO backfills (name) VALUES ('clearance')`);
+    const fresh = createJobStore({ db, now: () => T0 } as unknown as AppContext);
+    await fresh.backfillPending?.();
+    expect(fresh.getPosting(old.id)?.clearance).toMatchObject({ requirement: 'active', level: 'secret' });
+    expect(fresh.getPosting(plain.id)?.clearance).toBeUndefined();
+    expect(db.scalar(`SELECT COUNT(*) FROM backfills`)).toBe(0);
+  });
+
   it('setLiveness records the check; closed closes once, open re-opens, unknown changes nothing', () => {
     const p = posting({ externalId: '1' });
     store.upsertFeed(GH, [p], { complete: true, now: T0 });

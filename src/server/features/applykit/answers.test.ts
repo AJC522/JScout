@@ -125,6 +125,18 @@ describe('scaffolds', () => {
     expect(unknown).toBe('[Your work authorization status.] [Whether you need visa sponsorship.]');
   });
 
+  it('answers security clearance questions from the profile', () => {
+    const q = 'Do you currently hold an active security clearance?';
+    expect(classifyQuestion(q)).toBe('clearance');
+    expect(scaffoldAnswer({ ...base, question: q, profile: profile((p) => (p.work.clearance = { level: 'ts-sci', status: 'active', polygraph: 'ci' })) })).toBe(
+      'Yes, I hold an active TS/SCI with CI polygraph clearance. [Granting agency and investigation date, if they ask.]',
+    );
+    expect(scaffoldAnswer({ ...base, question: q, profile: profile((p) => (p.work.clearance = { level: 'secret', status: 'inactive' })) })).toMatch(
+      /^I previously held a Secret clearance; it is currently inactive\./,
+    );
+    expect(scaffoldAnswer({ ...base, question: q, profile: profile((p) => (p.work.clearance = null)) })).toMatch(/^I don't currently hold a security clearance\./);
+  });
+
   it('gives a STAR outline that points at a relevant highlight', () => {
     const text = scaffoldAnswer({ ...base, question: 'Tell us about a time you led a migration.', profile: softwareProfile.profile });
     expect(text).toMatch(/^Situation: \[/);

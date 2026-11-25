@@ -4,7 +4,7 @@
  * Kept free of database access so it is easy to test and reason about.
  */
 import { atsKindSchema } from '../../shared/schemas';
-import type { JobLocation, JobPosting, Place, Salary, SalaryPeriod } from '../../shared/types';
+import type { JobClearance, JobLocation, JobPosting, Place, Salary, SalaryPeriod } from '../../shared/types';
 import { parseJson, type SqlValue } from '../db';
 import { countryName, countryShortName } from '../lib/location';
 import { uniqueFolded } from '../lib/text';
@@ -19,8 +19,13 @@ export const CONTENT_COLUMNS = [
   'salary_min', 'salary_max', 'salary_currency', 'salary_period', 'salary_annual_min', 'salary_annual_max',
   'salary_text', 'salary_inferred',
   'employment_type', 'seniority', 'department', 'tags', 'skills', 'snippet', 'description_html',
-  'posted_at', 'content_hash',
+  'posted_at', 'content_hash', 'clearance', 'clearance_detail',
 ] as const;
+
+/** jobs.clearance and jobs.clearance_detail for a posting's clearance requirement. */
+export function clearanceValues(clearance: JobClearance | undefined): [string, string | null] {
+  return [clearance?.requirement ?? 'none', clearance ? JSON.stringify(clearance) : null];
+}
 
 const num = (n: number | undefined): number | null => (typeof n === 'number' && Number.isFinite(n) ? n : null);
 
@@ -34,7 +39,7 @@ export function contentValues(p: NormalizedPosting): SqlValue[] {
     s?.text ?? null, s?.inferred ? 1 : 0,
     p.employmentType, p.seniority, p.department ?? null, JSON.stringify(p.tags), JSON.stringify(p.skills),
     p.snippet, p.descriptionHtml,
-    p.postedAt ?? null, p.contentHash,
+    p.postedAt ?? null, p.contentHash, ...clearanceValues(p.clearance),
   ];
 }
 
@@ -149,7 +154,7 @@ export const POSTING_SELECT = `id, cluster_key, source, external_id, url, apply_
   company, company_url, company_logo, location_text, remote, remote_scope, places,
   salary_min, salary_max, salary_currency, salary_period, salary_annual_min, salary_annual_max,
   salary_text, salary_inferred, employment_type, seniority, department, tags, skills, snippet,
-  description_html != '' AS has_description, posted_at, first_seen_at, last_seen_at, closed_at`;
+  description_html != '' AS has_description, posted_at, first_seen_at, last_seen_at, closed_at, clearance_detail`;
 
 export interface PostingRow {
   id: string;
@@ -186,6 +191,7 @@ export interface PostingRow {
   first_seen_at: string;
   last_seen_at: string;
   closed_at: string | null;
+  clearance_detail: string | null;
 }
 
 export function sourceName(sourceId: string): string {
@@ -236,6 +242,7 @@ export function rowToPosting(r: PostingRow): JobPosting {
     department: opt(r.department),
     tags: parseJson<string[]>(r.tags, []),
     skills: parseJson<string[]>(r.skills, []),
+    ...(r.clearance_detail ? { clearance: parseJson<JobClearance>(r.clearance_detail, { requirement: 'none' }) } : {}),
     snippet: r.snippet,
     hasDescription: r.has_description === 1,
     postedAt: opt(r.posted_at),

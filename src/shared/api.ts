@@ -10,6 +10,9 @@
  */
 import type {
   AiStatus,
+  EmailApplicationDraft,
+  EmailApplicationResult,
+  EmailApplicationSend,
   AnswerDraftRequest,
   AnswerDraftResult,
   AppSettings,
@@ -288,6 +291,9 @@ export interface ApiRoutes {
   'POST /api/gaps': { body: GapRequest; res: GapAnalysis };
   'GET /api/ai/status': { res: AiStatus };
   'POST /api/ai/test': { res: AiStatus };
+  'POST /api/apply/email/draft': { body: { jobId?: string; applicationId?: string }; res: EmailApplicationDraft };
+  'POST /api/apply/email/send': { body: EmailApplicationSend; res: EmailApplicationResult };
+  'POST /api/email/test': { res: { to: string } };
 }
 
 export type RouteKey = keyof ApiRoutes;

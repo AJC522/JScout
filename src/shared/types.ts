@@ -104,6 +104,42 @@ export interface Salary {
 }
 
 // ---------------------------------------------------------------------------
+// Security clearances
+// ---------------------------------------------------------------------------
+
+/**
+ * What a posting asks for in the way of a security clearance:
+ *  - none:      no clearance needed (the posting doesn't ask for one, or says so)
+ *  - preferred: a clearance helps, but you can be hired without one
+ *  - sponsored: a clearance is required, and the employer gets it for you (you must be eligible)
+ *  - active:    you must already hold one when you apply or start
+ *  - required:  a clearance is required, but the posting doesn't say whether they sponsor it
+ */
+export type ClearanceRequirement = 'none' | 'preferred' | 'sponsored' | 'active' | 'required';
+
+/** U.S. clearance levels, plus the DOE's Q (about a Top Secret) and L (about a Secret). */
+export type ClearanceLevel = 'public-trust' | 'confidential' | 'secret' | 'top-secret' | 'ts-sci' | 'doe-l' | 'doe-q';
+
+export type PolygraphKind = 'ci' | 'full-scope' | 'polygraph';
+
+/** A posting's clearance requirement, as read from its title, tags and description. */
+export interface JobClearance {
+  requirement: ClearanceRequirement;
+  level?: ClearanceLevel;
+  polygraph?: PolygraphKind;
+  /** The sentence that decided it. */
+  evidence?: string;
+}
+
+/** A clearance the user holds. */
+export interface HeldClearance {
+  level: ClearanceLevel;
+  /** active: current and in scope. inactive: held before and lapsed (often reinstatable within 24 months). */
+  status: 'active' | 'inactive';
+  polygraph?: PolygraphKind;
+}
+
+// ---------------------------------------------------------------------------
 // Jobs
 // ---------------------------------------------------------------------------
 
@@ -140,6 +176,8 @@ export interface JobPosting {
   tags: string[];
   /** Canonical skills extracted from the title and description. */
   skills: string[];
+  /** Security clearance the posting asks for; absent when it doesn't mention one. */
+  clearance?: JobClearance;
   /** First ~300 characters of the description as plain text. */
   snippet: string;
   hasDescription: boolean;
@@ -248,9 +286,22 @@ export interface SearchResultItem {
   userState: JobUserState;
 }
 
+/** An address the posting says to send applications to. */
+export interface ApplyEmail {
+  address: string;
+  /** The sentence that gives it. */
+  evidence: string;
+  /** True when the posting says outright to apply by email ("Send your résumé to …"). */
+  explicit: boolean;
+  /** Subject line the posting asks for, if any. */
+  subject?: string;
+}
+
 export interface JobDetail extends SearchResultItem {
   /** Sanitised HTML, safe to inject. */
   descriptionHtml: string;
+  /** Present when the posting takes applications by email. */
+  applyEmail?: ApplyEmail;
   /** Result of the most recent liveness check, if any. */
   liveness?: LivenessResult;
 }
@@ -298,6 +349,8 @@ export interface SearchQuery {
   includeNoSalary?: boolean;
   employmentTypes?: EmploymentType[];
   seniority?: Seniority[];
+  /** Security clearance requirements to keep ("none" = postings that don't ask for one). Empty/undefined = any. */
+  clearance?: ClearanceRequirement[];
   /** Only postings published/first seen within this many days. */
   postedWithinDays?: number;
   /** Restrict to these source ids. */
@@ -358,6 +411,7 @@ export type BroadenKind =
   | 'salary'
   | 'seniority'
   | 'employment-type'
+  | 'clearance'
   | 'work-mode'
   | 'drop-exclusions'
   | 'external';
@@ -386,6 +440,7 @@ export interface SearchFacets {
   remote: FacetCount[];
   employmentType: FacetCount[];
   seniority: FacetCount[];
+  clearance: FacetCount[];
   source: FacetCount[];
   company: FacetCount[];
   postedWithin: FacetCount[];
@@ -557,6 +612,8 @@ export interface WorkDetails {
   /** Free text, e.g. "US citizen", "H-1B", "EU work permit". */
   workAuthorization: string;
   requiresSponsorship: boolean | null;
+  /** Security clearance the user holds; null when none (or not said). */
+  clearance: HeldClearance | null;
   willingToRelocate: boolean | null;
   /** Free text, e.g. "2 weeks". */
   noticePeriod: string;
@@ -711,6 +768,8 @@ export interface JobSnapshot {
   employmentType: EmploymentType;
   postedAt?: IsoDate;
   skills: string[];
+  /** Security clearance the posting asked for, when it mentioned one. */
+  clearance?: JobClearance;
   /** Sanitised HTML. */
   descriptionHtml: string;
 }
@@ -1036,6 +1095,8 @@ export interface AppSettings {
     keySource: 'saved' | 'environment' | null;
     model: string;
   };
+  /** The account applications are emailed from; null until set up. */
+  email: EmailAccountView | null;
 }
 
 export interface AppSettingsUpdate {
@@ -1044,6 +1105,77 @@ export interface AppSettingsUpdate {
   closedRetentionDays?: number;
   maxPostingAgeDays?: number;
   ai?: { apiKey?: string | null; model?: string };
+  /** null removes the email account (and its password). */
+  email?: EmailAccountUpdate | null;
+}
+
+/** The user's own email account, used to send applications (SMTP). */
+export interface EmailAccount {
+  /** Outgoing mail server, e.g. "smtp.gmail.com". */
+  host: string;
+  port: number;
+  /** TLS from the first byte (usually port 465); otherwise STARTTLS is required (usually 587). */
+  secure: boolean;
+  /** Sign-in name, usually the email address. */
+  user: string;
+  /** Address applications are sent from. */
+  fromAddress: string;
+  /** Name shown to the recipient; the profile's name when empty. */
+  fromName: string;
+}
+
+export interface EmailAccountView extends EmailAccount {
+  /** The password is never sent to the client. */
+  hasPassword: boolean;
+}
+
+export interface EmailAccountUpdate extends Partial<EmailAccount> {
+  /** An app password; null or '' removes it. */
+  password?: string | null;
+}
+
+// --- applying by email -------------------------------------------------------
+
+export interface EmailAttachmentInfo {
+  kind: 'resume';
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** True when this is the résumé text as a .txt file (no original file was uploaded). */
+  fromText: boolean;
+}
+
+/** An application email ready to edit and send. */
+export interface EmailApplicationDraft {
+  /** The address the posting gives (empty when it gives none). */
+  to: string;
+  /** Other addresses worth offering: the posting's, the application's contacts. */
+  suggestions: Array<{ address: string; label: string }>;
+  applyEmail?: ApplyEmail;
+  subject: string;
+  body: string;
+  /** Where the body came from: a cover letter saved on the application, or a template. */
+  bodySource: 'saved-letter' | 'template';
+  resume?: EmailAttachmentInfo;
+  /** Whether an email account is set up to send from. */
+  canSend: boolean;
+  fromAddress?: string;
+}
+
+export interface EmailApplicationSend {
+  jobId?: string;
+  applicationId?: string;
+  to: string;
+  cc?: string;
+  subject: string;
+  body: string;
+  attachResume: boolean;
+}
+
+export interface EmailApplicationResult {
+  application: ApplicationDetail;
+  to: string;
+  sentAt: IsoDate;
 }
 
 // --- skill gaps ----------------------------------------------------------------

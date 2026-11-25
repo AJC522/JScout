@@ -6,6 +6,12 @@ describe('describeQuery', () => {
     expect(describeQuery({ q: '' })).toBe('Any job · Anywhere');
   });
 
+  it('describes a clearance filter', () => {
+    expect(describeQuery({ q: 'analyst', clearance: ['none', 'preferred', 'sponsored'] })).toContain('No clearance of your own needed');
+    expect(describeQuery({ q: 'analyst', clearance: ['active'] })).toContain('Must already hold a clearance');
+    expect(describeQuery({ q: 'analyst', clearance: ['sponsored', 'none'] })).toContain('Clearance: not needed or sponsored');
+  });
+
   it('reads comma-separated titles as alternatives', () => {
     expect(describeQuery({ q: 'Product designer, UX designer' })).toBe('Product designer or UX designer · Anywhere');
     expect(describeQuery({ q: 'a, b, c, d, e' })).toBe('a, b, c +2 more · Anywhere');

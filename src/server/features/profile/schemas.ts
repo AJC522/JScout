@@ -3,8 +3,10 @@ import { z } from 'zod';
 import { MAX_RESUME_BYTES } from '../../../shared/constants';
 import {
   atsKindSchema,
+  clearanceLevelSchema,
   employmentTypeSchema,
   isoDateSchema,
+  polygraphKindSchema,
   remoteModeSchema,
   searchQuerySchema,
   senioritySchema,
@@ -46,6 +48,9 @@ const workFields = {
   yearsExperience: z.number().min(0).max(70).nullable(),
   workAuthorization: text(200),
   requiresSponsorship: z.boolean().nullable(),
+  clearance: z
+    .strictObject({ level: clearanceLevelSchema, status: z.enum(['active', 'inactive']), polygraph: polygraphKindSchema.optional() })
+    .nullable(),
   willingToRelocate: z.boolean().nullable(),
   noticePeriod: text(100),
   earliestStart: text(100),

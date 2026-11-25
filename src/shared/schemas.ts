@@ -34,6 +34,15 @@ export const applicationStatusSchema = z.enum([
   'rejected',
   'withdrawn',
 ]);
+export const clearanceRequirementSchema = z.enum(['none', 'preferred', 'sponsored', 'active', 'required']);
+export const clearanceLevelSchema = z.enum(['public-trust', 'confidential', 'secret', 'top-secret', 'ts-sci', 'doe-l', 'doe-q']);
+export const polygraphKindSchema = z.enum(['ci', 'full-scope', 'polygraph']);
+export const jobClearanceSchema = z.object({
+  requirement: clearanceRequirementSchema,
+  level: clearanceLevelSchema.optional(),
+  polygraph: polygraphKindSchema.optional(),
+  evidence: z.string().max(300).optional(),
+});
 export const atsKindSchema = z.enum(['greenhouse', 'lever', 'ashby', 'smartrecruiters', 'workable', 'governmentjobs']);
 
 const shortList = (max: number, itemMax = 120) => z.array(z.string().trim().min(1).max(itemMax)).max(max);
@@ -55,6 +64,7 @@ export const searchQuerySchema = z.strictObject({
   includeNoSalary: z.boolean().optional(),
   employmentTypes: z.array(employmentTypeSchema).max(8).optional(),
   seniority: z.array(senioritySchema).max(9).optional(),
+  clearance: z.array(clearanceRequirementSchema).max(5).optional(),
   postedWithinDays: z.number().int().min(1).max(365).optional(),
   sources: shortList(50, 60).optional(),
   companies: shortList(50).optional(),

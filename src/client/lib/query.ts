@@ -91,6 +91,8 @@ export const qk = {
   resumeReview: (target: ResumeTarget) => ['profile-extras', 'resume-review', compactParams(target)] as const,
   /** The saved résumé scored against every active application. */
   resumeScores: () => ['profile-extras', 'resume-scores'] as const,
+  /** An application email for a job or application. Profile edits (name, résumé) change it. */
+  emailDraft: (target: { applicationId?: string; jobId?: string }) => ['profile-extras', 'email-draft', compactParams(target)] as const,
   /** Skill gaps across a set of jobs. Profile edits (a skill added) change it. */
   gaps: (request: GapRequest) => ['profile-extras', 'gaps', compactParams(request)] as const,
 

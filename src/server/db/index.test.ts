@@ -97,12 +97,31 @@ describe('db', () => {
       `INSERT INTO jobs (id, source, feed_key, external_id, url, title, title_core, company, company_key, cluster_key, location_text, description_html, first_seen_at, last_seen_at, content_hash)
        VALUES ('j1', 's', 's', 'e1', 'u', 'Business Intern', 'business intern', 'Acme', 'acme', 'c1', 'Berlin', '<p>International team</p>', 'x', 'x', 'h')`,
     );
-    db.exec(`DROP TABLE jobs_words; DROP TABLE removed_feeds; PRAGMA user_version = 3`);
+    db.exec(`DROP TABLE jobs_words; DROP TABLE removed_feeds; DROP TABLE backfills; DROP INDEX jobs_search;
+      ALTER TABLE jobs DROP COLUMN clearance; ALTER TABLE jobs DROP COLUMN clearance_detail; PRAGMA user_version = 3`);
     migrate(db);
     const words = (expr: string) => db.all(`SELECT rowid FROM jobs_words WHERE jobs_words MATCH ?`, expr).length;
     expect(words('"intern"')).toBe(1);
     expect(words('"international"')).toBe(1);
     expect(words('"internal"')).toBe(0);
+    db.close();
+  });
+
+  it('migration 6 adds clearance columns and queues a backfill only for an index with postings', () => {
+    const empty = openDb(':memory:');
+    expect(empty.scalar('SELECT COUNT(*) FROM backfills')).toBe(0);
+    empty.close();
+
+    const db = openDb(':memory:');
+    db.run(
+      `INSERT INTO jobs (id, source, feed_key, external_id, url, title, title_core, company, company_key, cluster_key, location_text, first_seen_at, last_seen_at, content_hash)
+       VALUES ('j1', 's', 's', 'e1', 'u', 'Analyst', 'analyst', 'Acme', 'acme', 'c1', 'Reston', 'x', 'x', 'h')`,
+    );
+    db.exec(`DROP TABLE backfills; DROP INDEX jobs_search; ALTER TABLE jobs DROP COLUMN clearance; ALTER TABLE jobs DROP COLUMN clearance_detail;
+      PRAGMA user_version = 5`);
+    migrate(db);
+    expect(db.get('SELECT clearance, clearance_detail FROM jobs')).toEqual({ clearance: 'none', clearance_detail: null });
+    expect(db.all('SELECT name, after_rid FROM backfills')).toEqual([{ name: 'clearance', after_rid: 0 }]);
     db.close();
   });
 });
