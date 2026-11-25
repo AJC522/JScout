@@ -122,6 +122,7 @@ const PLACES: Place[] = [
   city('Chicago', 'IL', 'US', 41.88, -87.63),
   city('Toronto', 'ON', 'CA', 43.65, -79.38),
   city('Seattle', 'WA', 'US', 47.61, -122.33),
+  { kind: 'admin1', raw: 'Illinois', admin1: 'IL', country: 'US', label: 'Illinois, United States' },
   { kind: 'country', raw: 'United States', country: 'US', label: 'United States' },
 ];
 
@@ -136,7 +137,7 @@ function km(a: Place, b: Place): number {
 export const fakeLocation = {
   resolvePlace(text: string): Place | undefined {
     const n = normalizeText(text);
-    return PLACES.find((p) => n.startsWith(normalizeText(p.city ?? p.label)));
+    return PLACES.find((p) => n === normalizeText(p.raw) || n.startsWith(`${normalizeText(p.raw)} `));
   },
   matchPlace(job: JobLocation, target: Place, opts: { radiusKm?: number; includeRemote?: boolean } = {}): PlaceMatch {
     for (const p of job.places) {
@@ -286,7 +287,8 @@ export const softwareProfile = makeProfile(
       workAuthorization: 'US citizen',
       requiresSponsorship: false,
       noticePeriod: '2 weeks',
-      summary: 'Backend engineer with 6 years of experience building payment and billing systems in TypeScript and Node.js.',
+      summary:
+        'Backend engineer with 6 years of experience building payment and billing systems in TypeScript and Node.js. I care about reliable systems and clear documentation.',
     });
     Object.assign(p.preferences, {
       targetTitles: ['Backend Engineer', 'Software Engineer'],
@@ -321,7 +323,10 @@ export const softwareProfile = makeProfile(
         end: '2021-02',
         current: false,
         summary: '',
-        highlights: ['Shipped React dashboards used by 200 enterprise customers'],
+        highlights: [
+          'Shipped React dashboards used by 200 enterprise customers',
+          'Built the first automated test suite for the billing API',
+        ],
       },
     ];
     p.education = [{ id: 'ed1', school: 'University of Texas at Austin', degree: 'BS', field: 'Computer Science', start: '2014', end: '2018' }];

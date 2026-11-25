@@ -16,10 +16,6 @@ export interface Keyword extends KeywordCoverage {
   kind: 'skill' | 'phrase' | 'word' | 'name';
   /** Stem key used for matching. */
   key: string;
-  /** Mentions in the posting (at least 1 for listed skills). */
-  count: number;
-  /** Position of the first mention as a fraction of the posting (0 = start). */
-  firstAt: number;
 }
 
 export const MAX_KEYWORDS = 25;
@@ -86,15 +82,15 @@ function sectionRanges(text: string): Ranges {
     const end = offset + line.length + 1;
     const trimmed = line.trim();
     const isList = trimmed.startsWith('- ');
+    const heading = isHeading(trimmed);
     // A requirements list ends at the first prose paragraph after it.
-    if (reqStart >= 0 && sawList && afterBlank && trimmed && !isList && !isHeading(trimmed)) {
+    if (reqStart >= 0 && sawList && afterBlank && trimmed && !isList && !heading) {
       requirements.push([reqStart, offset]);
       reqStart = -1;
     }
     if (reqStart >= 0 && isList) sawList = true;
-    if (trimmed) afterBlank = false;
-    else afterBlank = true;
-    if (isHeading(trimmed)) {
+    afterBlank = !trimmed;
+    if (heading) {
       const isReq = REQUIREMENT_HEADING.test(trimmed);
       if (isReq && reqStart < 0) {
         reqStart = offset;
@@ -157,7 +153,7 @@ function lowerCapitalised(phrase: string): string {
 }
 
 /** Single words that recur at least three times ("payments" in a payments company's posting). */
-function wordCandidates(text: string, ws: Word[], ranges: Ranges, excluded: Set<string>): Candidate[] {
+function wordCandidates(ws: Word[], ranges: Ranges, excluded: Set<string>): Candidate[] {
   const byStem = new Map<string, Candidate>();
   for (let i = 0; i < ws.length; i++) {
     const w = ws[i]!;
@@ -224,7 +220,7 @@ export function extractKeywords(job: JobContext, profile: ProfileContext): Keywo
   const candidates = [
     ...skillCandidates,
     ...phraseCandidates(text, ws, ranges, excluded),
-    ...wordCandidates(text, ws, ranges, notNames),
+    ...wordCandidates(ws, ranges, notNames),
     ...nameCandidates(text, ws, ranges, notNames),
   ];
 
@@ -239,7 +235,7 @@ export function extractKeywords(job: JobContext, profile: ProfileContext): Keywo
       const eligible = c.kind === 'skill' || count >= 2 || (inRequirements && size < 3);
       const base = { skill: 2, name: 1.2, phrase: 1, word: 0.9 }[c.kind];
       const score = base * (1 + Math.log2(count)) * (inRequirements ? 1.5 : 1) * (firstAt < 0.25 ? 1.2 : 1);
-      return { c, count, firstAt, eligible, score, size };
+      return { c, firstAt, eligible, score, size };
     })
     .sort((a, b) => b.score - a.score || a.firstAt - b.firstAt);
 
@@ -259,16 +255,15 @@ export function extractKeywords(job: JobContext, profile: ProfileContext): Keywo
   const userSkills = new Set(profile.skills.map(foldText));
   return chosen
     .sort((a, b) => b.score - a.score)
-    .map(({ c, count, firstAt, score }) => ({
+    .map(({ c, score }) => ({
       term: c.term,
+      // Skills go by the canonical list, which handles ambiguous names ("Go") properly.
       present:
-        (c.kind === 'skill' && userSkills.has(foldText(c.term))) ||
-        containsPhrase(profile.corpus, c.key) ||
-        (c.kind === 'phrase' && nearPhrase(profile.corpusStems, c.key)),
+        c.kind === 'skill'
+          ? userSkills.has(foldText(c.term))
+          : containsPhrase(profile.corpus, c.key) || (c.kind === 'phrase' && nearPhrase(profile.corpusStems, c.key)),
       weight: Math.round((score / top) * 100) / 100,
       kind: c.kind,
       key: c.key,
-      count,
-      firstAt,
     }));
 }

@@ -17,6 +17,7 @@ import { parseJobLocation } from '../../lib/location';
 import { extractSalaryFromText, parseSalaryText } from '../../lib/salary';
 import { extractSkills } from '../../lib/skills';
 import { detectSeniority } from '../../lib/titles';
+import { uniqueFolded } from '../../lib/text';
 import type { ProfileService, Services } from '../../services';
 import { stemmedText } from './text';
 
@@ -109,7 +110,7 @@ function fromApplication(services: Pick<Services, 'jobs'>, app: ApplicationDetai
 
 export interface ProfileContext {
   profile: Profile;
-  /** Canonical skills: listed skills plus those found in the résumé. */
+  /** Canonical skills: listed, found in the résumé, or named in the summary and experience. */
   skills: string[];
   resumeText: string;
   /** Stemmed text of everything the user has told us about their background. */
@@ -122,9 +123,14 @@ export interface ProfileContext {
 
 export function loadProfile(profiles: ProfileService): ProfileContext {
   const profile = profiles.get();
-  const skills = profiles.effectiveSkills();
   const resumeText = profiles.resumeText();
   const { work, preferences } = profile;
+  // effectiveSkills covers the skills list and the résumé; the summary and experience
+  // entries can name more. extractSkills knows which names are ambiguous ("Go", "Excel").
+  const described = [work.summary, ...profile.experience.flatMap((e) => [e.title, e.summary, ...e.highlights])]
+    .filter(Boolean)
+    .join('\n');
+  const skills = uniqueFolded([...profiles.effectiveSkills(), ...(described ? extractSkills(described) : [])]);
   const parts = [
     resumeText,
     work.summary,

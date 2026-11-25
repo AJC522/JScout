@@ -12,6 +12,7 @@ import { escapeRegExp } from '../../lib/text';
 import type { JobContext } from './context';
 import {
   asSentence,
+  firstPersonSummary,
   listPhrase,
   lowerFirst,
   pick,
@@ -72,20 +73,6 @@ function relevantHighlights(entry: ExperienceEntry, strengths: string[]): string
     .map((x) => x.h);
 }
 
-/** The first one or two summary sentences, turned into first person where the form is recognisable. */
-function summarySentences(summary: string): string[] {
-  const out: string[] = [];
-  for (const [i, raw] of splitSentences(summary).slice(0, 2).entries()) {
-    const s = stripEnd(raw);
-    if (/^(I|I['’](m|ve|d)|My)\b/.test(s)) out.push(asSentence(s));
-    else if (i > 0) break;
-    else if (/^(over|more than|nearly|almost|\d)/i.test(s)) out.push(asSentence(`I bring ${lowerFirst(s)}`));
-    else if (/^\p{L}+ing\b/u.test(s)) out.push(asSentence(`I've been ${lowerFirst(s)}`));
-    else out.push(asSentence(`I'm ${withArticle(lowerFirst(s))}`));
-  }
-  return out;
-}
-
 /** User notes are used verbatim; "mention that X" style instructions keep only X. */
 function noteSentences(notes: string): string[] {
   return notes
@@ -95,11 +82,17 @@ function noteSentences(notes: string): string[] {
     .map((line) => asSentence(upperFirst(line)));
 }
 
-function select(all: Sentence[], target: number): Sentence[] {
+/** Shorter letters leave out the least important sentences even when they would fit. */
+const MAX_PRIORITY: Record<LetterLength, number> = { short: 3, medium: 5, long: Infinity };
+
+function select(all: Sentence[], length: LetterLength): Sentence[] {
+  const target = LETTER_TARGET_WORDS[length];
   const keep = new Set(all.filter((s) => s.priority === 0));
   // Greeting and sign-off take a handful of words.
   let total = 6 + [...keep].reduce((n, s) => n + wordCount(s.text), 0);
-  const optional = all.filter((s) => s.priority > 0).sort((a, b) => a.priority - b.priority);
+  const optional = all
+    .filter((s) => s.priority > 0 && s.priority <= MAX_PRIORITY[length])
+    .sort((a, b) => a.priority - b.priority);
   for (const s of optional) {
     const n = wordCount(s.text);
     if (total + n > target * 1.1) continue;
@@ -109,74 +102,88 @@ function select(all: Sentence[], target: number): Sentence[] {
   return all.filter((s) => keep.has(s));
 }
 
+/** Bullets that state a requirement rather than describe the work. */
+const REQUIREMENT_BULLET =
+  /\b(required|requirements?|must|years?|degree|certifi\w*|licen[cs]\w*|experience|knowledge|familiarity|proficien\w*|ability|skills?|track record|background in|nice to have|bonus|plus)\b/i;
+
 /**
- * A duty from the posting that names the user's strengths and none of the skills they lack,
- * with the strengths it names. Bullets with numbers ("5+ years") are skipped: quoting them
- * would read as a claim about the user.
+ * Duties from the posting that name the user's strengths and none of the skills they lack,
+ * best first. Requirement bullets and bullets with numbers ("5+ years") are skipped: quoting
+ * them would read as a claim about the user.
  */
-function matchingDuty(job: JobContext, strengths: string[], missing: string[]): { text: string; names: string[] } | undefined {
-  const mentions = (line: string, term: string) => new RegExp(`(^|[^\\p{L}])${escapeRegExp(term)}($|[^\\p{L}])`, 'iu').test(line);
-  let best: { text: string; names: string[] } | undefined;
+function matchingDuties(job: JobContext, strengths: string[], missing: string[]): Array<{ text: string; names: string[] }> {
+  const mentions = (line: string, term: string) =>
+    new RegExp(`(^|[^\\p{L}])${escapeRegExp(term)}($|[^\\p{L}])`, 'iu').test(line);
+  const duties: Array<{ text: string; names: string[] }> = [];
   for (const line of job.descriptionText.split('\n')) {
-    if (!line.startsWith('- ') || /\d/.test(line)) continue;
+    if (!line.startsWith('- ') || /\d/.test(line) || REQUIREMENT_BULLET.test(line)) continue;
     const text = stripEnd(line);
     if (text.split(/\s+/).length < 4 || missing.some((m) => mentions(text, m))) continue;
     const names = strengths.filter((s) => mentions(text, s));
-    if (names.length > 0 && (!best || names.length > best.names.length)) best = { text: lowerFirst(text), names };
+    if (names.length > 0) duties.push({ text: lowerFirst(text), names });
   }
-  return best;
+  return duties.sort((a, b) => b.names.length - a.names.length);
 }
 
-export function templateLetter(input: LetterInput): string {
-  const { job, profile, tone, skills, themes } = input;
-  const strengths = skills.length > 0 ? skills : themes;
-  const variant = (slot: string, options: readonly string[]) => pick(options, job.key, `${tone}:${slot}`);
-  const sentences: Sentence[] = [];
-  const add = (section: Section, text: string, priority: number) => sentences.push({ section, text, priority });
+/** Shared state while the sentence pool for one letter is built. */
+interface Draft {
+  input: LetterInput;
+  /** Skills the user has, else covered themes: what the letter leads with. */
+  strengths: string[];
+  experience: ExperienceEntry[];
+  companyName: string;
+  variant: (slot: string, options: readonly string[]) => string;
+  add: (section: Section, text: string, priority: number) => void;
+}
 
-  const title = job.title.trim() || '[Job title]';
-  const company = job.company.trim();
-  const companyName = company || '[Company]';
+/** The role, then who the candidate is. */
+function addOpening(d: Draft): void {
+  const { profile, job, tone } = d.input;
   const work = profile.work;
+  const recent = d.experience[0];
   const years = work.yearsExperience;
-  const experience = byRecency(profile.experience);
-  const recent = experience[0];
   const currentTitle = work.currentTitle.trim() || (recent?.current ? recent.title : '');
   const currentCompany = work.currentCompany.trim() || (recent?.current ? recent.company : '');
+  const at = currentCompany ? ` at ${currentCompany}` : '';
 
-  // Opening: the role, then who the candidate is.
-  add('opening', variant('open', OPENERS[tone](title, companyName)), 0);
+  d.add('opening', d.variant('open', OPENERS[tone](job.title.trim() || '[Job title]', d.companyName)), 0);
   const currentRole = currentTitle
-    ? variant('current', [
-        `I currently work as ${withArticle(currentTitle)}${currentCompany ? ` at ${currentCompany}` : ''}.`,
-        `I'm currently ${withArticle(currentTitle)}${currentCompany ? ` at ${currentCompany}` : ''}.`,
-        `Right now I work as ${withArticle(currentTitle)}${currentCompany ? ` at ${currentCompany}` : ''}.`,
+    ? d.variant('current', [
+        `I currently work as ${withArticle(currentTitle)}${at}.`,
+        `I'm currently ${withArticle(currentTitle)}${at}.`,
+        `Right now I work as ${withArticle(currentTitle)}${at}.`,
       ])
     : undefined;
-  const yearsSentence = years ? `I have ${years} year${years === 1 ? '' : 's'} of professional experience.` : undefined;
-  const summary = summarySentences(work.summary);
+  const yearsPhrase = years ? `${years} year${years === 1 ? '' : 's'} of professional experience` : undefined;
+  const yearsSentence = yearsPhrase && `I have ${yearsPhrase}.`;
+  const summary = firstPersonSummary(work.summary);
   if (summary[0]) {
-    add('opening', summary[0], 0);
-    if (summary[1]) add('opening', summary[1], 3);
-    if (currentRole && !(currentCompany && work.summary.includes(currentCompany))) add('opening', currentRole, 2);
-    if (yearsSentence && !/\d/.test(work.summary)) add('opening', yearsSentence, 3);
+    d.add('opening', summary[0], 0);
+    if (summary[1]) d.add('opening', summary[1], 3);
+    if (currentRole && !(currentCompany && work.summary.includes(currentCompany))) d.add('opening', currentRole, 2);
+    if (yearsSentence && !/\d/.test(work.summary)) d.add('opening', yearsSentence, 3);
   } else if (currentRole) {
-    add('opening', years ? `${currentRole.slice(0, -1)}, with ${years} years of professional experience.` : currentRole, 0);
+    d.add('opening', yearsPhrase ? `${currentRole.slice(0, -1)}, with ${yearsPhrase}.` : currentRole, 0);
   } else if (yearsSentence) {
-    add('opening', yearsSentence, 0);
+    d.add('opening', yearsSentence, 0);
   } else if (!recent) {
-    add('opening', '[A sentence or two about your background and what makes you a fit for this role.]', 0);
+    d.add('opening', '[A sentence or two about your background and what makes you a fit for this role.]', 0);
   }
+}
 
-  // Requirements the user meets.
-  if (strengths.length > 0) add('match', variant('match', MATCHES[tone](listPhrase(strengths.slice(0, 3)), companyName)), 0);
-  if (skills.length > 3) add('background', `I also work with ${listPhrase(skills.slice(3, 6))}.`, 4);
+/** The posting's requirements the user meets, and duties that build on them. */
+function addMatch(d: Draft): void {
+  const { skills, themes, missing, tone, job } = d.input;
+  if (d.strengths.length > 0) {
+    d.add('match', d.variant('match', MATCHES[tone](listPhrase(d.strengths.slice(0, 3)), d.companyName)), 0);
+  }
+  if (skills.length > 3) d.add('background', `I also work with ${listPhrase(skills.slice(3, 6))}.`, 4);
   const extraThemes = skills.length > 0 ? themes.slice(0, 2) : themes.slice(3, 5);
   if (extraThemes.length > 0) {
     const list = listPhrase(extraThemes);
-    add(
+    d.add(
       'match',
-      variant('themes', [
+      d.variant('themes', [
         `The posting's emphasis on ${list} is familiar ground for me.`,
         `I noticed how much the role involves ${list}, which my background covers.`,
         `My experience also covers ${list}, which the posting returns to more than once.`,
@@ -184,93 +191,112 @@ export function templateLetter(input: LetterInput): string {
       2,
     );
   }
-  const duty = matchingDuty(job, [...skills, ...themes], input.missing);
+  const [duty, secondDuty] = matchingDuties(job, [...skills, ...themes], missing);
   if (duty) {
-    add('match', `The work you describe, “${duty.text}”, builds directly on my experience with ${listPhrase(duty.names)}.`, 3);
+    d.add('match', `The work you describe, “${duty.text}”, builds directly on my experience with ${listPhrase(duty.names)}.`, 3);
   }
+  if (secondDuty) d.add('match', `Likewise, “${secondDuty.text}” draws on my background in ${listPhrase(secondDuty.names)}.`, 6);
+}
 
-  // Most recent role and its highlights.
+/** The most recent role's highlights, earlier roles, education. */
+function addExperience(d: Draft): void {
+  const [recent, previous, older] = d.experience;
   if (recent) {
-    if (!recent.current) add('match', `Most recently, I worked as ${withArticle(recent.title)} at ${recent.company}.`, 1);
     const at = recent.company;
-    const highlights = relevantHighlights(recent, strengths);
+    if (!recent.current) d.add('match', `Most recently, I worked as ${withArticle(recent.title)} at ${at}.`, 1);
     const firstLead = recent.current
       ? [`At ${at}, I`, `In my work at ${at}, I`, `As part of my role at ${at}, I`]
       : [`At ${at}, I`, `During my time at ${at}, I`, `While at ${at}, I`];
-    const laterLead = ['I also', 'Beyond that, I', 'In addition, I'];
+    const highlights = relevantHighlights(recent, d.strengths);
     highlights.slice(0, 5).forEach((h, i) => {
-      const verb = PAST_VERB.test(h);
-      const lead = i === 0 ? variant('h0', firstLead) : variant(`h${i}`, laterLead);
-      const text = verb ? `${lead} ${lowerFirst(h)}.` : `${i === 0 ? `One highlight from ${at}` : 'Another highlight'}: ${asSentence(h)}`;
-      add('match', text, [1, 2, 5, 6, 7][i]!);
+      const lead = i === 0 ? d.variant('h0', firstLead) : d.variant(`h${i}`, ['I also', 'Beyond that, I', 'In addition, I']);
+      const text = PAST_VERB.test(h)
+        ? `${lead} ${lowerFirst(h)}.`
+        : `${i === 0 ? `One highlight from ${at}` : 'Another highlight'}: ${asSentence(h)}`;
+      d.add('match', text, [1, 2, 5, 6, 7][i]!);
     });
     if (highlights.length === 0 && recent.summary.trim()) {
       const s = stripEnd(splitSentences(recent.summary)[0] ?? '');
-      if (PAST_VERB.test(s)) add('match', `${variant('h0', firstLead)} ${lowerFirst(s)}.`, 1);
-      else if (/^(I|My)\b/.test(s)) add('match', asSentence(s), 1);
+      if (PAST_VERB.test(s)) d.add('match', `${d.variant('h0', firstLead)} ${lowerFirst(s)}.`, 1);
+      else if (/^(I|My)\b/.test(s)) d.add('match', asSentence(s), 1);
     }
   }
+  if (previous) {
+    const [h, more] = relevantHighlights(previous, d.strengths).filter((x) => PAST_VERB.test(x));
+    const lead = d.variant('previous', ['Before that, I worked as', 'Previously, I worked as', 'Earlier in my career, I worked as']);
+    d.add('background', `${lead} ${withArticle(previous.title)} at ${previous.company}${h ? `, where I ${lowerFirst(h)}` : ''}.`, 3);
+    if (more) d.add('background', `There, I also ${lowerFirst(more)}.`, 6);
+  }
+  if (older) d.add('background', `I also spent time as ${withArticle(older.title)} at ${older.company}.`, 6);
 
-  // Earlier roles and education.
-  const previous = experience[1];
-  if (previous) {
-    const h = relevantHighlights(previous, strengths).find((x) => PAST_VERB.test(x));
-    const lead = variant('previous', ['Before that, I worked as', 'Previously, I worked as', 'Earlier in my career, I worked as']);
-    add('background', `${lead} ${withArticle(previous.title)} at ${previous.company}${h ? `, where I ${lowerFirst(h)}` : ''}.`, 3);
-  }
-  if (previous) {
-    const more = relevantHighlights(previous, strengths).filter((x) => PAST_VERB.test(x))[1];
-    if (more) add('background', `There, I also ${lowerFirst(more)}.`, 6);
-  }
-  const older = experience[2];
-  if (older) add('background', `I also spent time as ${withArticle(older.title)} at ${older.company}.`, 6);
-  const edu = profile.education.find((e) => e.school.trim() && (e.degree.trim() || e.field.trim()));
+  const edu = d.input.profile.education.find((e) => e.school.trim() && (e.degree.trim() || e.field.trim()));
   if (edu) {
     const degree = edu.degree.trim();
     const field = edu.field.trim();
-    add(
-      'background',
-      degree
-        ? `I hold ${withArticle(degree)}${field ? ` in ${field}` : ''} from ${edu.school.trim()}.`
-        : `I studied ${field} at ${edu.school.trim()}.`,
-      4,
-    );
+    const school = edu.school.trim();
+    d.add('background', degree ? `I hold ${withArticle(degree)}${field ? ` in ${field}` : ''} from ${school}.` : `I studied ${field} at ${school}.`, 4);
   }
-
-  if (skills.length > 0 && experience.length > 0) {
-    const companies = listPhrase([...new Set(experience.slice(0, 2).map((e) => e.company))]);
-    add('background', `Taken together, my work at ${companies} has given me a solid grounding in ${listPhrase(skills.slice(0, 3))}.`, 5);
+  const { skills } = d.input;
+  if (skills.length > 0 && recent) {
+    const companies = listPhrase([...new Set(d.experience.slice(0, 2).map((e) => e.company))]);
+    d.add('background', `In short, I'd bring ${listPhrase(skills.slice(0, 3))}, along with my experience at ${companies}.`, 5);
   }
+}
 
-  for (const note of noteSentences(input.notes ?? '')) add('notes', note, 0);
-
+/** Location fit, practicalities, and the closing line. */
+function addClosing(d: Draft): void {
+  const { profile, job, locationOk, tone } = d.input;
+  const work = profile.work;
   const home = profile.personal.location.trim();
-  const modes = profile.preferences.remote;
-  if (job.location.remote === 'remote' && modes.includes('remote')) {
-    add('closing', `The fully remote setup suits me well${home ? `, and I'm based in ${home}` : ''}.`, 4);
-  } else if (input.locationOk && home && job.location.remote !== 'remote') {
-    const arrangement = job.location.remote === 'hybrid' ? 'the hybrid arrangement' : 'working from your office';
-    add('closing', `I'm based in ${home}, so ${arrangement} works well for me.`, 4);
+  if (locationOk && job.location.remote === 'remote' && profile.preferences.remote.includes('remote')) {
+    d.add('closing', `The fully remote setup suits me well${home ? `, and I'm based in ${home}` : ''}.`, 4);
+  } else if (locationOk && home && job.location.remote !== 'remote') {
+    const arrangement = { hybrid: 'the hybrid arrangement', onsite: 'working on-site', unknown: 'the location' }[job.location.remote];
+    d.add('closing', `I'm based in ${home}, so ${arrangement} works well for me.`, 4);
   }
-  if (work.requiresSponsorship === false) add('closing', "I don't require visa sponsorship.", 6);
+  if (work.requiresSponsorship === false) d.add('closing', "I don't require visa sponsorship.", 6);
 
-  // Close.
   const start = work.earliestStart.trim() ? startPhrase(work.earliestStart) : undefined;
   const notice = stripEnd(work.noticePeriod);
-  if (start) add('closing', `I'm available to start ${start}.`, 3);
+  if (start) d.add('closing', `I'm available to start ${start}.`, 3);
   else if (notice && !/^(none|no|n\/a|0)\b/i.test(notice) && notice.split(/\s+/).length <= 4) {
-    add('closing', `My notice period is ${lowerFirst(notice)}.`, 3);
+    d.add('closing', `My notice period is ${lowerFirst(notice)}.`, 3);
   }
+  const recent = d.experience[0];
   if (recent) {
-    add('closing', variant('more', [
-      `I'd be glad to share more about my work at ${recent.company} in a conversation.`,
-      `I'd be happy to walk you through my work at ${recent.company} in more detail.`,
-      `I can share more detail about my work at ${recent.company} whenever it's useful.`,
-    ]), 5);
+    const at = recent.company;
+    d.add(
+      'closing',
+      d.variant('more', [
+        `I'd be glad to share more about my work at ${at} in a conversation.`,
+        `I'd be happy to walk you through my work at ${at} in more detail.`,
+        `I can share more detail about my work at ${at} whenever it's useful.`,
+      ]),
+      5,
+    );
   }
-  add('closing', variant('close', CLOSINGS[tone](companyName)), 0);
+  d.add('closing', d.variant('close', CLOSINGS[tone](d.companyName)), 0);
+}
 
-  const chosen = select(sentences, LETTER_TARGET_WORDS[input.length]);
+export function templateLetter(input: LetterInput): string {
+  const { job, profile, tone } = input;
+  const sentences: Sentence[] = [];
+  const company = job.company.trim();
+  const draft: Draft = {
+    input,
+    strengths: input.skills.length > 0 ? input.skills : input.themes,
+    experience: byRecency(profile.experience),
+    companyName: company || '[Company]',
+    variant: (slot, options) => pick(options, job.key, `${tone}:${slot}`),
+    add: (section, text, priority) => sentences.push({ section, text, priority }),
+  };
+  addOpening(draft);
+  addMatch(draft);
+  addExperience(draft);
+  for (const note of noteSentences(input.notes ?? '')) draft.add('notes', note, 0);
+  addClosing(draft);
+
+  const chosen = select(sentences, input.length);
   const para = (...sections: Section[]) =>
     chosen
       .filter((s) => sections.includes(s.section))

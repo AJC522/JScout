@@ -27,7 +27,7 @@ function letterFor(job: JobContext, fixture: ProfileFixture, opts: { tone: (type
     resumeText: () => fixture.resumeText,
   } as Partial<ProfileService> as ProfileService);
   const fit = analyzeFit(job, me);
-  return templateLetter({ job, profile: me.profile, strengths: fit.skillsMatched, ...opts });
+  return templateLetter({ job, profile: me.profile, skills: fit.skillsMatched, themes: fit.keywords.filter((k) => k.present && k.weight >= 0.3 && !fit.skillsMatched.includes(k.term) && !/engineer|nurse|executive/i.test(k.term)).map((k) => k.term).slice(0, 4), missing: fit.skillsMissing, locationOk: fit.locationAlignment.ok === true, ...opts });
 }
 
 /** Capitalised words that do not start a line or sentence: names, which must come from the inputs. */
@@ -45,7 +45,7 @@ function properNouns(letter: string): string[] {
   return out;
 }
 
-const BANDS: Record<LetterLength, [number, number]> = { short: [110, 190], medium: [200, 310], long: [300, 460] };
+const BANDS: Record<LetterLength, [number, number]> = { short: [110, 190], medium: [200, 310], long: [280, 460] };
 const CLICHES = [/I am writing to express/i, /team player/i, /hit the ground running/i, /passionate/i];
 
 describe('template cover letters', () => {

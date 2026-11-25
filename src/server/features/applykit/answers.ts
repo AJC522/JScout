@@ -8,7 +8,7 @@ import { escapeRegExp, foldText } from '../../lib/text';
 import type { JobContext } from './context';
 import {
   STOPWORDS,
-  asSentence,
+  firstPersonSummary,
   formatMoney,
   listPhrase,
   lowerFirst,
@@ -70,7 +70,8 @@ for (const [concept, list] of Object.entries({
   for (const word of list.split(' ')) CONCEPTS[word] = concept;
 }
 
-const QUESTION_STOPWORDS = new Set([...STOPWORDS].filter((w) => !['why', 'what', 'how', 'us'].includes(w)));
+/** Question words are left to classifyQuestion; "us" stays because it means the company. */
+const QUESTION_STOPWORDS = new Set([...STOPWORDS].filter((w) => w !== 'us'));
 
 function concepts(text: string): Set<string> {
   return new Set(
@@ -89,7 +90,7 @@ export function similarity(question: string, saved: SavedAnswer): number {
   const type = classifyQuestion(question);
   if (type !== 'other' && type === classifyQuestion(saved.question)) score += 0.5;
   const tagHits = saved.tags.filter((tag) => [...concepts(tag)].some((t) => q.has(t))).length;
-  return score + Math.min(0.3, tagHits * 0.15);
+  return score + Math.min(0.5, tagHits * 0.25);
 }
 
 export const MAX_RELATED = 5;
@@ -158,12 +159,11 @@ function fitLine(input: ScaffoldInput): string {
 }
 
 function identity(profile: Profile): string | undefined {
-  const summary = stripEnd(profile.work.summary.split(/(?<=[.!?])\s+/)[0] ?? '');
-  if (/^(I|I['’](m|ve|d)|My)\b/.test(summary)) return asSentence(summary);
+  const summary = firstPersonSummary(profile.work.summary)[0];
+  if (summary) return summary;
   const role = currentRole(profile);
   const years = profile.work.yearsExperience;
   if (role) return `I'm currently ${role}${years ? `, with ${years} years of professional experience` : ''}.`;
-  if (summary) return asSentence(`I'm ${withArticle(lowerFirst(summary))}`);
   return years ? `I have ${years} years of professional experience.` : undefined;
 }
 

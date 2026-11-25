@@ -30,7 +30,7 @@ interface SkillSplit {
 
 function splitSkills(job: JobContext, profile: ProfileContext, jobText: string): SkillSplit {
   const mine = new Set(profile.skills.map(foldText));
-  const has = (skill: string) => mine.has(foldText(skill)) || containsPhrase(profile.corpus, phraseKey(skill));
+  const has = (skill: string) => mine.has(foldText(skill));
   const jobSkills = new Set(job.skills.map(foldText));
   return {
     matched: job.skills.filter(has),

@@ -170,6 +170,21 @@ export function startPhrase(raw: string): string | undefined {
   return undefined;
 }
 
+/** The first one or two summary sentences, turned into first person where the form is recognisable. */
+export function firstPersonSummary(summary: string): string[] {
+  const out: string[] = [];
+  for (const [i, raw] of splitSentences(summary).slice(0, 2).entries()) {
+    const s = stripEnd(raw);
+    if (/^(I|I['’](m|ve|d)|My)\b/.test(s)) out.push(asSentence(s));
+    else if (i > 0) break;
+    else if (/^((over|more than|nearly|almost)\b|\d)/i.test(s)) out.push(asSentence(`I bring ${lowerFirst(s)}`));
+    else if (/^\p{L}+ing\b/u.test(s)) out.push(asSentence(`I've been ${lowerFirst(s)}`));
+    else if (/^(a|an|the)\s/i.test(s)) out.push(asSentence(`I'm ${lowerFirst(s)}`));
+    else out.push(asSentence(`I'm ${withArticle(lowerFirst(s))}`));
+  }
+  return out;
+}
+
 /** "$150,000" style amount; falls back to "150,000 XYZ" for codes Intl doesn't know. */
 export function formatMoney(amount: number, currency: string): string {
   try {

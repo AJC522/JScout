@@ -7,11 +7,15 @@ import { type JobContext, type ProfileContext, hasTarget, loadProfile, resolveJo
 import { analyzeFit } from './fit';
 import { templateLetter } from './letter-template';
 import { answerSystemPrompt, answerUserPrompt, letterSystemPrompt, letterUserPrompt, profileBlock } from './prompts';
+import { phraseKey } from './text';
 
 export const DEFAULT_MAX_WORDS = 200;
 const MAX_STRENGTHS = 6;
-/** Weight a covered posting term needs to be named as a strength in drafts. */
-const STRENGTH_MIN_WEIGHT = 0.3;
+const MAX_THEMES = 4;
+/** Weight a covered posting term needs before drafts name it. */
+const THEME_MIN_WEIGHT = 0.3;
+/** Credentials read badly as themes ("the role involves RN license"); the flags cover them. */
+const CREDENTIAL_TERM = /licen[cs]|certif|degree|clearance/i;
 
 /**
  * Output budgets: room for the draft itself plus the reasoning that current models do before
@@ -20,13 +24,25 @@ const STRENGTH_MIN_WEIGHT = 0.3;
 const LETTER_MAX_TOKENS: Record<LetterLength, number> = { short: 3000, medium: 4000, long: 5000 };
 const answerMaxTokens = (maxWords: number) => 2500 + maxWords * 3;
 
-/** What the user can honestly claim for this posting: matched skills, then covered key terms. */
-function strengthsFrom(fit: FitAnalysis): string[] {
-  const seen = new Set(fit.skillsMatched.map(foldText));
-  const terms = fit.keywords
-    .filter((k) => k.present && k.weight >= STRENGTH_MIN_WEIGHT && !seen.has(foldText(k.term)))
-    .map((k) => k.term);
-  return [...fit.skillsMatched, ...terms].slice(0, MAX_STRENGTHS);
+/**
+ * What a draft may honestly claim for this posting: the posting's skills the user has, and
+ * other important terms their background covers (minus the job title's own words).
+ */
+function draftFacts(fit: FitAnalysis, job: JobContext) {
+  const skills = new Set(fit.skillsMatched.map(foldText));
+  const titleWords = new Set(phraseKey(job.title).split(' '));
+  const themes = fit.keywords
+    .filter((k) => k.present && k.weight >= THEME_MIN_WEIGHT && !skills.has(foldText(k.term)))
+    .map((k) => k.term)
+    .filter((term) => !phraseKey(term).split(' ').every((t) => titleWords.has(t)) && !CREDENTIAL_TERM.test(term))
+    .slice(0, MAX_THEMES);
+  return {
+    skills: fit.skillsMatched,
+    themes,
+    missing: fit.skillsMissing,
+    locationOk: fit.locationAlignment.ok === true,
+    strengths: [...fit.skillsMatched, ...themes].slice(0, MAX_STRENGTHS),
+  };
 }
 
 /**
@@ -46,10 +62,14 @@ export function createApplyKitService(ctx: AppContext): ApplyKitService {
     async coverLetter(request) {
       const target = job(request);
       const me = profileContext();
+      const facts = draftFacts(analyzeFit(target, me), target);
       const content = templateLetter({
         job: target,
         profile: me.profile,
-        strengths: strengthsFrom(analyzeFit(target, me)),
+        skills: facts.skills,
+        themes: facts.themes,
+        missing: facts.missing,
+        locationOk: facts.locationOk,
         tone: request.tone,
         length: request.length,
         notes: request.notes,
@@ -78,7 +98,7 @@ export function createApplyKitService(ctx: AppContext): ApplyKitService {
             question: request.question,
             job: target,
             profile: me.profile,
-            strengths: target ? strengthsFrom(analyzeFit(target, me)) : me.skills.slice(0, MAX_STRENGTHS),
+            strengths: target ? draftFacts(analyzeFit(target, me), target).strengths : me.skills.slice(0, MAX_STRENGTHS),
           },
           () => ctx.services.applications.list().map((a) => a.job),
         );
