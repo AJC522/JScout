@@ -22,7 +22,7 @@ export const MAX_KEYWORDS = 25;
 const MIN_KEYWORDS = 10;
 
 /** Generic posting vocabulary that never makes a useful keyword on its own or at a phrase edge. */
-const GENERIC = new Set(
+export const GENERIC = new Set(
   (
     'experience experienced ability abilities able strong excellent great good proven solid deep demonstrated ' +
     'skill skills work works working team teams role roles year years job jobs position candidate candidates ' +
@@ -52,11 +52,11 @@ const VAGUE_ALONE = new Set(
 /** Inner words allowed inside a three-word phrase ("attention to detail", "quality of care"). */
 const PHRASE_GLUE = new Set(['of', 'and', 'to', 'for', 'in', 'with']);
 
-const REQUIREMENT_HEADING =
+export const REQUIREMENT_HEADING =
   /\b(requirements?|qualifications?|what you('|’)?ll (bring|need|have)|what you bring|what (we|we're|we’re) (are )?looking for|what we look for|must[- ]haves?|you have|you bring|about you|who you are|skills|nice[- ]to[- ]haves?|preferred|bonus points|ideal candidate|essential|desired|competencies)\b/i;
 
 /** Paragraphs that are legal or benefits boilerplate: no phrases or names are taken from them. */
-const BOILERPLATE =
+export const BOILERPLATE =
   /\b(equal (employment )?opportunity|without regard to|regardless of|reasonable accommodations?|e-?verify|privacy (notice|policy)|benefits include|we offer)\b/i;
 
 interface Ranges {
@@ -67,7 +67,7 @@ interface Ranges {
 const inRanges = (ranges: Array<[number, number]>, at: number) => ranges.some(([a, b]) => at >= a && at < b);
 
 /** A short line with no sentence punctuation, or one ending with ':' — a section heading. */
-function isHeading(line: string): boolean {
+export function isHeading(line: string): boolean {
   const t = line.trim();
   if (!t || t.startsWith('- ') || t.length > 80) return false;
   if (t.endsWith(':')) return true;

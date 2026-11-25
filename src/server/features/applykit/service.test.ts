@@ -1,11 +1,11 @@
 import { APIConnectionTimeoutError, AuthenticationError, RateLimitError } from '@anthropic-ai/sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_AI_MODEL } from '../../../shared/constants';
-import type { Application, CoverLetterRequest } from '../../../shared/types';
+import type { Application, ApplicationStatus, CoverLetterRequest } from '../../../shared/types';
 import type { AppContext, ApplicationsService, ProfileService, SearchService, SettingsService } from '../../services';
 import { LAST_ERROR_KEY, NO_KEY_REASON } from './ai';
 import { createApplyKitService } from './service';
-import { savedAnswer, softwareJob, softwareProfile } from './test-fixtures';
+import { salesApplication, savedAnswer, softwareJob, softwareProfile, softwareResume } from './test-fixtures';
 
 vi.mock('../../lib/skills', () => import('./test-fixtures').then((m) => m.fakeSkills));
 vi.mock('../../lib/titles', () => import('./test-fixtures').then((m) => m.fakeTitles));
@@ -63,6 +63,7 @@ function makeService() {
   const applications = { get: () => undefined, list: (): Application[] => [] } as Partial<ApplicationsService>;
   const ctx = {
     log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    now: () => new Date('2026-11-20T12:00:00.000Z'),
     services: { settings, profile, search, applications, jobs: {} },
   } as unknown as AppContext;
   return { service: createApplyKitService(ctx), ctx };
@@ -186,5 +187,108 @@ describe('apply kit service: AI drafting', () => {
     await expect(service.coverLetter({ ...letterRequest, jobId: 'nope' })).rejects.toMatchObject({ status: 404 });
     await expect(service.coverLetter({ tone: 'warm', length: 'short', mode: 'template' })).rejects.toMatchObject({ status: 400 });
     expect(() => service.analyze({ jobId: 'nope' })).toThrow(/Job was not found/);
+  });
+});
+
+describe('apply kit service: résumé review and rework', () => {
+  function makeResumeService(resumeText = softwareResume) {
+    const made = makeService();
+    const services = made.ctx.services as unknown as Record<string, Record<string, unknown>>;
+    services.profile!.resumeText = () => resumeText;
+    const apps: Array<Pick<Application, 'id' | 'status' | 'job' | 'jobId'>> = [
+      { ...salesApplication, status: 'applied' as ApplicationStatus },
+      { ...salesApplication, id: 'app-old', status: 'rejected' as ApplicationStatus },
+    ];
+    services.applications = {
+      list: () => apps,
+      get: (id: string) => (id === salesApplication.id ? salesApplication : undefined),
+    };
+    return made;
+  }
+
+  it('reviews the saved résumé, a draft, or a pasted posting', () => {
+    const { service } = makeResumeService();
+    const saved = service.reviewResume({ jobId: 'job-sw' });
+    expect(saved).toMatchObject({ source: 'saved', job: { title: 'Senior Backend Engineer', company: 'Lumen Pay' } });
+    expect(saved.skillsMatched).toEqual(['TypeScript', 'Node.js', 'PostgreSQL', 'AWS']);
+
+    const draft = service.reviewResume({ jobId: 'job-sw', resumeText: `${softwareResume}
+Kubernetes, Kafka` });
+    expect(draft.source).toBe('draft');
+    expect(draft.skillsMissing).toEqual([]);
+    expect(draft.score).toBeGreaterThan(saved.score);
+
+    const pasted = service.reviewResume({ posting: { title: 'Frontend Engineer', company: 'Acme', description: 'Requirements\n- 3+ years of React experience\n- Docker' } });
+    expect(pasted.job).toEqual({ title: 'Frontend Engineer', company: 'Acme' });
+    expect(pasted.requirements.map((r) => [r.text, r.status])).toEqual([
+      ['3+ years of React experience', 'met'],
+      ['Docker', 'met'],
+    ]);
+  });
+
+  it('asks for a résumé when there is none', () => {
+    const { service } = makeResumeService('  ');
+    expect(() => service.reviewResume({ jobId: 'job-sw' })).toThrow(/Add your résumé first/);
+    expect(() => service.reviewResume({ jobId: 'job-sw', resumeText: '' })).toThrow(/draft is empty/);
+    expect(service.resumeScores()).toEqual([]);
+  });
+
+  it('tailors a draft without AI', async () => {
+    const { service } = makeResumeService();
+    const result = await service.reworkResume({ jobId: 'job-sw', mode: 'template' });
+    expect(result.generatedBy).toBe('template');
+    expect(result.content).toContain('- Maintained the internal admin dashboard used by support staff');
+    expect(result.changes.length).toBeGreaterThan(1);
+    expect(sdk.create).not.toHaveBeenCalled();
+  });
+
+  it('rewrites with AI under no-invention rules, passing the review findings as hints', async () => {
+    const { service } = makeResumeService();
+    sdk.create.mockResolvedValue(message('MAYA CHEN\n\nSUMMARY\nBackend engineer.\n\nEXPERIENCE\n- Built a claims payment service [add % uptime]'));
+
+    const result = await service.reworkResume({ jobId: 'job-sw', mode: 'ai' });
+
+    expect(result).toMatchObject({ generatedBy: 'ai', content: expect.stringContaining('Built a claims payment service') });
+    expect(result.changes).toEqual([
+      'Rewritten with AI for Senior Backend Engineer at Lumen Pay.',
+      'Read every line before you use it: keep only what is true of your work.',
+      'Fill in the bracketed placeholder with real figures, or remove it.',
+    ]);
+    expect(sdk.constructed).toEqual([{ apiKey: 'sk-ant-test-key', timeout: 150_000 }]);
+    const [params] = sdk.create.mock.calls[0]!;
+    expect(params.system).toMatch(/Never add employers, roles, dates/);
+    expect(params.system).toMatch(/Never make up a figure/);
+    const prompt: string = params.messages[0].content;
+    expect(prompt).toContain(DESCRIPTION_MARKER);
+    expect(prompt).toContain('<resume_to_rewrite>\nMaya Chen');
+    expect(prompt).toContain('<review_findings>');
+    expect(prompt).toContain('Requirements the résumé does not clearly show: "Experience with PostgreSQL and distributed systems"');
+    // The résumé is sent once, as the text to rewrite.
+    expect(prompt.split('Responsible for maintaining').length).toBe(2);
+  });
+
+  it('falls back to the template draft when AI fails', async () => {
+    const { service } = makeResumeService();
+    sdk.create.mockRejectedValue(new APIConnectionTimeoutError());
+    const result = await service.reworkResume({ jobId: 'job-sw', mode: 'ai' });
+    expect(result).toMatchObject({ generatedBy: 'template', fallbackReason: "The AI provider didn't respond in time. Try again shortly." });
+    expect(result.content).toContain('Maintained the internal admin dashboard');
+  });
+
+  it('scores the résumé against every active application', () => {
+    const { service } = makeResumeService();
+    expect(service.resumeScores()).toEqual([
+      {
+        applicationId: 'app-sales',
+        title: 'Account Executive, Mid-Market',
+        company: 'Brightwave Software',
+        status: 'applied',
+        score: expect.any(Number),
+        band: expect.any(String),
+        requiredMet: expect.any(Number),
+        requiredTotal: 4,
+        limited: false,
+      },
+    ]);
   });
 });

@@ -47,6 +47,11 @@ import type {
   QuickFillField,
   ResumeAnalysis,
   ResumeInfo,
+  ResumeReview,
+  ResumeReviewRequest,
+  ResumeReworkRequest,
+  ResumeReworkResult,
+  ResumeScoreSummary,
   SavedAnswer,
   SavedSearch,
   SearchPreferences,
@@ -269,6 +274,12 @@ export interface ApiRoutes {
   'POST /api/applykit/analyze': { body: { jobId?: string; applicationId?: string }; res: FitAnalysis };
   'POST /api/applykit/cover-letter': { body: CoverLetterRequest; res: DraftResult };
   'POST /api/applykit/answer': { body: AnswerDraftRequest; res: AnswerDraftResult };
+  /** Score the saved résumé (or a draft) against a job, application or pasted posting. */
+  'POST /api/applykit/resume-review': { body: ResumeReviewRequest; res: ResumeReview };
+  /** A tailored résumé draft for that target; returned, never saved. */
+  'POST /api/applykit/resume-rework': { body: ResumeReworkRequest; res: ResumeReworkResult };
+  /** The saved résumé scored against every active application. */
+  'GET /api/applykit/resume-scores': { res: ResumeScoreSummary[] };
   'GET /api/ai/status': { res: AiStatus };
   'POST /api/ai/test': { res: AiStatus };
 }

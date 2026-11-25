@@ -1,10 +1,16 @@
 import type { FastifyInstance } from 'fastify';
-import { analyzeBodySchema, answerBodySchema, coverLetterBodySchema } from '../features/applykit/schemas';
+import {
+  analyzeBodySchema,
+  answerBodySchema,
+  coverLetterBodySchema,
+  resumeReviewBodySchema,
+  resumeReworkBodySchema,
+} from '../features/applykit/schemas';
 import type { AppContext } from '../services';
 import { parse } from '../validate';
 
 /**
- * Fit analysis, cover letters, answer drafts, AI status. Services are read per request so
+ * Fit analysis, résumé review and rework, cover letters, answer drafts, AI status. Services are read per request so
  * tests can swap them after buildApp. Drafts for an application are returned, never saved:
  * the client saves documents explicitly.
  */
@@ -28,6 +34,20 @@ export function registerApplyKitRoutes(app: FastifyInstance, ctx: AppContext): v
     await fetchMissingDescription(ctx, body);
     return kit().answer(body);
   });
+
+  app.post('/api/applykit/resume-review', async (request) => {
+    const body = parse(resumeReviewBodySchema, request.body);
+    if (!body.posting) await fetchMissingDescription(ctx, body);
+    return kit().reviewResume(body);
+  });
+
+  app.post('/api/applykit/resume-rework', async (request) => {
+    const body = parse(resumeReworkBodySchema, request.body);
+    if (!body.posting) await fetchMissingDescription(ctx, body);
+    return kit().reworkResume(body);
+  });
+
+  app.get('/api/applykit/resume-scores', async () => kit().resumeScores());
 
   app.get('/api/ai/status', async () => kit().aiStatus());
 

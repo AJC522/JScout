@@ -12,6 +12,7 @@ import { Section } from './Section';
 const KIND_LABELS: Record<DocumentKind, string> = {
   'cover-letter': 'Cover letter',
   answer: 'Answer',
+  resume: 'Tailored résumé',
   'resume-notes': 'Résumé notes',
   email: 'Email',
   other: 'Document',

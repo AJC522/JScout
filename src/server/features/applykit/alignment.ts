@@ -17,14 +17,14 @@ export interface Scored<T> {
   factor: number;
 }
 
-const TITLE_RANK: Record<TitleMatchKind, number> = { exact: 4, synonym: 3, related: 2, partial: 1, none: 0 };
-const TITLE_FACTOR: Record<TitleMatchKind, number> = { exact: 1, synonym: 0.9, related: 0.6, partial: 0.4, none: 0 };
+export const TITLE_RANK: Record<TitleMatchKind, number> = { exact: 4, synonym: 3, related: 2, partial: 1, none: 0 };
+export const TITLE_FACTOR: Record<TitleMatchKind, number> = { exact: 1, synonym: 0.9, related: 0.6, partial: 0.4, none: 0 };
 
 function coreTokens(core: string): string[] {
   return core.split(' ').filter((t) => t && !STOPWORDS.has(t));
 }
 
-function compareTitles(job: TitleInfo, mine: TitleInfo): TitleMatchKind {
+export function compareTitles(job: TitleInfo, mine: TitleInfo): TitleMatchKind {
   if (mine.core !== '' && mine.core === job.core) return 'exact';
   if (job.role && mine.role) {
     if (job.role.id === mine.role.id) return 'synonym';

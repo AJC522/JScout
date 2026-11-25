@@ -7,17 +7,18 @@ import type {
   EmploymentType,
   JobDetail,
   JobLocation,
+  PastedPosting,
   Profile,
   Salary,
   Seniority,
 } from '../../../shared/types';
 import { badRequest, notFound } from '../../errors';
-import { htmlToText } from '../../lib/html';
+import { htmlToText, textToHtml } from '../../lib/html';
 import { parseJobLocation } from '../../lib/location';
 import { extractSalaryFromText, parseSalaryText } from '../../lib/salary';
 import { extractSkills } from '../../lib/skills';
 import { detectSeniority } from '../../lib/titles';
-import { uniqueFolded } from '../../lib/text';
+import { stableHash, uniqueFolded } from '../../lib/text';
 import type { ProfileService, Services } from '../../services';
 import { stemmedText } from './text';
 
@@ -106,6 +107,34 @@ function fromApplication(services: Pick<Services, 'jobs'>, app: ApplicationDetai
     skills: snap.skills.length > 0 ? snap.skills : extractSkills(`${snap.title}\n${text}`),
     descriptionText: text,
   };
+}
+
+/**
+ * A posting the user pasted. Its text goes through the HTML round trip so bullets ("•", "*",
+ * "1.") become the "- " list lines the requirement and keyword readers expect.
+ */
+export function fromPastedPosting(posting: PastedPosting): JobContext {
+  const text = htmlToText(textToHtml(posting.description));
+  const title = posting.title.trim();
+  const { location } = parseJobLocation({ locations: [], title, descriptionText: text });
+  const country = location.places.find((p) => p.country)?.country;
+  return {
+    key: `pasted:${stableHash(title, posting.company ?? '', text).slice(0, 16)}`,
+    title,
+    company: posting.company?.trim() ?? '',
+    locationText: '',
+    location,
+    salary: extractSalaryFromText(text, { country }),
+    seniority: detectSeniority(title, undefined, text),
+    employmentType: 'unknown',
+    skills: extractSkills(`${title}\n${text}`),
+    descriptionText: text,
+  };
+}
+
+/** A job, an application, or a pasted posting: whichever the request names (pasted text wins). */
+export function resolveTarget(services: Pick<Services, 'search' | 'applications' | 'jobs'>, target: Target & { posting?: PastedPosting }): JobContext {
+  return target.posting ? fromPastedPosting(target.posting) : resolveJob(services, target);
 }
 
 export interface ProfileContext {

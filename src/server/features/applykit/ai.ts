@@ -29,6 +29,8 @@ export interface AiRequest {
   system: string;
   user: string;
   maxTokens: number;
+  /** Longer drafts (a whole résumé) may need more than the default. */
+  timeoutMs?: number;
 }
 
 export type AiOutcome = { ok: true; text: string } | { ok: false; reason: string };
@@ -107,7 +109,7 @@ export function createAiClient(getSettings: () => SettingsService, log: Logger):
       ...(EFFORT_MODELS.test(model) ? { output_config: { effort: 'low' } } : {}),
     };
     try {
-      const client = new Anthropic({ apiKey, timeout: AI_TIMEOUT_MS });
+      const client = new Anthropic({ apiKey, timeout: request.timeoutMs ?? AI_TIMEOUT_MS });
       return { message: await client.messages.create(params) };
     } catch (err) {
       log.warn('AI request failed', {

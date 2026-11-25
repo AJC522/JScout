@@ -45,6 +45,7 @@ const DEFAULT_CHECKLIST = ['Review the posting', 'Tailor résumé', 'Write cover
 const DOCUMENT_LABELS: Record<DocumentKind, string> = {
   'cover-letter': 'cover letter',
   answer: 'application answer',
+  resume: 'tailored résumé',
   'resume-notes': 'résumé notes',
   email: 'email',
   other: 'document',
