@@ -2,9 +2,11 @@ import type { Profile, SearchPreferences } from '../../../shared/types';
 import { errorMessage } from '../../api/client';
 import { useToast } from '../../components/ui';
 import { PreferencesFields } from './PreferencesFields';
+import { preferencesErrors } from './preferences-model';
 import { useSaveProfile } from './profile-api';
 import { SectionCard } from './SectionCard';
 import { useDraft, useReportDirty } from './use-draft';
+import { hasErrors } from './validation';
 
 export function PreferencesSection({ profile, onDirtyChange }: { profile: Profile; onDirtyChange: (dirty: boolean) => void }) {
   const draft = useDraft<SearchPreferences>(profile.preferences);
@@ -13,7 +15,11 @@ export function PreferencesSection({ profile, onDirtyChange }: { profile: Profil
 
   useReportDirty(draft.dirty, onDirtyChange);
 
-  const onSave = () =>
+  const onSave = () => {
+    if (hasErrors(preferencesErrors(draft.value))) {
+      toast.error('Check the highlighted fields');
+      return;
+    }
     save.mutate(
       { preferences: draft.value },
       {
@@ -24,6 +30,7 @@ export function PreferencesSection({ profile, onDirtyChange }: { profile: Profil
         onError: (err) => toast.error('Could not save your preferences', { description: errorMessage(err) }),
       },
     );
+  };
 
   return (
     <SectionCard

@@ -28,7 +28,12 @@ export function DoneStep({ profile, onBack, onFinished }: DoneStepProps) {
     { done: p.targetTitles.length > 0, text: p.targetTitles.length > 0 ? `Looking for ${listOf(p.targetTitles)}` : 'No job titles yet' },
     {
       done: p.locations.length > 0 || p.remote.length > 0,
-      text: p.locations.length > 0 ? `In ${listOf(p.locations)}` : p.remote.includes('remote') ? 'Remote jobs' : 'Any location',
+      text:
+        p.locations.length > 0
+          ? `In ${listOf(p.locations)}${p.remote.includes('remote') ? ', or remote' : ''}`
+          : p.remote.includes('remote')
+            ? 'Remote jobs'
+            : 'Any location',
     },
     { done: p.skills.length > 0, text: p.skills.length > 0 ? `${p.skills.length} skills to match against` : 'No skills yet' },
   ];

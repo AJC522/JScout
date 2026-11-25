@@ -87,4 +87,9 @@ export const qk = {
 
   /** Apply-kit fit analysis for an application or job. Under profile-extras because profile edits change it. */
   fitAnalysis: (target: { applicationId?: string; jobId?: string }) => ['profile-extras', 'fit', compactParams(target)] as const,
+
+  /** Prefix of every result set made by `qk.search(query)` (not history or from-profile). */
+  searchResults: () => ['search', 'results'] as const,
+  /** Prefix of every `qk.job(id)`. */
+  jobs: () => ['job'] as const,
 };

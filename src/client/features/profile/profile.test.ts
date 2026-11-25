@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyProfile } from '../../../shared/constants';
 import type { ExperienceEntry, Profile, ResumeAnalysis } from '../../../shared/types';
 import { filterAnswers, unansweredCommon } from './answers-model';
-import { formatSalaryInput, radiusLabel, toggle } from './preferences-model';
+import { LIST_LIMITS, formatSalaryInput, preferencesErrors, radiusLabel, toggle } from './preferences-model';
 import { applyProfilePatch, isEmptyPatch, mergeUnique, missingFrom, moveItem, upsertById } from './profile-model';
 import { buildResumePatch, initialSelection, newExperience, suggestsPaste } from './resume-apply';
 import { checkResumeFile, isValidEmail, isValidLink, isYearMonth, parseOptionalNumber, validatePersonal } from './validation';
@@ -197,5 +197,12 @@ describe('answers and preferences', () => {
     expect(formatSalaryInput(null)).toBe('');
     expect(toggle(['a'], 'b')).toEqual(['a', 'b']);
     expect(toggle(['a', 'b'], 'a')).toEqual(['b']);
+  });
+
+  it('flags preference lists longer than the server keeps', () => {
+    const titles = Array.from({ length: LIST_LIMITS.targetTitles + 2 }, (_, i) => `Title ${i}`);
+    expect(preferencesErrors({ targetTitles: titles, skills: ['Go'] })).toEqual({ targetTitles: 'Keep it to 60 or fewer (remove 2)' });
+    expect(preferencesErrors({ targetTitles: titles.slice(0, LIST_LIMITS.targetTitles) })).toEqual({});
+    expect(preferencesErrors({})).toEqual({});
   });
 });

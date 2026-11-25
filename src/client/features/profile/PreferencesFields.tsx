@@ -11,7 +11,7 @@ import {
 import type { EmploymentType, RemoteMode, SearchPreferences, Seniority } from '../../../shared/types';
 import { Chip, Field, Input, Select, TagInput } from '../../components/ui';
 import { suggest } from './profile-api';
-import { CURRENCIES, MAX_SALARY, formatSalaryInput, radiusLabel, toggle } from './preferences-model';
+import { CURRENCIES, MAX_SALARY, formatSalaryInput, preferencesErrors, radiusLabel, toggle } from './preferences-model';
 import { parseOptionalNumber } from './validation';
 
 export type PreferencesValue = Pick<
@@ -32,6 +32,8 @@ const JOB_TYPES = EMPLOYMENT_TYPES.filter((t): t is Exclude<EmploymentType, 'unk
 
 export function PreferencesFields<V extends PreferencesValue>({ value, onChange, extended = false }: PreferencesFieldsProps<V>) {
   const set = <K extends keyof PreferencesValue>(key: K, next: V[K]) => onChange({ ...value, [key]: next });
+  // Limits are checked here rather than with TagInput's `max`, whose running counter would clutter every list.
+  const errors = preferencesErrors(value);
   // The salary box keeps what was typed (e.g. "85,000") and stores it once it is a valid number.
   // A valid text that disagrees with the value means the value changed elsewhere (discard, reset).
   const [salaryText, setSalaryText] = useState(() => formatSalaryInput(value.salaryMin));
@@ -46,23 +48,21 @@ export function PreferencesFields<V extends PreferencesValue>({ value, onChange,
 
   return (
     <div className="flex flex-col gap-5">
-      <Field label="Job titles" hint="Add a few. JScout also finds jobs with similar titles.">
+      <Field label="Job titles" hint="Add a few. JScout also finds jobs with similar titles." error={errors.targetTitles}>
         <TagInput
           value={value.targetTitles}
           onChange={(next) => set('targetTitles', next)}
           loadSuggestions={suggest.titles}
-          max={60}
           placeholder="e.g. Product designer"
         />
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-[1fr_12rem]">
-        <Field label="Locations" hint="Cities, regions or countries you would work in.">
+        <Field label="Locations" hint="Cities, regions or countries you would work in." error={errors.locations}>
           <TagInput
             value={value.locations}
             onChange={(next) => set('locations', next)}
             loadSuggestions={suggest.locations}
-            max={50}
             placeholder="e.g. Austin, TX"
           />
         </Field>
@@ -132,26 +132,24 @@ export function PreferencesFields<V extends PreferencesValue>({ value, onChange,
 
       {extended ? (
         <>
-          <Field label="Skills" hint="Jobs that ask for these rank higher.">
+          <Field label="Skills" hint="Jobs that ask for these rank higher." error={errors.skills}>
             <TagInput
               value={value.skills ?? []}
               onChange={(next) => set('skills', next)}
               loadSuggestions={suggest.skills}
-              max={300}
               placeholder="e.g. Figma"
             />
           </Field>
-          <Field label="Companies to leave out" optional hint="Their jobs never show up in your results.">
+          <Field label="Companies to leave out" optional hint="Their jobs never show up in your results." error={errors.excludeCompanies}>
             <TagInput
               value={value.excludeCompanies ?? []}
               onChange={(next) => set('excludeCompanies', next)}
               loadSuggestions={suggest.companies}
-              max={200}
               placeholder="Company name"
             />
           </Field>
-          <Field label="Words to leave out" optional hint="Hide jobs whose title or description has any of these.">
-            <TagInput value={value.excludeTerms ?? []} onChange={(next) => set('excludeTerms', next)} max={100} placeholder="e.g. unpaid" />
+          <Field label="Words to leave out" optional hint="Hide jobs whose title or description has any of these." error={errors.excludeTerms}>
+            <TagInput value={value.excludeTerms ?? []} onChange={(next) => set('excludeTerms', next)} placeholder="e.g. unpaid" />
           </Field>
         </>
       ) : null}

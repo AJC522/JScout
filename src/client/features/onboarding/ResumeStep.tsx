@@ -5,6 +5,7 @@ import type { Profile, ResumeAnalysis } from '../../../shared/types';
 import { errorMessage } from '../../api/client';
 import { Button, ErrorState, SkeletonText, useToast } from '../../components/ui';
 import { useResumeAnalysis, useSaveProfile } from '../profile/profile-api';
+import { isEmptyPatch } from '../profile/profile-model';
 import { ResumeSuggestions } from '../profile/ResumeSuggestions';
 import { ResumeUpload } from '../profile/ResumeUpload';
 import { StepLayout } from './StepLayout';
@@ -25,18 +26,23 @@ export function ResumeStep({ profile, onBack, onNext }: ResumeStepProps) {
   const toast = useToast();
   const analysis = fresh ?? stored.data;
 
-  const apply = (patch: ProfilePatch) =>
+  const apply = (patch: ProfilePatch) => {
+    if (isEmptyPatch(patch)) {
+      onNext();
+      return;
+    }
     save.mutate(patch, {
       onSuccess: onNext,
       onError: (err) => toast.error('Could not save these details', { description: errorMessage(err) }),
     });
+  };
 
   if (phase !== 'review') {
     return (
       <StepLayout
         key="upload"
         title="Add your résumé"
-        description="JScout reads it to suggest your skills and the titles to search for. You confirm everything before it is saved."
+        description="JScout reads it to suggest your skills and the titles to search for. You choose what goes into your profile."
         onBack={onBack}
         onSkip={onNext}
       >
@@ -83,6 +89,7 @@ export function ResumeStep({ profile, onBack, onNext }: ResumeStepProps) {
           profile={profile}
           onApply={apply}
           applying={save.isPending}
+          emptyLabel="Next"
           onPasteInstead={() => {
             setFresh(null);
             setPhase('paste');

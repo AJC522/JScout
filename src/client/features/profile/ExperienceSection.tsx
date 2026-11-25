@@ -6,6 +6,9 @@ import { EntryList, type EntryFormProps } from './EntryList';
 import { newId } from './profile-model';
 import { DATE_ERROR, isYearMonth } from './validation';
 
+/** The most highlights the server keeps per job. */
+const MAX_HIGHLIGHTS = 30;
+
 const emptyJob = (): ExperienceEntry => ({
   id: newId(),
   title: '',
@@ -45,6 +48,8 @@ function dateErrors(start: string, end: string, current: boolean) {
 function validateJob(job: ExperienceEntry): Partial<Record<keyof ExperienceEntry, string>> {
   const errors: Partial<Record<keyof ExperienceEntry, string>> = dateErrors(job.start, job.end, job.current);
   if (!job.title.trim() && !job.company.trim()) errors.title = 'Add a job title or a company';
+  const highlights = job.highlights.filter((h) => h.trim()).length;
+  if (highlights > MAX_HIGHLIGHTS) errors.highlights = `Keep it to ${MAX_HIGHLIGHTS} highlights or fewer`;
   return errors;
 }
 
@@ -74,7 +79,7 @@ export function ExperienceSection({ profile }: { profile: Profile }) {
       }}
       renderSummary={(job) => (
         <>
-          <p className="truncate text-sm font-medium text-fg">{[job.title, job.company].filter(Boolean).join(' · ')}</p>
+          <p className="text-sm font-medium break-words text-fg">{[job.title, job.company].filter(Boolean).join(' · ')}</p>
           <p className="text-sm text-muted">
             {[dates(job.start, job.end, job.current), job.location].filter(Boolean).join(' · ') || 'No dates'}
           </p>
@@ -106,7 +111,7 @@ export function EducationSection({ profile }: { profile: Profile }) {
       empty={{ icon: <GraduationCap />, title: 'No education added yet', description: 'Add the schools and qualifications employers usually ask about.' }}
       renderSummary={(school) => (
         <>
-          <p className="truncate text-sm font-medium text-fg">{[school.degree, school.field].filter(Boolean).join(', ') || school.school}</p>
+          <p className="text-sm font-medium break-words text-fg">{[school.degree, school.field].filter(Boolean).join(', ') || school.school}</p>
           <p className="text-sm text-muted">
             {[school.degree || school.field ? school.school : '', dates(school.start, school.end)].filter(Boolean).join(' · ') || 'No dates'}
           </p>
@@ -151,7 +156,13 @@ function JobForm({ value, onChange, errors }: EntryFormProps<ExperienceEntry>) {
       <Field label="What you did" optional className="sm:col-span-2">
         <Textarea value={value.summary} onChange={(e) => set('summary', e.target.value)} autoGrow rows={3} maxRows={10} />
       </Field>
-      <Field label="Highlights" optional className="sm:col-span-2" hint="One per line: results you are proud of, with numbers where you can.">
+      <Field
+        label="Highlights"
+        optional
+        className="sm:col-span-2"
+        hint="One per line: results you are proud of, with numbers where you can."
+        error={errors.highlights}
+      >
         <Textarea
           value={value.highlights.join('\n')}
           onChange={(e) => set('highlights', e.target.value.split('\n'))}

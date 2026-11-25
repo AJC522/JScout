@@ -4,7 +4,9 @@ import { errorMessage } from '../../api/client';
 import { useToast } from '../../components/ui';
 import { PreferencesFields, type PreferencesValue } from '../profile/PreferencesFields';
 import { useSaveProfile } from '../profile/profile-api';
+import { preferencesErrors } from '../profile/preferences-model';
 import { sameJson } from '../profile/profile-model';
+import { hasErrors } from '../profile/validation';
 import { StepLayout } from './StepLayout';
 
 interface PreferencesStepProps {
@@ -25,15 +27,20 @@ export function PreferencesStep({ profile, onBack, onNext }: PreferencesStepProp
   const save = useSaveProfile();
   const toast = useToast();
 
-  const next = () => {
+  /** Moving either way keeps what was entered; only "Skip this step" leaves it unsaved. */
+  const saveThen = (move: () => void) => {
     if (sameJson(value, initial)) {
-      onNext();
+      move();
+      return;
+    }
+    if (hasErrors(preferencesErrors(value))) {
+      toast.error('Check the highlighted fields');
       return;
     }
     save.mutate(
       { preferences: value },
       {
-        onSuccess: onNext,
+        onSuccess: move,
         onError: (err) => toast.error('Could not save your preferences', { description: errorMessage(err) }),
       },
     );
@@ -43,9 +50,9 @@ export function PreferencesStep({ profile, onBack, onNext }: PreferencesStepProp
     <StepLayout
       title="What are you looking for?"
       description="Fill in what you know. Everything is optional and you can change it any time on your profile."
-      onBack={onBack}
+      onBack={() => saveThen(onBack)}
       onSkip={onNext}
-      primary={{ label: 'Next', onClick: next, loading: save.isPending }}
+      primary={{ label: 'Next', onClick: () => saveThen(onNext), loading: save.isPending }}
     >
       <PreferencesFields value={value} onChange={setValue} />
     </StepLayout>

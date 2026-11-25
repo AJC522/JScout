@@ -22,7 +22,7 @@ export function AppearanceSection() {
   return (
     <SectionCard id="appearance" title="Appearance" description="System follows your computer’s light or dark setting.">
       <Field label="Theme" hideLabel>
-        <SegmentedControl<ThemePreference> aria-label="Theme" options={THEME_OPTIONS} value={theme} onValueChange={setTheme} />
+        <SegmentedControl<ThemePreference> aria-label="Theme" options={THEME_OPTIONS} value={theme} onValueChange={setTheme} className="self-start" />
       </Field>
     </SectionCard>
   );

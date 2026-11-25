@@ -29,6 +29,11 @@ interface ResumeSuggestionsProps {
   onPasteInstead?: () => void;
   /** Extra buttons next to the apply button (e.g. "Skip"). */
   secondaryAction?: ReactNode;
+  /**
+   * When set, the apply button stays enabled with this label while there is nothing new to add,
+   * and calls `onApply` with an empty patch (onboarding uses it to simply move on).
+   */
+  emptyLabel?: string;
 }
 
 const PREVIEW_ENTRIES = 4;
@@ -41,10 +46,12 @@ export function ResumeSuggestions({
   applyLabel = 'Use these',
   onPasteInstead,
   secondaryAction,
+  emptyLabel,
 }: ResumeSuggestionsProps) {
   const [selection, setSelection] = useState<ResumeSelection>(() => initialSelection(analysis, profile));
   const update = (changes: Partial<ResumeSelection>) => setSelection((current) => ({ ...current, ...changes }));
   const patch = buildResumePatch(selection, analysis, profile);
+  const nothingNew = isEmptyPatch(patch);
   const jobs = newExperience(profile.experience, analysis.experience);
   const schools = newEducation(profile.education, analysis.education);
   const contactFields = CONTACT_FIELDS.filter((field) => analysis.contact[field]);
@@ -153,11 +160,11 @@ export function ResumeSuggestions({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="primary" loading={applying} disabled={isEmptyPatch(patch)} onClick={() => onApply(patch)}>
-          {applyLabel}
+        <Button variant="primary" loading={applying} disabled={nothingNew && !emptyLabel} onClick={() => onApply(patch)}>
+          {nothingNew && emptyLabel ? emptyLabel : applyLabel}
         </Button>
         {secondaryAction}
-        {isEmptyPatch(patch) && !foundNothing ? <span className="text-sm text-muted">Your profile already has all of this.</span> : null}
+        {nothingNew && !foundNothing ? <span className="text-sm text-muted">Your profile already has all of this.</span> : null}
       </div>
     </div>
   );
