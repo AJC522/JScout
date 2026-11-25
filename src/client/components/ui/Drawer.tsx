@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/cn';
@@ -37,13 +37,21 @@ export interface DrawerProps {
  */
 export function Drawer({ open, onOpenChange, trigger, title, description, headerActions, footer, size = 'md', side = 'right', hideTitle = false, children, bodyClassName, className }: DrawerProps) {
   const restoreFocus = useRestoreFocus(open);
+  const contentRef = useRef<HTMLDivElement>(null);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       {trigger ? <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger> : null}
       <DialogPrimitive.Portal>
         <ModalOverlay />
         <DialogPrimitive.Content
+          ref={contentRef}
           data-modal-layer=""
+          // Start on the panel itself: screen readers begin at the title, and the first header button
+          // (often an icon with a tooltip) does not pop its tooltip open.
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            contentRef.current?.focus();
+          }}
           onCloseAutoFocus={trigger ? undefined : restoreFocus}
           {...(description ? {} : { 'aria-describedby': undefined })}
           className={cn(

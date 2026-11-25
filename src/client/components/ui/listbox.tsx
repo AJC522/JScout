@@ -100,9 +100,11 @@ export interface OptionListProps<T> {
   /** Shown when nothing matched; omit to hide the list instead. */
   emptyMessage?: ReactNode;
   label?: string;
+  /** Id of a visible label (the surrounding Field's), used when `label` is not given. */
+  labelledBy?: string;
 }
 
-export function OptionList<T>({ listId, open, onOpenChange, anchor, options, activeIndex, onActiveIndexChange, onSelect, getKey, renderOption, loading, emptyMessage, label }: OptionListProps<T>) {
+export function OptionList<T>({ listId, open, onOpenChange, anchor, options, activeIndex, onActiveIndexChange, onSelect, getKey, renderOption, loading, emptyMessage, label, labelledBy }: OptionListProps<T>) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const showEmpty = !loading && options.length === 0 && emptyMessage !== undefined;
   const visible = open && (options.length > 0 || loading || showEmpty);
@@ -139,6 +141,7 @@ export function OptionList<T>({ listId, open, onOpenChange, anchor, options, act
             id={listId}
             role="listbox"
             aria-label={label}
+            aria-labelledby={label ? undefined : labelledBy}
             // mousedown anywhere in the list (an option, the scrollbar) would blur the text box and close it.
             onMouseDown={(event) => event.preventDefault()}
             className="max-h-[min(20rem,var(--radix-popover-content-available-height))] overflow-y-auto p-1"

@@ -80,7 +80,7 @@ export function Field({ label, children, hint, error, required = false, optional
 
   return (
     <FieldContext.Provider value={value}>
-      <div className={cn('flex min-w-0 flex-col gap-1.5', disabled && 'opacity-70', className)}>
+      <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
         <div className={cn('flex min-h-5 items-end justify-between gap-3', hideLabel && 'sr-only')}>
           <label id={labelId} htmlFor={controlId} className="text-sm font-medium text-fg">
             {label}

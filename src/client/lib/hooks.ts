@@ -86,9 +86,9 @@ export function useLocalStorage<T>(
     () => readStorage(key),
     () => null,
   );
-  // Parsed from the raw string so the value keeps its identity until the stored text changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `initial` is a ref
-  const value = useMemo(() => parseStored(raw, initial.current), [raw]);
+  // Parsed from the raw string so the value keeps its identity until the stored text changes
+  // (`initial` is a ref, deliberately not a dependency).
+  const value = useMemo(() => parseStored(raw, initial.current), [raw, initial]);
 
   const setValue = useCallback(
     (next: T | ((previous: T) => T)) => {

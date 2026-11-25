@@ -35,7 +35,6 @@ export function Select({ size = 'md', options, placeholder, invalid, wrapperClas
         className={cn(
           controlFrame({ invalid: field.invalid, disabled: field.disabled }),
           'h-full w-full min-w-0 appearance-none truncate pr-8 outline-none focus-visible:outline-none',
-          'focus:border-focus focus:ring-1 focus:ring-focus',
           size === 'sm' ? 'pl-2 text-sm' : 'pl-2.5 text-base',
           className,
         )}

@@ -18,7 +18,9 @@ export default defineConfig({
     port: Number(process.env.VITE_PORT ?? 5173),
     strictPort: true,
     proxy: {
-      '/api': { target: apiTarget, changeOrigin: false },
+      // Vite serves src/client/api/*.ts at /api/*.ts, so forward only real API
+      // calls: anything under /api/ that is not a source module request.
+      '^/api/(?![^?]*\\.(?:ts|tsx|js|mjs|css)(?:\\?.*)?$)': { target: apiTarget, changeOrigin: false },
     },
   },
 });

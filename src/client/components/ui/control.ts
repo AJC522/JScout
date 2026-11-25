@@ -24,8 +24,8 @@ export function controlFrame({ invalid = false, disabled = false, className }: {
     'rounded-control border bg-surface text-fg transition-[border-color,box-shadow]',
     invalid
       ? 'border-danger focus-within:ring-1 focus-within:ring-danger'
-      : 'border-control/70 hover:border-control focus-within:border-focus focus-within:ring-1 focus-within:ring-focus focus-within:hover:border-focus',
-    disabled && 'cursor-not-allowed bg-surface-2 opacity-60 hover:border-control/70',
+      : 'border-control hover:border-muted focus-within:border-focus focus-within:ring-1 focus-within:ring-focus focus-within:hover:border-focus',
+    disabled && 'cursor-not-allowed bg-surface-2 opacity-60 hover:border-control',
     className,
   );
 }

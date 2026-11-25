@@ -27,7 +27,8 @@ const SIZES: Record<ButtonSize, string> = {
 
 /** Class names for a button look on something that is not a Button (e.g. a label wrapping a file input). */
 export function buttonClasses({ variant = 'secondary', size = 'md', className }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}): string {
-  return cn(BASE, SIZES[size], VARIANTS[variant], variant === 'link' && 'h-auto px-0', className);
+  // VARIANTS come after SIZES so the link variant's h-auto/px-0 override the size box.
+  return cn(BASE, SIZES[size], VARIANTS[variant], className);
 }
 
 export interface ButtonProps extends ComponentProps<'button'> {

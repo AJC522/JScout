@@ -11,7 +11,7 @@ export interface InputProps extends Omit<ComponentProps<'input'>, 'size'> {
   leadingIcon?: ReactNode;
   /** Anything at the end of the box: a unit, a Kbd hint, a small button. */
   trailing?: ReactNode;
-  /** Shows a clear button while the field has a value; called when it is pressed (and on Escape). */
+  /** Shows a clear button while the (controlled) value is non-empty; called when it is pressed and on Escape. */
   onClear?: () => void;
   invalid?: boolean;
   /** Classes for the outer box; `className` goes to the <input>. */

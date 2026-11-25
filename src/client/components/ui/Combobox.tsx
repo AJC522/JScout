@@ -95,7 +95,7 @@ export function Combobox<T = string>({
   const keyOf = getOptionKey ?? getOptionLabel;
   // A different set of options invalidates the highlighted row. Compared by content, not identity,
   // because callers often pass inline label functions that produce a new array every render.
-  const signature = options.map(keyOf).join('\u0000');
+  const signature = options.map((option) => keyOf(option)).join('\u0000');
   const [seenSignature, setSeenSignature] = useState(signature);
   if (seenSignature !== signature) {
     setSeenSignature(signature);
@@ -236,6 +236,7 @@ export function Combobox<T = string>({
       onSelect={select}
       getKey={keyOf}
       label={props['aria-label']}
+      labelledBy={field.labelId}
       loading={loading}
       emptyMessage={emptyShown}
       renderOption={(option, isActive) =>
