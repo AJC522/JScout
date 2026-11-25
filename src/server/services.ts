@@ -158,6 +158,8 @@ export interface JobStore {
   /** True while hidden feeds still have postings to delete (search must then filter them out). */
   removingFeeds(): boolean;
   /** Resolves once the background deletion of hidden feeds has finished. */
+  /** Resolves once postings indexed before clearance detection have been classified (see migration 6). */
+  backfillPending?(): Promise<void>;
   purgePending(): Promise<void>;
   /**
    * Last step of a complete feed written in batches with upsertPostings: close the feed's open postings

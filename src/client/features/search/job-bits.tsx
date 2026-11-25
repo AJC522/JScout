@@ -1,8 +1,20 @@
 /** Small pieces of job presentation shared by the result cards and the detail view. */
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { STATUS_LABELS } from '../../../shared/constants';
-import type { ApplicationStatus, LocationFit, MatchExplanation, ProfileFit, RemoteMode } from '../../../shared/types';
+import { Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { type ClearanceStanding, clearanceFit } from '../../../shared/clearance';
+import { CLEARANCE_DESCRIPTIONS, CLEARANCE_LABELS, CLEARANCE_LEVEL_LABELS, STATUS_LABELS } from '../../../shared/constants';
+import type {
+  ApplicationStatus,
+  HeldClearance,
+  JobClearance,
+  LocationFit,
+  MatchExplanation,
+  PolygraphKind,
+  ProfileFit,
+  RemoteMode,
+} from '../../../shared/types';
+import { useProfile } from '../profile/profile-api';
 import { Badge, ScoreRing, Tooltip, type Tone } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatSalary } from '../../lib/format';
@@ -41,6 +53,72 @@ export function RemoteBadge({ mode, className }: { mode: RemoteMode; className?:
       </Badge>
     );
   return null;
+}
+
+/** The clearance the user holds, from their profile (null = none or not loaded yet). */
+export function useHeldClearance(): HeldClearance | null {
+  return useProfile().data?.work.clearance ?? null;
+}
+
+const POLY_SHORT: Record<PolygraphKind, string> = { polygraph: 'poly', ci: 'CI poly', 'full-scope': 'FS poly' };
+
+/** "Must hold TS/SCI + FS poly", "Sponsors Secret", "Clearance required", "No clearance needed". */
+export function clearanceBadgeLabel(c: JobClearance): string {
+  if (c.requirement === 'none') return 'No clearance needed';
+  const level = c.level ? CLEARANCE_LEVEL_LABELS[c.level] : undefined;
+  const poly = c.polygraph ? ` + ${POLY_SHORT[c.polygraph]}` : '';
+  switch (c.requirement) {
+    case 'active':
+      return `Must hold ${level ?? 'clearance'}${poly}`;
+    case 'sponsored':
+      return `Sponsors ${level ?? 'clearance'}${poly}`;
+    case 'preferred':
+      return `${level ?? 'Clearance'} preferred`;
+    default:
+      return `${level ?? 'Clearance'} required${poly}`;
+  }
+}
+
+const STANDING_TONE: Record<ClearanceStanding, Tone> = { meets: 'success', short: 'danger', sponsored: 'info', ask: 'warning', clear: 'neutral' };
+
+function StandingIcon({ standing }: { standing: ClearanceStanding }) {
+  if (standing === 'meets') return <ShieldCheck aria-hidden="true" />;
+  if (standing === 'short' || standing === 'ask') return <ShieldAlert aria-hidden="true" />;
+  return <Shield aria-hidden="true" />;
+}
+
+/**
+ * What the posting asks for in the way of a security clearance, coloured by whether the user's own
+ * clearance answers it: green (you hold it), red (you'd have to bring one), amber (unclear: ask),
+ * blue (they sponsor it), grey (not needed or only preferred).
+ */
+export function ClearanceBadge({ clearance, held, className }: { clearance: JobClearance | undefined; held: HeldClearance | null; className?: string }) {
+  if (!clearance) return null;
+  const fit = clearanceFit(clearance, held);
+  const label = clearanceBadgeLabel(clearance);
+  return (
+    <Tooltip
+      content={
+        <div className="max-w-72 space-y-1 py-0.5 font-normal">
+          <p className="font-medium">{CLEARANCE_LABELS[clearance.requirement]}</p>
+          <p>{CLEARANCE_DESCRIPTIONS[clearance.requirement]}</p>
+          {held || fit.standing === 'meets' ? <p className="opacity-90">{fit.note}</p> : null}
+          {clearance.evidence ? <p className="italic opacity-80">“{clearance.evidence}”</p> : null}
+        </div>
+      }
+    >
+      <Badge
+        tone={STANDING_TONE[fit.standing]}
+        size="sm"
+        tabIndex={0}
+        aria-label={`${label}. ${fit.note}`}
+        icon={<StandingIcon standing={fit.standing} />}
+        className={cn('cursor-default focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none', className)}
+      >
+        {label}
+      </Badge>
+    </Tooltip>
+  );
 }
 
 /** Positive reasons first, strongest first. */

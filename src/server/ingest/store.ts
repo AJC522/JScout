@@ -2,8 +2,9 @@ import type { JobPosting, JobSourceLink, LivenessResult, Place } from '../../sha
 import { parseJson } from '../db';
 import { htmlToText, sanitizeHtml } from '../lib/html';
 import type { AppContext, JobStore } from '../services';
-import { makeSnippet, postingSkills } from './normalize';
+import { makeSnippet, postingClearance, postingSkills } from './normalize';
 import {
+  clearanceValues,
   CONTENT_COLUMNS,
   contentValues,
   ftsDoc,
@@ -54,6 +55,15 @@ const emptyStats = (): UpsertStats => ({ added: 0, updated: 0, unchanged: 0, clo
 
 /** Postings the background removal deletes per transaction: each stays in the tens of milliseconds. */
 const PURGE_BATCH = 250;
+/** Postings the clearance backfill reads per transaction. */
+const BACKFILL_BATCH = 200;
+/**
+ * Words detectClearance needs before it reads a posting (its own cheap gate), as SQL: postings
+ * without any of them stay 'none' and are never loaded. LIKE is case-insensitive for ASCII.
+ */
+const CLEARANCE_HINT = ['clearance', 'secret', 'public trust', 'public-trust', 'ts/sci', 'ts-sci', 'ts / sci', 'cleared', 'classified', 'security investigation', 'sf86', 'sf-86', 'sf 86', 'eqip', 'e-qip']
+  .map((w) => `title LIKE '%${w}%' OR tags LIKE '%${w}%' OR description_html LIKE '%${w}%'`)
+  .join(' OR ');
 const NOT_REMOVED = `feed_key NOT IN (SELECT feed_key FROM removed_feeds)`;
 
 /**
@@ -100,6 +110,46 @@ export function createJobStore(ctx: AppContext): JobStore {
     return purge;
   }
   if (removing) void startPurge();
+
+  let backfill: Promise<void> | undefined;
+  /**
+   * Classify the clearance requirement of postings indexed before clearances were (migration 6), a
+   * batch per event-loop turn. Progress is kept in backfills, so a restart resumes where it stopped.
+   */
+  function startBackfill(): Promise<void> {
+    backfill ??= (async () => {
+      let changed = 0;
+      try {
+        for (;;) {
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          const after = db.scalar<number>(`SELECT after_rid FROM backfills WHERE name = 'clearance'`);
+          if (after === undefined) break;
+          const rows = db.all<{ rid: number; source: string; title: string; tags: string; description_html: string }>(
+            `SELECT rid, source, title, tags, description_html FROM jobs WHERE rid > ? AND (${CLEARANCE_HINT}) ORDER BY rid LIMIT ${BACKFILL_BATCH}`,
+            after,
+          );
+          db.tx(() => {
+            for (const r of rows) {
+              const clearance = postingClearance(r.source, r.title, parseJson<string[]>(r.tags, []), htmlToText(r.description_html));
+              if (!clearance) continue;
+              db.run(`UPDATE jobs SET clearance = ?, clearance_detail = ? WHERE rid = ?`, ...clearanceValues(clearance), r.rid);
+              changed++;
+            }
+            if (rows.length < BACKFILL_BATCH) db.run(`DELETE FROM backfills WHERE name = 'clearance'`);
+            else db.run(`UPDATE backfills SET after_rid = ? WHERE name = 'clearance'`, rows[rows.length - 1]!.rid);
+          });
+        }
+        if (changed > 0) ctx.events?.publish({ type: 'index-changed', index: ctx.services.sync.summary() });
+      } catch (err) {
+        // Typically the database closing at shutdown; the next start resumes from backfills.
+        ctx.log?.debug('jobs: clearance backfill stopped', { err });
+      } finally {
+        backfill = undefined;
+      }
+    })();
+    return backfill;
+  }
+  if (db.scalar(`SELECT 1 FROM backfills LIMIT 1`) !== undefined) void startBackfill();
 
   function writeFts(rid: number, doc: FtsDoc): void {
     db.run(INSERT_FTS, rid, doc.title, doc.company, doc.location, doc.tags, doc.body);
@@ -155,6 +205,7 @@ export function createJobStore(ctx: AppContext): JobStore {
       descriptionText,
       snippet: makeSnippet(descriptionText),
       skills: postingSkills(p.title, p.tags, descriptionText),
+      clearance: postingClearance(p.source, p.title, p.tags, descriptionText),
     };
   }
 
@@ -282,6 +333,7 @@ export function createJobStore(ctx: AppContext): JobStore {
     setDescription(id, descriptionHtml, descriptionText) {
       const row = db.get<{
         rid: number;
+        source: string;
         title: string;
         company: string;
         location_text: string;
@@ -291,7 +343,7 @@ export function createJobStore(ctx: AppContext): JobStore {
         tags: string;
         department: string | null;
       }>(
-        `SELECT rid, title, company, location_text, remote, remote_scope, places, tags, department FROM jobs WHERE id = ?`,
+        `SELECT rid, source, title, company, location_text, remote, remote_scope, places, tags, department FROM jobs WHERE id = ?`,
         id,
       );
       // The posting can be purged or removed while its description is being fetched; nothing to store then.
@@ -301,6 +353,7 @@ export function createJobStore(ctx: AppContext): JobStore {
       const text = descriptionText.trim() ? descriptionText : htmlToText(html);
       const tags = parseJson<string[]>(row.tags, []);
       const skills = postingSkills(row.title, tags, text);
+      const clearance = postingClearance(row.source, row.title, tags, text);
       const doc = ftsDoc(
         {
           title: row.title,
@@ -319,10 +372,11 @@ export function createJobStore(ctx: AppContext): JobStore {
       );
       db.tx(() => {
         db.run(
-          `UPDATE jobs SET description_html = ?, snippet = ?, skills = ? WHERE rid = ?`,
+          `UPDATE jobs SET description_html = ?, snippet = ?, skills = ?, clearance = ?, clearance_detail = ? WHERE rid = ?`,
           html,
           makeSnippet(text),
           JSON.stringify(skills),
+          ...clearanceValues(clearance),
           row.rid,
         );
         deleteFts(row.rid);
@@ -419,6 +473,7 @@ export function createJobStore(ctx: AppContext): JobStore {
     removingFeeds: () => removing,
 
     purgePending: () => purge ?? Promise.resolve(),
+    backfillPending: () => backfill ?? Promise.resolve(),
 
     closeUnseen(feed, seenExternalIds, opts) {
       // Without a grace cut-off every absent posting closes.

@@ -100,12 +100,25 @@ describe('fit analysis', () => {
     const me = profileOf({ ...softwareProfile, profile: { ...softwareProfile.profile, work: { ...softwareProfile.profile.work, workAuthorization: 'UK citizen' } } });
     const fit = analyzeFit(job, me);
     expect(fit.flags).toEqual([
-      'Requires a security clearance: “Must be a U.S. citizen with an active Top Secret security clearance.”',
+      'Security clearance: You must already hold an active Top Secret. “Must be a U.S. citizen with an active Top Secret security clearance.”',
       'Citizenship requirement: “Must be a U.S. citizen with an active Top Secret security clearance.”',
       'Asks for 10+ years of experience; your profile says 6.',
     ]);
     // A US citizen satisfies the citizenship requirement.
     expect(analyzeFit(job, profileOf(softwareProfile)).flags.some((f) => f.startsWith('Citizenship'))).toBe(false);
+    // Holding the clearance answers it; a lapsed one doesn't.
+    const holding = (status: 'active' | 'inactive') =>
+      profileOf({ ...softwareProfile, profile: { ...softwareProfile.profile, work: { ...softwareProfile.profile.work, clearance: { level: 'ts-sci', status } } } });
+    expect(analyzeFit(job, holding('active')).flags.some((f) => f.startsWith('Security clearance'))).toBe(false);
+    expect(analyzeFit(job, holding('inactive')).flags).toContain(
+      'Security clearance: They want an active Top Secret; yours is inactive. Ask whether it can be reinstated. “Must be a U.S. citizen with an active Top Secret security clearance.”',
+    );
+  });
+
+  it('does not flag a clearance the employer sponsors', () => {
+    const job = resolveJob(services, { jobId: 'job-sw' });
+    job.descriptionText = 'Must be able to obtain and maintain a Secret clearance.';
+    expect(analyzeFit(job, profileOf(softwareProfile)).flags.some((f) => f.startsWith('Security clearance'))).toBe(false);
   });
 
   it('is neutral rather than wrong when the profile is empty', () => {

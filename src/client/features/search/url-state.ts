@@ -3,8 +3,8 @@
  * all restore the same search. Keys are short, defaults are left out, and anything unknown or
  * malformed in a hand-edited URL is dropped rather than sent to the server.
  */
-import { EMPLOYMENT_TYPES, REMOTE_MODES, SEARCH_DEFAULTS, SENIORITY_ORDER } from '../../../shared/constants';
-import type { EmploymentType, RemoteMode, SearchQuery, SearchSort, Seniority } from '../../../shared/types';
+import { CLEARANCE_REQUIREMENTS, EMPLOYMENT_TYPES, REMOTE_MODES, SEARCH_DEFAULTS, SENIORITY_ORDER } from '../../../shared/constants';
+import type { ClearanceRequirement, EmploymentType, RemoteMode, SearchQuery, SearchSort, Seniority } from '../../../shared/types';
 
 /** Page-level parameters that live next to the query but are not part of it. */
 export const PAGE_PARAMS = { job: 'job', from: 'from', saved: 'saved' } as const;
@@ -50,6 +50,7 @@ const KEYS = {
   salaryCurrency: 'cur',
   employmentTypes: 'et',
   seniority: 'sen',
+  clearance: 'clr',
   postedWithinDays: 'd',
   sort: 'sort',
 } as const;
@@ -106,6 +107,9 @@ export function normalizeQuery(query: Partial<SearchQuery>): SearchQuery {
   if (employment.length) out.employmentTypes = employment;
   const seniority = enumList<Seniority>(query.seniority, SENIORITIES);
   if (seniority.length) out.seniority = seniority;
+  const clearance = enumList<ClearanceRequirement>(query.clearance, CLEARANCE_REQUIREMENTS);
+  // Every requirement ticked filters nothing.
+  if (clearance.length > 0 && clearance.length < CLEARANCE_REQUIREMENTS.length) out.clearance = clearance;
   const days = positive(query.postedWithinDays, MAX_DAYS);
   if (days) out.postedWithinDays = days;
 
@@ -138,6 +142,7 @@ export function queryToParams(query: Partial<SearchQuery>): URLSearchParams {
   if (q.salaryCurrency) params.set(KEYS.salaryCurrency, q.salaryCurrency);
   if (q.employmentTypes) params.set(KEYS.employmentTypes, q.employmentTypes.join(','));
   if (q.seniority) params.set(KEYS.seniority, q.seniority.join(','));
+  if (q.clearance) params.set(KEYS.clearance, q.clearance.join(','));
   if (q.postedWithinDays) params.set(KEYS.postedWithinDays, String(q.postedWithinDays));
   for (const field of Object.keys(TEXT_LIST_KEYS) as TextListField[]) {
     for (const value of q[field] ?? []) params.append(TEXT_LIST_KEYS[field], value);
@@ -179,6 +184,7 @@ export function paramsToQuery(params: URLSearchParams): SearchQuery {
     salaryCurrency: params.get(KEYS.salaryCurrency) ?? undefined,
     employmentTypes: csvParam(params, KEYS.employmentTypes) as EmploymentType[],
     seniority: csvParam(params, KEYS.seniority) as Seniority[],
+    clearance: csvParam(params, KEYS.clearance) as ClearanceRequirement[],
     postedWithinDays: numberParam(params, KEYS.postedWithinDays),
     sort: (params.get(KEYS.sort) ?? undefined) as SearchSort | undefined,
   };
@@ -219,6 +225,7 @@ export function countActiveFilters(query: SearchQuery): number {
     query.salaryMin,
     query.employmentTypes?.length,
     query.seniority?.length,
+    query.clearance?.length,
     query.sources?.length,
     query.companies?.length,
     query.excludeCompanies?.length,

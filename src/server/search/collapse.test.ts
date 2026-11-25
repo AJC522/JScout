@@ -7,7 +7,7 @@ const NOW = new Date('2026-11-24T12:00:00.000Z');
 const env = { now: NOW, maxPostingAgeDays: 0, defaultCurrency: 'USD' };
 let rid = 0;
 const row = (o: Partial<CandidateRow> & { clusterKey: string }): CandidateRow => ({
-  rid: ++rid, remote: 'onsite', employmentType: 'full-time', seniority: 'mid', source: 'greenhouse', companyKey: 'acme',
+  rid: ++rid, remote: 'onsite', employmentType: 'full-time', seniority: 'mid', clearance: 'none', source: 'greenhouse', companyKey: 'acme',
   ts: '2026-11-23T00:00:00.000Z', closed: false, hasDescription: true, rank: null, ...o,
 });
 const labels = { companyNames: (keys: string[]) => new Map(keys.map((k) => [k, k.toUpperCase()])) };
@@ -67,6 +67,26 @@ describe('collapse', () => {
     // Clusters not shown are counted under their other copies.
     expect(facets.source.find((f) => f.value === 'greenhouse')?.count).toBe(2);
     expect(sum(facets.source)).toBe(3);
+  });
+
+  it('filters and counts by clearance requirement', () => {
+    const cleared = [
+      row({ clusterKey: 'x', clearance: 'active' }),
+      row({ clusterKey: 'y', clearance: 'sponsored' }),
+      row({ clusterKey: 'z' }),
+    ];
+    const all = collapse(cleared, buildPlan({ q: '' }, env), labels);
+    expect(all.facets.clearance).toEqual([
+      { value: 'none', label: 'No clearance needed', count: 1 },
+      { value: 'sponsored', label: 'Clearance sponsored', count: 1 },
+      { value: 'active', label: 'Must already hold a clearance', count: 1 },
+    ]);
+    // "Jobs I can get without a clearance of my own."
+    const plan = buildPlan({ q: '', clearance: ['none', 'preferred', 'sponsored'] }, env);
+    const { reps, facets } = collapse(cleared, plan, labels);
+    expect(reps.map((r) => r.clusterKey).sort()).toEqual(['y', 'z']);
+    expect(facets.clearance.map((f) => [f.value, f.count])).toEqual([['none', 1], ['preferred', 0], ['sponsored', 1], ['active', 1]]);
+    expect(plan.dims.clearance?.cond.sql).toBe('j.clearance IN (SELECT value FROM json_each(?))');
   });
 
   it('lists selected values even when nothing matches them', () => {

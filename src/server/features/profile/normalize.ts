@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { EMPLOYMENT_TYPES, REMOTE_MODES, SENIORITY_ORDER, emptyProfile } from '../../../shared/constants';
+import { CLEARANCE_LEVELS, EMPLOYMENT_TYPES, REMOTE_MODES, SENIORITY_ORDER, emptyProfile } from '../../../shared/constants';
 import type {
+  ClearanceLevel,
   EducationEntry,
   EmploymentType,
   ExperienceEntry,
+  HeldClearance,
   PersonalInfo,
+  PolygraphKind,
   Profile,
   RemoteMode,
   ResumeInfo,
@@ -189,6 +192,19 @@ function normalizePersonal(p: PersonalInfo, mode: NormalizeOptions['mode']): Per
   };
 }
 
+const CLEARANCE_LEVEL_SET: ReadonlySet<string> = new Set<ClearanceLevel>(CLEARANCE_LEVELS);
+const POLYGRAPH_SET: ReadonlySet<string> = new Set<PolygraphKind>(['ci', 'full-scope', 'polygraph']);
+
+/** A held clearance, or null for anything that is not one (profiles saved before clearances had none). */
+function normalizeHeldClearance(v: unknown): HeldClearance | null {
+  if (!v || typeof v !== 'object') return null;
+  const c = v as Record<string, unknown>;
+  if (typeof c.level !== 'string' || !CLEARANCE_LEVEL_SET.has(c.level)) return null;
+  const held: HeldClearance = { level: c.level as ClearanceLevel, status: c.status === 'inactive' ? 'inactive' : 'active' };
+  if (typeof c.polygraph === 'string' && POLYGRAPH_SET.has(c.polygraph)) held.polygraph = c.polygraph as PolygraphKind;
+  return held;
+}
+
 function normalizeWork(w: WorkDetails): WorkDetails {
   const years = finiteOrNull(w.yearsExperience, 0, 70);
   return {
@@ -197,6 +213,7 @@ function normalizeWork(w: WorkDetails): WorkDetails {
     yearsExperience: years === null ? null : Math.round(years * 10) / 10,
     workAuthorization: str(w.workAuthorization, 200),
     requiresSponsorship: nullableBool(w.requiresSponsorship),
+    clearance: normalizeHeldClearance(w.clearance),
     willingToRelocate: nullableBool(w.willingToRelocate),
     noticePeriod: str(w.noticePeriod, 100),
     earliestStart: str(w.earliestStart, 100),

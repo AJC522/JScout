@@ -20,12 +20,14 @@ import {
   Maximize2,
   MoreHorizontal,
   SearchX,
+  Shield,
   TrendingUp,
   TriangleAlert,
   X,
 } from 'lucide-react';
-import { EMPLOYMENT_LABELS, SENIORITY_LABELS } from '../../../shared/constants';
-import type { JobDetail, LivenessResult, MatchExplanation, ProfileFit, SearchResultItem, TitleMatchKind } from '../../../shared/types';
+import { clearanceFit, describeClearance } from '../../../shared/clearance';
+import { CLEARANCE_DESCRIPTIONS, CLEARANCE_LABELS, EMPLOYMENT_LABELS, SENIORITY_LABELS } from '../../../shared/constants';
+import type { JobClearance, JobDetail, LivenessResult, MatchExplanation, ProfileFit, SearchResultItem, TitleMatchKind } from '../../../shared/types';
 import { ApiRequestError, errorMessage } from '../../api/client';
 import {
   Badge,
@@ -50,7 +52,7 @@ import {
 import { useCopyToClipboard } from '../../lib/hooks';
 import { formatDate, formatRelativeTime, formatSalary, initials } from '../../lib/format';
 import { ApplyKitPanel } from '../applykit';
-import { hasPercent, IconLink, payLabel, RemoteBadge, StatusBadge } from './job-bits';
+import { ClearanceBadge, hasPercent, IconLink, payLabel, RemoteBadge, StatusBadge, useHeldClearance } from './job-bits';
 import { useCheckLiveness, useJobDetail, useSources } from './queries';
 import type { JobActions } from './use-job-actions';
 
@@ -135,6 +137,7 @@ export function JobDetailView({ jobId, placeholder, actions, variant, onClose }:
           <TabsTrigger value="kit">Apply kit</TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="space-y-5 pt-4">
+          {data.job.clearance && data.job.clearance.requirement !== 'none' ? <ClearanceSection clearance={data.job.clearance} /> : null}
           {hasPercent(explained.fit) ? <YourMatch fit={explained.fit} /> : null}
           <WhyThisJob score={explained.score} match={explained.match} showSkills={!hasPercent(explained.fit)} />
           <Description data={data} loading={descriptionLoading} failed={detail.isError} onRetry={() => void detail.refetch()} />
@@ -171,6 +174,7 @@ function PanelHeading({ data, onClose }: { data: JobDetail; onClose?: () => void
 
 function Facts({ data }: { data: JobDetail }) {
   const { job } = data;
+  const held = useHeldClearance();
   const salary = formatSalary(job.salary);
   const annual = job.salary?.period && job.salary.period !== 'year' ? formatSalary(job.salary, { annualized: true }) : '';
   const posted = job.postedAt ?? job.firstSeenAt;
@@ -188,6 +192,14 @@ function Facts({ data }: { data: JobDetail }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
       <RemoteBadge mode={job.location.remote} className="h-5.5 px-2 text-xs" />
+      {job.clearance ? (
+        <ClearanceBadge clearance={job.clearance} held={held} className="h-5.5 px-2 text-xs [&_svg]:size-3.5" />
+      ) : (
+        <span className="inline-flex items-center gap-1.5 [&_svg]:size-4 [&_svg]:text-subtle" title="The posting doesn't mention a security clearance">
+          <Shield aria-hidden="true" />
+          No clearance mentioned
+        </span>
+      )}
       {facts.map((fact) => (
         <span key={fact.text} title={fact.title} className={`inline-flex items-center gap-1.5 [&_svg]:size-4 [&_svg]:text-subtle ${fact.strong ? 'font-medium text-fg' : ''}`}>
           {fact.icon}
@@ -340,6 +352,39 @@ const PART_TITLES: Record<ProfileFit['parts'][number]['key'], string> = {
   role: 'Background',
   level: 'Experience level',
 };
+
+const STANDING_STYLE = {
+  meets: 'border-success/40 bg-success-soft/40',
+  short: 'border-danger/40 bg-danger-soft/40',
+  ask: 'border-warning/40 bg-warning-soft/40',
+  sponsored: 'border-info/40 bg-info-soft/40',
+  clear: 'border-border bg-surface-2/50',
+} as const;
+
+/** What the posting asks for in the way of a security clearance, and whether the user's own answers it. */
+function ClearanceSection({ clearance }: { clearance: JobClearance }) {
+  const held = useHeldClearance();
+  const fit = clearanceFit(clearance, held);
+  return (
+    <section aria-labelledby="clearance-title" className={`rounded-card border p-4 ${STANDING_STYLE[fit.standing]}`}>
+      <h3 id="clearance-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
+        <Shield className="size-4 text-muted" aria-hidden="true" />
+        {CLEARANCE_LABELS[clearance.requirement]}
+        {clearance.level || clearance.polygraph ? <span className="font-normal text-muted">· {describeClearance(clearance)}</span> : null}
+      </h3>
+      <p className="mt-1.5 text-sm text-fg/90">{CLEARANCE_DESCRIPTIONS[clearance.requirement]}</p>
+      {held ? <p className="mt-1.5 text-sm font-medium text-fg">{fit.note}</p> : null}
+      {clearance.evidence ? (
+        <blockquote className="mt-2 border-l-2 border-strong pl-3 text-sm text-muted italic">“{clearance.evidence}”</blockquote>
+      ) : null}
+      {!held ? (
+        <p className="mt-2 text-xs text-muted">
+          Hold a clearance? <Link to="/profile#work" className="text-primary hover:underline">Add it to your profile</Link> and JScout will tell you which jobs it covers.
+        </p>
+      ) : null}
+    </section>
+  );
+}
 
 /** How well the user's résumé, skills, certifications and background fit the job, part by part. */
 function YourMatch({ fit }: { fit: ProfileFit & { percent: number } }) {

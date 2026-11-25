@@ -2,6 +2,7 @@
  * Prompts for AI drafting. The model writes as the candidate from the supplied facts only;
  * the posting is quoted as data so instructions inside it are not followed.
  */
+import { capitalize, describeHeld } from '../../../shared/clearance';
 import type { LetterLength, LetterTone, Profile, SavedAnswer } from '../../../shared/types';
 import { formatSalary } from '../../lib/salary';
 import { truncate } from '../../lib/text';
@@ -68,6 +69,7 @@ export function profileBlock(profile: Profile, skills: string[], resumeText: str
   if (opts.applicationFacts) {
     push('Work authorization', work.workAuthorization);
     if (work.requiresSponsorship !== null) push('Needs visa sponsorship', work.requiresSponsorship ? 'yes' : 'no');
+    if (work.clearance) push('Security clearance', capitalize(describeHeld(work.clearance)));
     if (work.willingToRelocate !== null) push('Willing to relocate', work.willingToRelocate ? 'yes' : 'no');
     push('Notice period', work.noticePeriod);
     push('Earliest start', work.earliestStart);

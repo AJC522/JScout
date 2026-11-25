@@ -104,6 +104,42 @@ export interface Salary {
 }
 
 // ---------------------------------------------------------------------------
+// Security clearances
+// ---------------------------------------------------------------------------
+
+/**
+ * What a posting asks for in the way of a security clearance:
+ *  - none:      no clearance needed (the posting doesn't ask for one, or says so)
+ *  - preferred: a clearance helps, but you can be hired without one
+ *  - sponsored: a clearance is required, and the employer gets it for you (you must be eligible)
+ *  - active:    you must already hold one when you apply or start
+ *  - required:  a clearance is required, but the posting doesn't say whether they sponsor it
+ */
+export type ClearanceRequirement = 'none' | 'preferred' | 'sponsored' | 'active' | 'required';
+
+/** U.S. clearance levels, plus the DOE's Q (about a Top Secret) and L (about a Secret). */
+export type ClearanceLevel = 'public-trust' | 'confidential' | 'secret' | 'top-secret' | 'ts-sci' | 'doe-l' | 'doe-q';
+
+export type PolygraphKind = 'ci' | 'full-scope' | 'polygraph';
+
+/** A posting's clearance requirement, as read from its title, tags and description. */
+export interface JobClearance {
+  requirement: ClearanceRequirement;
+  level?: ClearanceLevel;
+  polygraph?: PolygraphKind;
+  /** The sentence that decided it. */
+  evidence?: string;
+}
+
+/** A clearance the user holds. */
+export interface HeldClearance {
+  level: ClearanceLevel;
+  /** active: current and in scope. inactive: held before and lapsed (often reinstatable within 24 months). */
+  status: 'active' | 'inactive';
+  polygraph?: PolygraphKind;
+}
+
+// ---------------------------------------------------------------------------
 // Jobs
 // ---------------------------------------------------------------------------
 
@@ -140,6 +176,8 @@ export interface JobPosting {
   tags: string[];
   /** Canonical skills extracted from the title and description. */
   skills: string[];
+  /** Security clearance the posting asks for; absent when it doesn't mention one. */
+  clearance?: JobClearance;
   /** First ~300 characters of the description as plain text. */
   snippet: string;
   hasDescription: boolean;
@@ -298,6 +336,8 @@ export interface SearchQuery {
   includeNoSalary?: boolean;
   employmentTypes?: EmploymentType[];
   seniority?: Seniority[];
+  /** Security clearance requirements to keep ("none" = postings that don't ask for one). Empty/undefined = any. */
+  clearance?: ClearanceRequirement[];
   /** Only postings published/first seen within this many days. */
   postedWithinDays?: number;
   /** Restrict to these source ids. */
@@ -358,6 +398,7 @@ export type BroadenKind =
   | 'salary'
   | 'seniority'
   | 'employment-type'
+  | 'clearance'
   | 'work-mode'
   | 'drop-exclusions'
   | 'external';
@@ -386,6 +427,7 @@ export interface SearchFacets {
   remote: FacetCount[];
   employmentType: FacetCount[];
   seniority: FacetCount[];
+  clearance: FacetCount[];
   source: FacetCount[];
   company: FacetCount[];
   postedWithin: FacetCount[];
@@ -557,6 +599,8 @@ export interface WorkDetails {
   /** Free text, e.g. "US citizen", "H-1B", "EU work permit". */
   workAuthorization: string;
   requiresSponsorship: boolean | null;
+  /** Security clearance the user holds; null when none (or not said). */
+  clearance: HeldClearance | null;
   willingToRelocate: boolean | null;
   /** Free text, e.g. "2 weeks". */
   noticePeriod: string;
@@ -711,6 +755,8 @@ export interface JobSnapshot {
   employmentType: EmploymentType;
   postedAt?: IsoDate;
   skills: string[];
+  /** Security clearance the posting asked for, when it mentioned one. */
+  clearance?: JobClearance;
   /** Sanitised HTML. */
   descriptionHtml: string;
 }

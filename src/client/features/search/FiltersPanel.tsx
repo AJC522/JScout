@@ -1,7 +1,16 @@
 /** Filter controls. Every change produces a new query; counts come from the (disjunctive) facets. */
 import { useState, type ReactNode } from 'react';
-import { EMPLOYMENT_LABELS, EMPLOYMENT_TYPES, POSTED_WITHIN_OPTIONS, REMOTE_LABELS, REMOTE_MODES, SENIORITY_LABELS, SENIORITY_ORDER } from '../../../shared/constants';
-import type { FacetCount, SearchFacets, SearchQuery } from '../../../shared/types';
+import {
+  CLEARANCE_REQUIREMENTS,
+  EMPLOYMENT_LABELS,
+  EMPLOYMENT_TYPES,
+  POSTED_WITHIN_OPTIONS,
+  REMOTE_LABELS,
+  REMOTE_MODES,
+  SENIORITY_LABELS,
+  SENIORITY_ORDER,
+} from '../../../shared/constants';
+import type { ClearanceRequirement, FacetCount, SearchFacets, SearchQuery } from '../../../shared/types';
 import { api } from '../../api/client';
 import { Button, Checkbox, Input, Select, Switch, TagInput } from '../../components/ui';
 import { formatNumber } from '../../lib/format';
@@ -17,6 +26,19 @@ interface Option {
   value: string;
   label: string;
 }
+
+/** Shorter than CLEARANCE_LABELS, for the narrow filter column. */
+const CLEARANCE_FILTER_LABELS: Record<ClearanceRequirement, string> = {
+  none: 'Not needed',
+  preferred: 'Preferred, not required',
+  sponsored: 'Employer sponsors it',
+  required: 'Unclear if sponsored',
+  active: 'Must already hold one',
+};
+/** Jobs someone without a clearance can be hired into. */
+const WITHOUT_CLEARANCE: ClearanceRequirement[] = ['none', 'preferred', 'sponsored'];
+
+const sameSet = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((v) => b.includes(v));
 
 function countOf(facet: readonly FacetCount[] | undefined, value: string): number | undefined {
   if (!facet) return undefined;
@@ -196,6 +218,20 @@ export function FiltersPanel({ query, facets, onChange }: FiltersPanelProps) {
         />
       </Group>
 
+      <Group title="Security clearance">
+        <CheckList
+          options={CLEARANCE_REQUIREMENTS.map((c) => ({ value: c, label: CLEARANCE_FILTER_LABELS[c] }))}
+          selected={query.clearance ?? []}
+          facet={facets?.clearance}
+          onChange={(clearance) => set({ clearance: clearance as SearchQuery['clearance'] })}
+        />
+        {sameSet(query.clearance ?? [], WITHOUT_CLEARANCE) ? null : (
+          <Button size="sm" variant="link" className="mt-1 px-1" onClick={() => set({ clearance: WITHOUT_CLEARANCE })}>
+            Only jobs I can get without one
+          </Button>
+        )}
+      </Group>
+
       {sourceOptions.length > 0 ? (
         <Group title="Sources">
           <CheckList options={sourceOptions} selected={query.sources ?? []} facet={facets?.source} onChange={(sources) => set({ sources })} />
@@ -210,7 +246,7 @@ export function FiltersPanel({ query, facets, onChange }: FiltersPanelProps) {
       </Group>
 
       <Group title="Leave out words">
-        <TagInput aria-label="Leave out jobs mentioning" placeholder="e.g. clearance, sales" value={query.excludeTerms ?? []} onChange={(excludeTerms) => set({ excludeTerms })} />
+        <TagInput aria-label="Leave out jobs mentioning" placeholder="e.g. sales, on call" value={query.excludeTerms ?? []} onChange={(excludeTerms) => set({ excludeTerms })} />
       </Group>
 
       <Group title="Also show">

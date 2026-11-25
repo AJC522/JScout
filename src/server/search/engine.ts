@@ -7,7 +7,7 @@
  * on a 50,000-posting index that halves the cost of materialising every row in JS.
  */
 import type { StatementSync } from 'node:sqlite';
-import { EMPLOYMENT_TYPES, REMOTE_MODES, SENIORITY_ORDER } from '../../shared/constants';
+import { CLEARANCE_REQUIREMENTS, EMPLOYMENT_TYPES, REMOTE_MODES, SENIORITY_ORDER } from '../../shared/constants';
 import type { EmploymentType, RemoteMode, Seniority } from '../../shared/types';
 import type { Db, SqlValue } from '../db';
 import { BM25_ARGS } from './fts';
@@ -125,11 +125,12 @@ const CANDIDATE_COLUMNS = [
   'COALESCE(j.posted_at, j.first_seen_at)',
   // Must match the jobs_search index expression exactly for the index to cover it.
   "(j.closed_at IS NOT NULL) + 2 * (j.description_html != '')",
+  enumCase('j.clearance', CLEARANCE_REQUIREMENTS),
 ].join(', ');
 
 const SALARY_COLUMNS = 'j.salary_currency, COALESCE(j.salary_annual_max, j.salary_annual_min)';
 
-type CandidateTuple = [number, string, number, number, number, string, string, string, number, number | null, (string | null)?, (number | null)?];
+type CandidateTuple = [number, string, number, number, number, string, string, string, number, number, number | null, (string | null)?, (number | null)?];
 
 const statements = new WeakMap<Db, Map<string, StatementSync>>();
 
@@ -158,9 +159,10 @@ function decode(t: CandidateTuple): CandidateRow {
     ts: t[7],
     closed: (t[8] & 1) === 1,
     hasDescription: (t[8] & 2) === 2,
-    rank: t[9],
+    clearance: CLEARANCE_REQUIREMENTS[t[9]] ?? 'none',
+    rank: t[10],
   };
-  if (t.length > 10) row.salary = { currency: t[10] ?? null, amount: t[11] ?? null };
+  if (t.length > 11) row.salary = { currency: t[11] ?? null, amount: t[12] ?? null };
   return row;
 }
 

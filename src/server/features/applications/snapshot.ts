@@ -30,6 +30,7 @@ export function snapshotFromPosting(posting: JobPosting, descriptionHtml: string
     descriptionHtml,
   };
   if (posting.applyUrl) snapshot.applyUrl = posting.applyUrl;
+  if (posting.clearance) snapshot.clearance = { ...posting.clearance };
   const salaryText = salaryDisplay(posting.salary);
   if (salaryText) snapshot.salaryText = salaryText;
   if (posting.postedAt) snapshot.postedAt = posting.postedAt;

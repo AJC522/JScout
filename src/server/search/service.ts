@@ -26,7 +26,7 @@ import { type LocationTarget, type ScoreContext, type ScoreInput, scorePosting }
 import { companyNames, companySuggestions, titleSuggestions } from './suggest';
 
 /** Query fields that only narrow by facet: a patch touching only these keeps the base rows valid. */
-const FACET_FIELDS = new Set<keyof SearchQuery>(['remote', 'employmentTypes', 'seniority', 'sources', 'companies', 'postedWithinDays']);
+const FACET_FIELDS = new Set<keyof SearchQuery>(['remote', 'employmentTypes', 'seniority', 'clearance', 'sources', 'companies', 'postedWithinDays']);
 const DEFAULT_SUGGEST_LIMIT = 8;
 /** Cached "Best match" sort keys before the cache starts over (several times a full index). */
 const FIT_CACHE_MAX = 250_000;

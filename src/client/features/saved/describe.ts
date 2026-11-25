@@ -1,6 +1,6 @@
 /** Plain-English summaries of search queries, for saved searches and anywhere else a query is listed. */
-import { EMPLOYMENT_LABELS, POSTED_WITHIN_OPTIONS, REMOTE_LABELS, REMOTE_MODES, SENIORITY_LABELS } from '../../../shared/constants';
-import type { RemoteMode, SearchQuery } from '../../../shared/types';
+import { CLEARANCE_LABELS, CLEARANCE_REQUIREMENTS, EMPLOYMENT_LABELS, POSTED_WITHIN_OPTIONS, REMOTE_LABELS, REMOTE_MODES, SENIORITY_LABELS } from '../../../shared/constants';
+import type { ClearanceRequirement, RemoteMode, SearchQuery } from '../../../shared/types';
 import { formatSalary } from '../../lib/format';
 
 export const SUMMARY_SEPARATOR = ' · ';
@@ -76,6 +76,16 @@ function describePosted(days: number | undefined): string | null {
   return POSTED_WITHIN_OPTIONS.find((o) => o.days === days)?.label ?? `Past ${days} days`;
 }
 
+/** "No clearance needed", "Clearance: not needed or sponsored", … */
+function describeClearanceFilter(values: readonly ClearanceRequirement[] | undefined): string | null {
+  if (!values?.length) return null;
+  const set = new Set(values);
+  if (set.size === 3 && set.has('none') && set.has('preferred') && set.has('sponsored')) return 'No clearance of your own needed';
+  if (set.size === 1) return CLEARANCE_LABELS[values[0]!];
+  const words: Record<ClearanceRequirement, string> = { none: 'not needed', preferred: 'preferred', sponsored: 'sponsored', required: 'required', active: 'must already hold' };
+  return `Clearance: ${listOf(CLEARANCE_REQUIREMENTS.filter((c) => set.has(c)).map((c) => words[c]), 5, 'or')}`;
+}
+
 /**
  * One line describing what a search looks for, e.g.
  * "Product designer or UX designer · Berlin within 25 km or remote · From €70k/yr · Senior · Past week".
@@ -89,6 +99,8 @@ export function describeQuery(query: SearchQuery): string {
   if (salary) parts.push(salary);
   if (query.seniority?.length) parts.push(listOf(query.seniority.map((s) => SENIORITY_LABELS[s]), 3, 'or'));
   if (query.employmentTypes?.length) parts.push(listOf(query.employmentTypes.map((t) => EMPLOYMENT_LABELS[t]), 3, 'or'));
+  const clearance = describeClearanceFilter(query.clearance);
+  if (clearance) parts.push(clearance);
   const posted = describePosted(query.postedWithinDays);
   if (posted) parts.push(posted);
   if (query.companies?.length) parts.push(`At ${listOf(query.companies, 2, 'or')}`);

@@ -158,6 +158,28 @@ function filterCandidates(query: SearchQuery, plan: SearchPlan, maxPostingAgeDay
       description: 'Show full-time, part-time, contract and other types.',
     });
   }
+  if (query.clearance?.length) {
+    const selected = query.clearance;
+    if (selected.includes('active')) {
+      out.push({
+        id: 'clearance', kind: 'clearance', label: 'Any clearance requirement', cost: 3, cheap: false, patch: { clearance: [] },
+        description: 'Show jobs whatever they ask for in the way of a security clearance.',
+      });
+    } else {
+      // Never widen into "must already hold one": someone who left it out has no clearance to bring.
+      const wider = (['none', 'preferred', 'sponsored', 'required'] as const).filter((c) => !selected.includes(c));
+      if (wider.length) {
+        const unclearOnly = wider.length === 1 && wider[0] === 'required';
+        out.push({
+          id: 'clearance', kind: 'clearance', cost: 3, cheap: false, patch: { clearance: [...selected, ...wider] },
+          label: unclearOnly ? 'Include “clearance required” jobs' : 'Any job you can get without a clearance of your own',
+          description: unclearOnly
+            ? 'Also show jobs that need a clearance but don’t say whether they sponsor it.'
+            : 'Also show jobs that need no clearance, prefer one, or sponsor one.',
+        });
+      }
+    }
+  }
   if (query.remote?.length) {
     out.push({
       id: 'work-mode', kind: 'work-mode', label: 'Any work arrangement', cost: 3, cheap: false, patch: { remote: [] },
