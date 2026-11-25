@@ -182,7 +182,7 @@ export const PROTECTED_PHRASES = words(
     'volunteer manager|founder associate|founders associate|founding|contract manager|contracts manager|' +
     'contract specialist|contract administrator|contract analyst|contract negotiator|contract management|' +
     'contract coordinator|contract officer|general contractor|electrical contractor|independent contractor|' +
-    'temporary housing|executive assistant|executive director|executive chef|account executive|managing editor',
+    'temporary housing|executive assistant|account executive|managing editor',
 );
 
 /**
