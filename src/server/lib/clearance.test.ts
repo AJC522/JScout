@@ -56,6 +56,8 @@ describe('detectClearance: must already hold one', () => {
 
   it('reads a "Cleared" title as holding one', () => {
     expect(job('Build mission software.', 'Cleared Software Engineer')).toMatchObject({ requirement: 'active' });
+    expect(job('Build mission software.', 'Cleared/Clearable Software Engineer')).toMatchObject({ requirement: 'sponsored' });
+    expect(job('Build mission software.', 'Uncleared Software Engineer')).toBeUndefined();
   });
 
   it('keeps the level to bring when the employer sponsors an upgrade', () => {

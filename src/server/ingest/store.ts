@@ -55,8 +55,8 @@ const emptyStats = (): UpsertStats => ({ added: 0, updated: 0, unchanged: 0, clo
 
 /** Postings the background removal deletes per transaction: each stays in the tens of milliseconds. */
 const PURGE_BATCH = 250;
-/** Postings the clearance backfill reads per transaction. */
-const BACKFILL_BATCH = 200;
+/** Rowids the clearance backfill scans per event-loop turn (few of them match, so each turn stays short). */
+const BACKFILL_WINDOW = 1000;
 /**
  * Words detectClearance needs before it reads a posting (its own cheap gate), as SQL: postings
  * without any of them stay 'none' and are never loaded. LIKE is case-insensitive for ASCII.
@@ -124,10 +124,13 @@ export function createJobStore(ctx: AppContext): JobStore {
           await new Promise<void>((resolve) => setImmediate(resolve));
           const after = db.scalar<number>(`SELECT after_rid FROM backfills WHERE name = 'clearance'`);
           if (after === undefined) break;
+          const until = after + BACKFILL_WINDOW;
           const rows = db.all<{ rid: number; source: string; title: string; tags: string; description_html: string }>(
-            `SELECT rid, source, title, tags, description_html FROM jobs WHERE rid > ? AND (${CLEARANCE_HINT}) ORDER BY rid LIMIT ${BACKFILL_BATCH}`,
+            `SELECT rid, source, title, tags, description_html FROM jobs WHERE rid > ? AND rid <= ? AND (${CLEARANCE_HINT})`,
             after,
+            until,
           );
+          const last = db.scalar<number>(`SELECT MAX(rid) FROM jobs`) ?? 0;
           db.tx(() => {
             for (const r of rows) {
               const clearance = postingClearance(r.source, r.title, parseJson<string[]>(r.tags, []), htmlToText(r.description_html));
@@ -135,8 +138,9 @@ export function createJobStore(ctx: AppContext): JobStore {
               db.run(`UPDATE jobs SET clearance = ?, clearance_detail = ? WHERE rid = ?`, ...clearanceValues(clearance), r.rid);
               changed++;
             }
-            if (rows.length < BACKFILL_BATCH) db.run(`DELETE FROM backfills WHERE name = 'clearance'`);
-            else db.run(`UPDATE backfills SET after_rid = ? WHERE name = 'clearance'`, rows[rows.length - 1]!.rid);
+            // Postings added meanwhile were classified as they were stored.
+            if (until >= last) db.run(`DELETE FROM backfills WHERE name = 'clearance'`);
+            else db.run(`UPDATE backfills SET after_rid = ? WHERE name = 'clearance'`, until);
           });
         }
         if (changed > 0) ctx.events?.publish({ type: 'index-changed', index: ctx.services.sync.summary() });

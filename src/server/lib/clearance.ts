@@ -222,6 +222,8 @@ const REFERENCE = /\b(?:obtain|maintain|hold|possess|get|keep|transfer|reinstate
 
 function stanceOfText(raw: string, clause: Clause, labelled: boolean): Stance | undefined {
   const text = clean(raw);
+  // "Cleared/Clearable Engineer": someone who can be cleared will do.
+  if (clause.title && /\bclearable\b/i.test(text)) return 'sponsored';
   if (clause.title && CLEARED_TITLE.test(text)) return 'active';
   if (!labelled && !mentions(text)) return undefined;
   if (NOT_REQUIRED.some((re) => re.test(text)) && !SPONSOR.test(text)) return 'none';
