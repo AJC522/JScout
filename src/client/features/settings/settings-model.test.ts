@@ -7,27 +7,27 @@ const settings: AppSettings = {
   autoSync: true,
   closedRetentionDays: 30,
   maxPostingAgeDays: 60,
-  ai: { hasKey: false, model: 'claude-opus-5-5' },
+  ai: { hasKey: false, keySource: null, model: 'claude-opus-5-5' },
 };
 
 describe('keyRemovalResult', () => {
   it('does not report a removed key while the server still has one from ANTHROPIC_API_KEY', () => {
-    expect(keyRemovalResult({ ...settings, ai: { ...settings.ai, hasKey: false } })).toBe('removed');
-    expect(keyRemovalResult({ ...settings, ai: { ...settings.ai, hasKey: true } })).toBe('env-key-in-use');
+    expect(keyRemovalResult({ ...settings, ai: { ...settings.ai, hasKey: false, keySource: null } })).toBe('removed');
+    expect(keyRemovalResult({ ...settings, ai: { ...settings.ai, hasKey: true, keySource: 'environment' } })).toBe('env-key-in-use');
   });
 });
 
 describe('applySettingsUpdate', () => {
   it('applies plain fields and turns a key into hasKey without storing it', () => {
     const next = applySettingsUpdate(settings, { autoSync: false, ai: { apiKey: 'sk-ant-123' } });
-    expect(next).toEqual({ ...settings, autoSync: false, ai: { hasKey: true, model: 'claude-opus-5-5' } });
+    expect(next).toEqual({ ...settings, autoSync: false, ai: { hasKey: true, keySource: 'saved', model: 'claude-opus-5-5' } });
     expect(JSON.stringify(next)).not.toContain('sk-ant');
   });
 
   it('clears the key with null and keeps it when only the model changes', () => {
-    const withKey = { ...settings, ai: { hasKey: true, model: 'm' } };
-    expect(applySettingsUpdate(withKey, { ai: { apiKey: null } }).ai).toEqual({ hasKey: false, model: 'm' });
-    expect(applySettingsUpdate(withKey, { ai: { model: 'n' } }).ai).toEqual({ hasKey: true, model: 'n' });
+    const withKey: AppSettings = { ...settings, ai: { hasKey: true, keySource: 'saved', model: 'm' } };
+    expect(applySettingsUpdate(withKey, { ai: { apiKey: null } }).ai).toEqual({ hasKey: false, keySource: null, model: 'm' });
+    expect(applySettingsUpdate(withKey, { ai: { model: 'n' } }).ai).toEqual({ hasKey: true, keySource: 'saved', model: 'n' });
     expect(settings.ai.hasKey).toBe(false);
   });
 });

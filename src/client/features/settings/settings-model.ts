@@ -7,7 +7,12 @@ export function applySettingsUpdate(settings: AppSettings, update: AppSettingsUp
   const { ai, ...rest } = update;
   const next: AppSettings = { ...settings, ...rest, ai: { ...settings.ai } };
   if (ai?.model !== undefined) next.ai.model = ai.model;
-  if (ai?.apiKey !== undefined) next.ai.hasKey = ai.apiKey !== null && ai.apiKey.trim() !== '';
+  if (ai?.apiKey !== undefined) {
+    const saved = ai.apiKey !== null && ai.apiKey.trim() !== '';
+    // Optimistic guess; the server's reply says whether an environment key takes over after removal.
+    next.ai.hasKey = saved;
+    next.ai.keySource = saved ? 'saved' : null;
+  }
   return next;
 }
 
@@ -17,7 +22,7 @@ export function applySettingsUpdate(settings: AppSettings, update: AppSettingsUp
  * be in use afterwards; saying "removed" then would be wrong.
  */
 export function keyRemovalResult(saved: AppSettings): 'removed' | 'env-key-in-use' {
-  return saved.ai.hasKey ? 'env-key-in-use' : 'removed';
+  return saved.ai.keySource === 'environment' ? 'env-key-in-use' : 'removed';
 }
 
 /** Choices for a "days" setting, always including the current value so it is never shown wrongly. */

@@ -7,7 +7,7 @@ import { applyServerEvent } from './events';
 const index: IndexSummary = { openJobs: 100, sources: 3, companies: 10, syncing: false, pendingFeeds: 0 };
 const bootstrap: Bootstrap = {
   version: '1',
-  settings: { theme: 'system', autoSync: true, closedRetentionDays: 30, maxPostingAgeDays: 60, ai: { hasKey: false, model: 'm' } },
+  settings: { theme: 'system', autoSync: true, closedRetentionDays: 30, maxPostingAgeDays: 60, ai: { hasKey: false, keySource: null, model: 'm' } },
   index,
   profile: { onboarded: true, name: 'Jane', completeness: 80 },
   tracker: { active: 1, followUpsDue: 0 },

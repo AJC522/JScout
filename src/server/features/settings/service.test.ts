@@ -30,7 +30,7 @@ describe('app settings', () => {
       autoSync: true,
       closedRetentionDays: 14,
       maxPostingAgeDays: 0,
-      ai: { hasKey: false, model: DEFAULT_AI_MODEL },
+      ai: { hasKey: false, keySource: null, model: DEFAULT_AI_MODEL },
     });
   });
 
@@ -44,7 +44,7 @@ describe('app settings', () => {
 
   it('stores the API key trimmed, never returns it, and clears it with null or an empty string', () => {
     const withKey = settings.updateApp({ ai: { apiKey: '  sk-test-123  ' } });
-    expect(withKey.ai).toEqual({ hasKey: true, model: DEFAULT_AI_MODEL });
+    expect(withKey.ai).toEqual({ hasKey: true, keySource: 'saved', model: DEFAULT_AI_MODEL });
     expect(JSON.stringify(withKey)).not.toContain('sk-test');
     expect(settings.getSecret('ai.apiKey')).toBe('sk-test-123');
 
@@ -60,7 +60,7 @@ describe('app settings', () => {
   it('falls back to ANTHROPIC_API_KEY from the environment', () => {
     vi.stubEnv('ANTHROPIC_API_KEY', 'sk-env');
     expect(settings.getSecret('ai.apiKey')).toBe('sk-env');
-    expect(settings.getApp().ai.hasKey).toBe(true);
+    expect(settings.getApp().ai).toMatchObject({ hasKey: true, keySource: 'environment' });
     settings.updateApp({ ai: { apiKey: 'sk-stored' } });
     expect(settings.getSecret('ai.apiKey')).toBe('sk-stored');
   });

@@ -121,12 +121,16 @@ export function createSettingsService(ctx: AppContext): SettingsService {
     }
   }
 
+  function aiKey(): { key: string; source: 'saved' | 'environment' } | undefined {
+    const stored = read(AI_KEY_KEY);
+    if (typeof stored === 'string' && stored) return { key: stored, source: 'saved' };
+    const env = process.env.ANTHROPIC_API_KEY?.trim();
+    return env ? { key: env, source: 'environment' } : undefined;
+  }
+
   function getSecret(key: 'ai.apiKey'): string | undefined {
     if (key !== 'ai.apiKey') return undefined;
-    const stored = read(AI_KEY_KEY);
-    if (typeof stored === 'string' && stored) return stored;
-    const env = process.env.ANTHROPIC_API_KEY?.trim();
-    return env ? env : undefined;
+    return aiKey()?.key;
   }
 
   function getApp(): AppSettings {
@@ -136,7 +140,10 @@ export function createSettingsService(ctx: AppContext): SettingsService {
       autoSync: app.autoSync,
       closedRetentionDays: app.closedRetentionDays,
       maxPostingAgeDays: app.maxPostingAgeDays,
-      ai: { hasKey: getSecret('ai.apiKey') !== undefined, model: app.aiModel },
+      ai: (() => {
+        const source = aiKey()?.source ?? null;
+        return { hasKey: source !== null, keySource: source, model: app.aiModel };
+      })(),
     };
   }
 

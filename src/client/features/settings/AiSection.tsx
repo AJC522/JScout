@@ -17,9 +17,8 @@ export function AiSection({ settings }: { settings: AppSettings }) {
   const status = useAiStatus(settings.ai.hasKey);
   const test = useTestAi();
   const [key, setKey] = useState('');
-  // Set when removing the saved key left AI on: the key comes from the ANTHROPIC_API_KEY environment variable.
-  const [envKeyInUse, setEnvKeyInUse] = useState(false);
-  const usingEnvKey = envKeyInUse && settings.ai.hasKey;
+  // A key from the ANTHROPIC_API_KEY environment variable cannot be removed from here.
+  const usingEnvKey = settings.ai.keySource === 'environment';
   const [model, setModel] = useState(settings.ai.model);
   const [savedModel, setSavedModel] = useState(settings.ai.model);
   // Follow the stored model when it changes elsewhere, unless the user is editing it.
@@ -38,7 +37,6 @@ export function AiSection({ settings }: { settings: AppSettings }) {
       {
         onSuccess: () => {
           setKey('');
-          setEnvKeyInUse(false);
           test.reset();
           toast.success('API key saved', { description: 'Use Test to check that it works.' });
         },
@@ -61,11 +59,9 @@ export function AiSection({ settings }: { settings: AppSettings }) {
         onSuccess: (saved) => {
           test.reset();
           if (keyRemovalResult(saved) === 'removed') {
-            setEnvKeyInUse(false);
             toast.success('API key removed');
             return;
           }
-          setEnvKeyInUse(true);
           toast.info('AI drafting is still on', { description: ENV_KEY_NOTE });
         },
         onError: (err) => toast.error('Could not remove the key', { description: errorMessage(err) }),
@@ -115,7 +111,7 @@ export function AiSection({ settings }: { settings: AppSettings }) {
             saveKey();
           }}
         >
-          <Field label={settings.ai.hasKey ? 'Replace API key' : 'Anthropic API key'} hint="Stored only on this computer and never shown again.">
+          <Field label={settings.ai.keySource === 'saved' ? 'Replace API key' : 'Anthropic API key'} hint="Stored only on this computer and never shown again.">
             <Input
               type="password"
               autoComplete="off"
@@ -123,7 +119,7 @@ export function AiSection({ settings }: { settings: AppSettings }) {
               leadingIcon={<KeyRound />}
               value={key}
               onChange={(event) => setKey(event.target.value)}
-              placeholder={settings.ai.hasKey ? '••••••••  saved' : 'sk-ant-…'}
+              placeholder={settings.ai.keySource === 'saved' ? '••••••••  saved' : 'sk-ant-…'}
             />
           </Field>
           <div className="flex flex-wrap gap-2">

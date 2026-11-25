@@ -837,8 +837,10 @@ export interface AppSettings {
   /** Treat postings older than this as stale and exclude them unless asked. 0 = never. */
   maxPostingAgeDays: number;
   ai: {
-    /** Never sent to the client; `hasKey` reports whether one is stored. */
+    /** The key itself is never sent to the client; `hasKey` reports whether one is available. */
     hasKey: boolean;
+    /** Where the key comes from: saved in Settings, or the ANTHROPIC_API_KEY environment variable. */
+    keySource: 'saved' | 'environment' | null;
     model: string;
   };
 }
