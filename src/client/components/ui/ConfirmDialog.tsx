@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 import { AlertDialog } from 'radix-ui';
 import { cn } from '../../lib/cn';
 import { Button } from './Button';
+import { useRestoreFocus } from './Dialog';
 
 export interface ConfirmOptions {
   title: ReactNode;
@@ -27,6 +28,7 @@ export interface ConfirmDialogProps extends ConfirmOptions {
  * dismissed by clicking outside, and focus starts on Cancel so Enter never destroys data by accident.
  */
 export function ConfirmDialog({ open, onOpenChange, onConfirm, loading = false, title, description, confirmLabel = 'Confirm', cancelLabel = 'Cancel', tone = 'default' }: ConfirmDialogProps) {
+  const restoreFocus = useRestoreFocus(open);
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
@@ -34,6 +36,7 @@ export function ConfirmDialog({ open, onOpenChange, onConfirm, loading = false, 
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
           <AlertDialog.Content
             data-modal-layer=""
+            onCloseAutoFocus={restoreFocus}
             {...(description ? {} : { 'aria-describedby': undefined })}
             className={cn(
               'pointer-events-auto w-full max-w-[420px] rounded-card border border-border bg-surface p-5 shadow-dialog outline-none',

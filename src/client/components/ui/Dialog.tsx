@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/cn';
@@ -36,6 +36,28 @@ export interface DialogProps {
 export const DialogClose = DialogPrimitive.Close;
 export const DialogTrigger = DialogPrimitive.Trigger;
 
+/**
+ * Radix returns focus to its own Trigger on close; a dialog opened from state (no Trigger)
+ * would drop focus to <body>. This remembers what had focus when `open` turned true and
+ * returns the handler for onCloseAutoFocus that puts focus back there.
+ */
+export function useRestoreFocus(open: boolean | undefined): (event: Event) => void {
+  const opener = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+  // Read during render on purpose: by the time effects run, autoFocus inside the dialog has already moved focus.
+  if (open && !wasOpen.current && typeof document !== 'undefined') {
+    const focused = document.activeElement;
+    opener.current = focused instanceof HTMLElement && focused !== document.body ? focused : null;
+  }
+  wasOpen.current = Boolean(open);
+  return (event) => {
+    const element = opener.current;
+    if (!element?.isConnected) return;
+    event.preventDefault();
+    element.focus();
+  };
+}
+
 /** Shared overlay so Dialog, Drawer and ConfirmDialog dim the page the same way. */
 export function ModalOverlay() {
   return <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-scrim data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in" />;
@@ -46,6 +68,7 @@ export function ModalOverlay() {
  * the trigger afterwards. The body scrolls; header and footer stay put.
  */
 export function Dialog({ open, onOpenChange, trigger, title, description, footer, size = 'md', children, hideClose = false, dismissible = true, onOpenAutoFocus, className }: DialogProps) {
+  const restoreFocus = useRestoreFocus(open);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       {trigger ? <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger> : null}
@@ -55,6 +78,7 @@ export function Dialog({ open, onOpenChange, trigger, title, description, footer
           <DialogPrimitive.Content
             data-modal-layer=""
             onOpenAutoFocus={onOpenAutoFocus}
+            onCloseAutoFocus={trigger ? undefined : restoreFocus}
             onEscapeKeyDown={dismissible ? undefined : (event) => event.preventDefault()}
             onPointerDownOutside={dismissible ? undefined : (event) => event.preventDefault()}
             // Radix warns when a dialog has no description unless aria-describedby is explicitly unset.

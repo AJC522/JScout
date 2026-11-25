@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/cn';
-import { ModalOverlay } from './Dialog';
+import { ModalOverlay, useRestoreFocus } from './Dialog';
 
 const SIZES = {
   sm: 'sm:max-w-[400px]',
@@ -36,6 +36,7 @@ export interface DrawerProps {
  * Full width on phones. Same focus and dismissal behaviour as Dialog.
  */
 export function Drawer({ open, onOpenChange, trigger, title, description, headerActions, footer, size = 'md', side = 'right', hideTitle = false, children, bodyClassName, className }: DrawerProps) {
+  const restoreFocus = useRestoreFocus(open);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       {trigger ? <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger> : null}
@@ -43,6 +44,7 @@ export function Drawer({ open, onOpenChange, trigger, title, description, header
         <ModalOverlay />
         <DialogPrimitive.Content
           data-modal-layer=""
+          onCloseAutoFocus={trigger ? undefined : restoreFocus}
           {...(description ? {} : { 'aria-describedby': undefined })}
           className={cn(
             'fixed inset-y-0 z-50 flex w-full flex-col bg-surface shadow-dialog outline-none',
