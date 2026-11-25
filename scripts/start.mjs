@@ -46,5 +46,11 @@ if (needsBuild()) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-const run = spawnSync(process.execPath, ['--enable-source-maps', serverOut], { cwd: root, stdio: 'inherit' });
+// Node's built-in fetch ignores HTTP(S)_PROXY unless NODE_USE_ENV_PROXY is set at
+// startup; set it for people behind a proxy so syncing works without extra steps.
+const env = { ...process.env };
+const proxied = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'].some((k) => env[k]);
+if (proxied && env.NODE_USE_ENV_PROXY === undefined) env.NODE_USE_ENV_PROXY = '1';
+
+const run = spawnSync(process.execPath, ['--enable-source-maps', serverOut], { cwd: root, stdio: 'inherit', env });
 process.exit(run.status ?? 0);

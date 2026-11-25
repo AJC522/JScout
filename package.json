@@ -10,8 +10,8 @@
   },
   "scripts": {
     "start": "node scripts/start.mjs",
-    "dev": "concurrently -k -n server,web -c blue,magenta \"tsx watch --clear-screen=false src/server/main.ts\" \"vite\"",
-    "dev:server": "tsx watch --clear-screen=false src/server/main.ts",
+    "dev": "concurrently -k -n server,web -c blue,magenta \"node scripts/proxy-env.mjs tsx watch --clear-screen=false src/server/main.ts\" \"vite\"",
+    "dev:server": "node scripts/proxy-env.mjs tsx watch --clear-screen=false src/server/main.ts",
     "dev:web": "vite",
     "build": "vite build && node scripts/build-server.mjs",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
