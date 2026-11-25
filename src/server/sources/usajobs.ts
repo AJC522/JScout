@@ -31,6 +31,7 @@
  */
 import type { SalaryPeriod } from '../../shared/types';
 import { type FeedResult, type JobSource, type RawPosting, type RawSalary, type SourceContext, SourceError } from './types';
+import { recaseTitle } from './title-case';
 import { usStateCode } from './us-states';
 import { asArray, asNumber, asRecord, asString, compactStrings, requireArray, requireRecord } from './util';
 
@@ -369,16 +370,17 @@ function mapRow(row: Record<string, unknown>, text: Record<string, unknown> | un
   if (id === undefined || !Number.isInteger(id) || id <= 0) throw new Error('no control number');
   const title = asString(row.positionTitle);
   if (!title) throw new Error('no title');
-  const agency = asString(row.hiringAgencyName) ?? asString(row.hiringDepartmentName);
+  const agency = agencyOf(row);
   if (!agency) throw new Error('no agency');
-  const department = asString(row.hiringSubelementName) ?? asString(row.hiringDepartmentName);
+  const department = [asString(row.hiringSubelementName), asString(row.hiringDepartmentName)].find((d) => d && !GENERIC_AGENCY.test(d));
   const closes = asString(row.positionCloseDate);
   const url = `https://www.usajobs.gov/job/${id}`;
 
   return {
     externalId: String(id),
     url,
-    title,
+    // About a quarter of announcements are titled in capitals ("IT CYBERSECURITY SPECIALIST (INFOSEC)").
+    title: recaseTitle(title),
     company: agency,
     locations: mapLocations(row),
     ...(text ? { descriptionHtml: factsHtml(row) + textHtml(text) } : {}),
@@ -387,9 +389,22 @@ function mapRow(row: Record<string, unknown>, text: Record<string, unknown> | un
     ...(closes && /^\d{4}-\d{2}-\d{2}$/.test(closes) ? { expiresAt: `${closes}T23:59:59-05:00` } : {}),
     salary: mapSalary(row),
     employmentType: employmentType(row),
-    ...(department && department !== agency && department !== 'Other Agencies and Independent Organizations' ? { department } : {}),
+    ...(department && department !== agency ? { department } : {}),
     tags: tagsOf(row),
   };
+}
+
+/** The umbrella some announcements give instead of their agency. */
+const GENERIC_AGENCY = /^other agencies and independent organizations$/i;
+
+/**
+ * The hiring agency. Some announcements leave hiringAgencyName empty (Air Force, Navy) or set it to
+ * the umbrella "Other Agencies and Independent Organizations" (State, Energy, Homeland Security);
+ * agencyLevelSort then names the department.
+ */
+function agencyOf(row: Record<string, unknown>): string | undefined {
+  const names = [asString(row.hiringAgencyName), asString(row.agencyLevelSort), asString(row.hiringDepartmentName)];
+  return names.find((n) => n && !GENERIC_AGENCY.test(n)) ?? names.find(Boolean);
 }
 
 function mapLocations(row: Record<string, unknown>): string[] {

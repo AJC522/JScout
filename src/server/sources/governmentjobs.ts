@@ -29,6 +29,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { SalaryPeriod } from '../../shared/types';
 import { type BoardRef, type FeedResult, type JobSource, type RawPosting, type RawSalary, type SourceContext, SourceError } from './types';
+import { recaseTitle } from './title-case';
 import { usStateCode } from './us-states';
 import { absoluteUrl, asArray, asNumber, asRecord, asString, compactStrings } from './util';
 
@@ -315,27 +316,3 @@ function cleanText(value: string | undefined): string | undefined {
   return s || undefined;
 }
 
-/** Words kept in capitals when a title written in capitals is re-cased. */
-const ACRONYMS = new Set(
-  (
-    'I II III IV V VI VII VIII IX X XI XII XIII XIV XV IT GIS CAD RMS HR EMS EMT EMD ADA ATS CDL CPA CSI DA DNA DOT DPW DUI ' +
-    'ERP FBI HVAC ICU ID IS LAN WAN LVN LPN RN CNA MD NCIC PC PIO PW QA QC SQL TV UAS US USA VA WIC 911 K9 AV IV CJIS ' +
-    'CIO CTO CFO CISO OIT DOIT ITS IOD NCMEC MSM CSA GEMS MARS OCFO DMV DHS DOC DPS DJJ EOC PSAP RTCC SWAT UC'
-  ).split(' '),
-);
-const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
-
-/** "INFORMATION TECHNOLOGY SPECIALIST II / EMERGENCY APPOINTMENT" -> "Information Technology Specialist II / Emergency Appointment". */
-export function recaseTitle(title: string): string {
-  if (/\p{Ll}/u.test(title) || (title.match(/\p{L}/gu)?.length ?? 0) < 4) return title;
-  let first = true;
-  return title.replace(/[\p{L}\p{N}][\p{L}\p{N}'’.]*/gu, (word) => {
-    const isFirst = first;
-    first = false;
-    const bare = word.replace(/[.'’]+$/, '');
-    if (ACRONYMS.has(bare) || /\d/.test(word)) return word;
-    const lower = word.toLowerCase();
-    if (!isFirst && SMALL_WORDS.has(lower)) return lower;
-    return lower.replace(/^\p{L}/u, (c) => c.toUpperCase());
-  });
-}

@@ -111,6 +111,21 @@ describe('usajobsSource.fetchFeed', () => {
     expect(byId(result.postings, '863124000').locations).toEqual(['United States']);
   });
 
+  it('names the department when the agency is missing or only the umbrella "Other Agencies"', async () => {
+    const page1 = JSON.parse(readFixture('usajobs', 'joa-page1.json')) as { data: Array<Record<string, unknown>> };
+    const cia = page1.data.find((r) => r.usajobsControlNumber === 759326100)!;
+    const rows = [
+      { ...cia, usajobsControlNumber: 1, hiringAgencyName: null, agencyLevelSort: 'Department of the Air Force', hiringDepartmentName: 'Department of the Air Force', hiringSubelementName: null },
+      { ...cia, usajobsControlNumber: 2, hiringAgencyName: 'Other Agencies and Independent Organizations', agencyLevelSort: 'Department of State', hiringDepartmentName: 'Other Agencies and Independent Organizations' },
+    ];
+    const http = fakeHttp([{ match: (u) => u.startsWith(`${API}/api/historicjoa?`), body: { data: rows } }]);
+    const result = await usajobsSource.fetchFeed!(testContext(http, { fullTextSeries: '9998' }, NOW));
+    expect(byId(result.postings, '1')).toMatchObject({ company: 'Department of the Air Force' });
+    expect(byId(result.postings, '1').department).toBeUndefined();
+    expect(byId(result.postings, '2')).toMatchObject({ company: 'Department of State' });
+    expect(byId(result.postings, '2').department).toBeUndefined();
+  });
+
   it('includes federal-employees-only jobs when the setting asks for them', async () => {
     const result = await usajobsSource.fetchFeed!(testContext(routes(), { includeFederalOnly: 'yes' }, NOW));
     const internal = byId(result.postings, '874600500');

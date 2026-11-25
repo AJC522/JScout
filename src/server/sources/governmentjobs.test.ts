@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalizePosting } from '../ingest/normalize';
-import { governmentjobsSource, mapLocations, recaseTitle, utcDate } from './governmentjobs';
+import { governmentjobsSource, mapLocations, utcDate } from './governmentjobs';
 import { fakeHttp, readFixture, testContext } from './testing';
 import { type BoardRef, type RawPosting, SourceError } from './types';
 
@@ -187,11 +187,4 @@ describe('governmentjobs helpers', () => {
     expect(utcDate(undefined)).toBeUndefined();
   });
 
-  it('re-cases only titles written entirely in capitals', () => {
-    expect(recaseTitle('POLICE OFFICER II - K9 UNIT')).toBe('Police Officer II - K9 Unit');
-    expect(recaseTitle("SHERIFF'S TECHNOLOGY SPECIALIST")).toBe("Sheriff's Technology Specialist");
-    expect(recaseTitle('GIS ANALYST FOR THE DEPARTMENT OF PUBLIC WORKS')).toBe('GIS Analyst for the Department of Public Works');
-    expect(recaseTitle('IT Specialist (INFOSEC)')).toBe('IT Specialist (INFOSEC)');
-    expect(recaseTitle('911')).toBe('911');
-  });
 });
