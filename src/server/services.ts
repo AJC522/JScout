@@ -113,13 +113,14 @@ export interface JobStore {
   /**
    * Insert/update the postings of one feed in a single pass.
    * When `complete` is true, open postings of this feed that are absent from
-   * `postings` are marked closed; postings that reappear are re-opened.
+   * `postings` are marked closed — but only those last seen before `closeUnseenBefore`
+   * (default `now`, i.e. all absent ones); postings that reappear are re-opened.
    * Keeps jobs, job_places and jobs_fts consistent.
    */
   upsertFeed(
     feed: { feedKey: string; source: string },
     postings: NormalizedPosting[],
-    opts: { complete: boolean; now: Date },
+    opts: { complete: boolean; now: Date; closeUnseenBefore?: Date },
   ): UpsertStats;
   /** Insert/update postings without affecting others in the feed (search-mode results). */
   upsertPostings(feed: { feedKey: string; source: string }, postings: NormalizedPosting[], now: Date): UpsertStats;

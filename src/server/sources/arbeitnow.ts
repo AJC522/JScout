@@ -55,6 +55,9 @@ export const arbeitnowSource: JobSource = {
     defaultEnabled: true,
     defaultTtlMinutes: 12 * 60,
     fullSnapshot: true,
+    // Pages are cached separately by Cloudflare (up to ~1 h apart), so a posting that shifts
+    // across a page boundary can be missing from one complete walk: wait a day before closing.
+    closeGraceMinutes: 24 * 60,
     minRequestIntervalMs: MIN_INTERVAL_MS,
   },
 
@@ -132,7 +135,7 @@ function readPage(data: unknown, pageNo: number): Page {
   const links = asRecord(envelope.links);
   // Without a links block, a non-empty page gives no proof of being the last one: keep walking
   // until an empty page (bounded by MAX_PAGES).
-  const hasNext = links ? absoluteUrl(links.next) !== undefined : true;
+  const hasNext = links ? asString(links.next) !== undefined : true;
   return { jobs, hasNext };
 }
 

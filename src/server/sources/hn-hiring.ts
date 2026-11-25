@@ -14,9 +14,11 @@
  *
  * Comments are free text. The first paragraph usually reads
  * "Company | Role | Location | REMOTE/ONSITE | Salary | URL"; it is parsed
- * heuristically below. Comments whose header yields no company and role (job
- * seekers, prose-only posts, "position filled" edits) are skipped: about 15%.
- * The comment HTML is kept as the description.
+ * heuristically below. When the header names no role, roles listed as short
+ * lines at the top of the body are used. Comments that still yield no company
+ * and role (job seekers, prose-only posts, "position filled" edits) are
+ * skipped: 17.6% of November 2026, 16.3% of October. The comment HTML is kept
+ * as the description.
  */
 import {
   type FeedResult,
@@ -129,6 +131,7 @@ async function fetchThread(ctx: SourceContext, thread: Thread): Promise<ThreadCo
   const hits: unknown[] = [];
   let total = 0;
   let exhaustive = true;
+  let counted = true;
   let allPages = false;
 
   for (let page = 0; page < MAX_PAGES_PER_THREAD; page++) {
@@ -161,7 +164,9 @@ async function fetchThread(ctx: SourceContext, thread: Thread): Promise<ThreadCo
     }
 
     hits.push(...pageHits);
-    total = asNumber(envelope.nbHits) ?? total;
+    const nbHits = asNumber(envelope.nbHits);
+    if (nbHits === undefined) counted = false;
+    else total = nbHits;
     if (envelope.exhaustiveNbHits === false || asRecord(envelope.exhaustive)?.nbHits === false) exhaustive = false;
     const nbPages = asNumber(envelope.nbPages) ?? 0;
     if (pageHits.length === 0 || page + 1 >= nbPages) {
@@ -170,7 +175,8 @@ async function fetchThread(ctx: SourceContext, thread: Thread): Promise<ThreadCo
     }
   }
 
-  const complete = allPages && exhaustive && hits.length >= total;
+  // Without the API's own count there is no proof that nothing is missing.
+  const complete = allPages && exhaustive && counted && hits.length >= total;
   if (!complete) {
     ctx.log.warn('hn-hiring: not every top-level comment of the thread was read', {
       thread: thread.id,
@@ -206,7 +212,7 @@ function mapBatches(ctx: SourceContext, batches: Array<{ thread: Thread; comment
       }
     });
     if (skipped > 0) {
-      ctx.log.info('hn-hiring: skipped comments without a recognisable company and role', {
+      ctx.log.info('hn-hiring: skipped comments that are not parseable job posts', {
         thread: thread.id,
         skipped,
         of: comments.hits.length,
@@ -366,9 +372,11 @@ const LINK = /https?:\/\/\S+|www\.\S+/gi;
 /** Openers of posts that are not one company's job ad (seekers, edits, prose). */
 const NOT_A_COMPANY =
   /^(?:location|remote|willing|seeking|looking|hi|hey|hello|i'm|i am|my name|backed by|update[ds]?|edit(?:ed)?|apply|closed|filled|we're|we are|who's|who is|this is|hiring|full[\s-]?time|part[\s-]?time|on[\s-]?site|hybrid)(?![\p{L}])/iu;
+/** A sentence, not a name: "At Tether we're hiring!". */
+const PROSE_IN_NAME = /(?<![\p{L}])(?:we're|we are|is hiring|are hiring|hiring|looking for)(?![\p{L}])/iu;
 /** Where run-on prose starts after the header fields: "Full Time LiveKit is building ...". */
 const PROSE_START =
-  /\s(?=(?:[\p{Lu}][\p{L}\d.'’&-]*\s+){0,3}(?:is|are|was|we|we're|i|i'm|our|has|have|helps?|builds?|makes?|processes|provides|powers?)\s)/u;
+  /\s(?=[\p{Lu}][\p{L}\d.'’&-]*\s+(?:is|are|was|has|have|helps?|builds?|makes?|processes|provides|powers?)\s)|\s(?=(?:We|We're|I|I'm|Our)\s)/u;
 const SENTENCE_OPENER = /^(?:i|i'm|we|we're|our|my|you|you'll|if|this|the)(?![\p{L}])/iu;
 
 const MAX_SEGMENT = 120;
@@ -408,6 +416,7 @@ export function parseHiringHeader(commentHtml: string): HiringHeader | null {
   let remote: HiringHeader['remote'];
   let hasHybrid = false;
   let hasOnsite = false;
+  // The whole segment counts here: "... All of our roles are fully-remote" ends many run-on headers.
   for (const seg of segments) {
     const text = seg.text;
     if (REMOTE_WORD.test(text) && !NO_REMOTE.test(text) && !PART_REMOTE.test(text)) remote = 'remote';
@@ -420,13 +429,13 @@ export function parseHiringHeader(commentHtml: string): HiringHeader | null {
   if (!remote) remote = hasHybrid ? 'hybrid' : hasOnsite ? 'onsite' : undefined;
 
   for (const seg of segments) {
-    if (seg.text === title.source || seg.strongRole || seg.url || seg.text.length > MAX_PLACE_SEGMENT) continue;
+    if (title.sources.has(seg.text) || seg.strongRole || seg.url || seg.text.length > MAX_PLACE_SEGMENT) continue;
     if (seg.place) locations.push(seg.text);
   }
   if (companyPlace) locations.push(companyPlace);
 
-  const salary = segments.find((s) => s.salary && s.text !== title.source);
-  const employment = segments.find((s) => s.employment && s.text !== title.source && s.text.length <= 60);
+  const salary = segments.find((s) => s.salary && !title.sources.has(s.text));
+  const employment = segments.find((s) => s.employment && !title.sources.has(s.text) && s.text.length <= 60);
   return {
     company,
     title: title.text,
@@ -495,8 +504,7 @@ function cleanSegment(segment: string): string {
 }
 
 function classify(text: string): Segment {
-  // Long segments are mostly prose; only their start is read for markers.
-  const head = text.length > MAX_SEGMENT ? text.slice(0, 40) : text;
+  const head = workModeText(text);
   const remoteWord = REMOTE_WORD.test(head);
   const url = URL_ONLY.test(text);
   // Role words are looked for outside links: "estuary.dev" is not a dev.
@@ -518,6 +526,11 @@ function classify(text: string): Segment {
   };
 }
 
+/** Long segments are mostly prose; only their start is read for place, contract and work-mode markers. */
+function workModeText(text: string): string {
+  return text.length > MAX_SEGMENT ? text.slice(0, 40) : text;
+}
+
 function isPlain(seg: Segment): boolean {
   return !(seg.url || seg.salary || seg.employment || seg.place || seg.strongRole || seg.weakRole || seg.remoteWord);
 }
@@ -527,7 +540,7 @@ function isPlain(seg: Segment): boolean {
  * role words in segments that are nothing else; else a work-mode segment that names a role
  * ("REMOTE backend dev"), with the work-mode words removed.
  */
-function pickTitle(segments: Segment[]): { text: string; source: string } | undefined {
+function pickTitle(segments: Segment[]): { text: string; sources: Set<string> } | undefined {
   const usable = segments.filter(
     (s) => !s.url && s.text.length <= MAX_SEGMENT && !SENTENCE_OPENER.test(s.text) && (s.strongRole || s.weakRole),
   );
@@ -539,7 +552,7 @@ function pickTitle(segments: Segment[]): { text: string; source: string } | unde
 
   const titles = chosen.map((s) => cleanTitle(s.text, s.remoteWord)).filter((t) => t !== '');
   if (titles.length === 0) return undefined;
-  return { text: titles.join(', '), source: chosen[0]?.text ?? '' };
+  return { text: titles.join(', '), sources: new Set(chosen.map((s) => s.text)) };
 }
 
 function cleanTitle(text: string, stripWorkMode: boolean): string {
@@ -564,7 +577,7 @@ const MAX_BODY_ROLES = 5;
  * Roles listed in the first lines of the body: "* Fullstack Engineer - https://...",
  * "Infrastructure Engineer: ...", "Senior iOS Engineer ($150k)".
  */
-function bodyRoles(lines: string[]): { text: string; source: string } | undefined {
+function bodyRoles(lines: string[]): { text: string; sources: Set<string> } | undefined {
   const roles: string[] = [];
   for (const line of lines.slice(0, MAX_BODY_LINES)) {
     const item = line.replace(/^(?:[*•·>+\-–—]+|\d+[.)])\s*/, '').replace(/^(?:roles?|positions?|title)\s*:\s*/i, '');
@@ -574,7 +587,7 @@ function bodyRoles(lines: string[]): { text: string; source: string } | undefine
     if (!roles.some((r) => r.toLowerCase() === name.toLowerCase())) roles.push(name);
     if (roles.length === MAX_BODY_ROLES) break;
   }
-  return roles.length > 0 ? { text: roles.join(', '), source: '' } : undefined;
+  return roles.length > 0 ? { text: roles.join(', '), sources: new Set<string>() } : undefined;
 }
 
 function companyName(segment: string): string | undefined {
@@ -592,7 +605,7 @@ function companyName(segment: string): string | undefined {
     const url = link ? absoluteUrl(link.startsWith('www.') ? `https://${link}` : link) : undefined;
     name = url ? new URL(url).hostname.replace(/^www\./, '') : '';
   }
-  if (name === '' || name.length > MAX_COMPANY || REMOTE_WORD.test(name) && name.split(' ').length <= 2) return undefined;
+  if (name === '' || name.length > MAX_COMPANY || PROSE_IN_NAME.test(name) || (REMOTE_WORD.test(name) && name.split(' ').length <= 2)) return undefined;
   return name;
 }
 

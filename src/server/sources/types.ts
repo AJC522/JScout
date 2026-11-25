@@ -79,6 +79,12 @@ export interface SourceDefinition {
    * so anything missing from it can be marked closed.
    */
   fullSnapshot: boolean;
+  /**
+   * For fullSnapshot sources whose "complete" fetch can still miss postings (e.g. pages
+   * cached separately by a CDN): a posting absent from a complete fetch is closed only
+   * once it has also not been seen for this many minutes. Default 0 (close immediately).
+   */
+  closeGraceMinutes?: number;
   /** Minimum gap between requests to this source's host, in ms. */
   minRequestIntervalMs: number;
 }
