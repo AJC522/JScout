@@ -119,7 +119,7 @@ describe('analyzeTitle: real posting titles from the captured sources', () => {
     ["Werkstudent Webentwicklung - Digitalhub (m/w/d)", "webentwicklung digitalhub", 'intern', null],
     ["Product Engineer (m/f/d)", "product engineer", 'unknown', null],
     ["Praktikum im Customer Success Management (m/w/d)", "customer success management", 'intern', null],
-    ["Forward Deployed Engineer (m/w/d)- Certil", "forward deployed engineer certil", 'unknown', null],
+    ["Forward Deployed Engineer (m/w/d)- Certil", "forward deployed engineer certil", 'unknown', 'forward-deployed-engineer'],
     ["Verantwortliche Elektrofachkraft (VEFK) (m/w/d) – DGUV-Prüfmanagement", "verantwortliche elektrofachkraft dguv prufmanagement", 'unknown', null],
     ["Commercial Account Executive UKI", "commercial account executive", 'unknown', 'account-executive'],
     ["Senior Managing Consultant", "managing consultant", 'senior', null],
@@ -278,7 +278,7 @@ describe('analyzeTitle: real posting titles from the captured sources', () => {
     ["Software Engineer", "software engineer", 'unknown', 'software-engineer'],
     ["Penetration Tester", "penetration tester", 'unknown', 'penetration-tester'],
     ["Founding Builder-in-Residence", "founding builder in residence", 'unknown', null],
-    ["Forward Deployed Engineer, Founding Product Engineer", "forward deployed engineer founding product engineer", 'unknown', null],
+    ["Forward Deployed Engineer, Founding Product Engineer", "forward deployed engineer founding product engineer", 'unknown', 'forward-deployed-engineer'],
     ["Lead Software Engineer", "software engineer", 'lead', 'software-engineer'],
   ];
   it('has a diverse sample of at least 80 titles', () => {

@@ -19,20 +19,16 @@ import { foldText } from './text';
 // ---------------------------------------------------------------------------
 
 /**
- * Extra aliases for existing dictionary entries that the data file lacks. Each value must be an exact
- * canonical name in skills.json; entries whose target is missing are ignored. Terms listed in
- * EXACT_CASE_TERMS match only with exactly that casing.
+ * Extra aliases for existing dictionary entries that the data file cannot hold: singular/plural pairs
+ * of a term the entry already has ("REST API" / "REST APIs", "K8s" / "k8"). skills.json keeps one
+ * grammatical number per entry (its authoring check rejects a term next to its regular plural), but the
+ * matcher does not fold plurals, so both spellings must be indexed. Every other alias belongs in
+ * skills.json. Each key must be an exact canonical name there; entries whose target is missing are ignored.
  */
 const EXTRA_ALIASES: Record<string, string[]> = {
-  'Amazon S3': ['S3'],
-  'RESTful APIs': ['REST', 'REST APIs', 'RESTful', 'REST services', 'RESTful API'],
+  'RESTful APIs': ['REST APIs', 'RESTful API'],
   'Kubernetes': ['k8'],
-  'PostgreSQL': ['Postgres'],
-  'Microsoft Excel': ['MS-Excel'],
-  'Machine Learning': ['ML'],
   'Large Language Models': ['LLMs', 'large language model'],
-  'iOS Development': ['iOS'],
-  'Android Development': ['Android'],
 };
 
 /** Terms (as spelled here) that must match with exactly this casing, without needing list context. */

@@ -80,7 +80,7 @@ describe('greenhouseSource.fetchFeed', () => {
       descriptionHtml: raw.content,
       postedAt: '2026-10-12T12:00:11-04:00',
       updatedAt: '2026-11-03T13:15:33-05:00',
-      salary: { min: 137700, max: 186300, currency: 'USD', text: 'Salary Range:' },
+      salary: { min: 137700, max: 186300, currency: 'USD' }, // the bare "Salary Range: " heading is dropped
       department: 'University',
     });
     expect(phd.remote).toBeUndefined();
@@ -91,14 +91,37 @@ describe('greenhouseSource.fetchFeed', () => {
     const http = fakeHttp([{ match: `${API}/duolingo/jobs`, body: consistent('jobs-content-pay-duolingo.json') }]);
     const { postings } = await greenhouseSource.fetchFeed!(testContext(http), board('duolingo'));
 
-    expect(byId(postings, '8883563002').salary).toEqual({ min: 11969600, max: 17954400, currency: 'INR', text: 'Salary Range:' });
-    expect(byId(postings, '8625579002').salary).toEqual({ min: 17178000, max: 25767100, currency: 'JPY', text: 'Salary Range:' });
-    expect(byId(postings, '8858333002').salary).toMatchObject({ min: 90630, max: 122617, currency: 'GBP' });
+    expect(byId(postings, '8883563002').salary).toEqual({ min: 11969600, max: 17954400, currency: 'INR' });
+    expect(byId(postings, '8625579002').salary).toEqual({ min: 17178000, max: 25767100, currency: 'JPY' });
+    expect(byId(postings, '8858333002').salary).toEqual({ min: 90630, max: 122617, currency: 'GBP' });
     expect(byId(postings, '8933285002').salary).toMatchObject({ min: 681212, max: 921640, currency: 'CNY' });
 
     const intern = byId(postings, '8933791002');
-    expect(intern.salary).toEqual({ min: 43, max: 45, currency: 'USD', period: 'hour', text: 'Hourly Range for this internship is:' });
+    // The title's only information, the period, is kept as `period`; the heading itself is dropped.
+    expect(intern.salary).toEqual({ min: 43, max: 45, currency: 'USD', period: 'hour' });
     expect(intern.expiresAt).toBe('2026-12-12T00:00:00-05:00');
+  });
+
+  it.each<[string, string | undefined, string | undefined]>([
+    ['Salary Range: ', undefined, undefined],
+    ['Base Salary', undefined, undefined],
+    ['Hourly Range for this internship is:', undefined, 'hour'],
+    ['Daily Rate', undefined, 'day'],
+    ['Pay Range (USD)', undefined, undefined],
+    ['The expected annual base salary range for this role is:', undefined, 'year'],
+    ['On Target Earnings', 'On Target Earnings', undefined],
+    ['US Pay Range', 'US Pay Range', undefined],
+    ['Zone A — San Francisco Bay Area', 'Zone A — San Francisco Bay Area', undefined],
+    ['$120k–$150k plus equity', '$120k–$150k plus equity', undefined],
+  ])('keeps the range title %j as salary text only when it says more than a heading', async (title, text, period) => {
+    const env = consistent('jobs-content-pay-duolingo.json');
+    const job = { ...env.jobs[0]!, pay_input_ranges: [{ min_cents: 12000000, max_cents: 15000000, currency_type: 'USD', title }] };
+    const http = fakeHttp([{ match: `${API}/duolingo/jobs`, body: { jobs: [job], meta: { total: 1 } } }]);
+    const { postings } = await greenhouseSource.fetchFeed!(testContext(http), board('duolingo'));
+    expect(postings[0]!.salary).toMatchObject({ min: 120000, max: 150000, currency: 'USD' });
+    expect(postings[0]!.salary?.text).toBe(text);
+    // A dropped heading still contributes its period.
+    expect(postings[0]!.salary?.period).toBe(period);
   });
 
   it('uses the post location, not the office tree, when the location names a place', async () => {
@@ -295,7 +318,7 @@ describe('greenhouseSource.fetchDetail', () => {
     expect(http.requests[0]!.options.allowStatus).toEqual([404]);
     expect(detail).toEqual({
       descriptionHtml: raw.content,
-      salary: { min: 11969600, max: 17954400, currency: 'INR', text: 'Salary Range:' },
+      salary: { min: 11969600, max: 17954400, currency: 'INR' },
     });
   });
 

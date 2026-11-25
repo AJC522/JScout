@@ -259,14 +259,33 @@ function salaryOf(ranges: unknown): RawSalary | undefined {
   if (maxCents !== undefined) salary.max = maxCents / divisor;
   if (currency) salary.currency = currency;
   // No period field: the employer's free-text title ("Hourly Range for this internship is:",
-  // "Salary Range: ", "On Target Earnings") is the only hint, and is kept as the salary text.
+  // "Salary Range: ", "On Target Earnings") is the only hint. It is kept as the salary text only
+  // when it says more than a heading.
   const title = asString(range.title);
   if (title) {
-    salary.text = title;
+    if (isInformativeTitle(title, currency)) salary.text = title;
     if (/\bhour(ly)?\b/i.test(title)) salary.period = 'hour';
     else if (/\bmonth(ly)?\b/i.test(title)) salary.period = 'month';
     else if (/\bweek(ly)?\b/i.test(title)) salary.period = 'week';
+    else if (/\b(day|daily)\b/i.test(title)) salary.period = 'day';
     else if (/\b(year(ly)?|annual(ly)?|per annum)\b/i.test(title)) salary.period = 'year';
   }
   return salary;
+}
+
+/** Words that make up bare pay-range headings: "Salary Range:", "Base Salary", "Hourly Range for this internship is:". */
+const HEADING_WORDS = new Set(
+  ('salary salaries pay compensation comp range ranges band base wage wages rate rates hourly annual annually yearly ' +
+    'monthly weekly daily per hour year annum month week day gross expected estimated anticipated starting the a an ' +
+    'this our for of is are role position job opening opportunity internship intern transparency information').split(' '),
+);
+
+/**
+ * A range title worth keeping: it holds an amount, or something besides heading words, such as what the
+ * range is ("On Target Earnings") or where it applies ("US Pay Range"). The currency code alone adds nothing.
+ */
+function isInformativeTitle(title: string, currency: string | undefined): boolean {
+  if (/\d/.test(title)) return true;
+  const words = title.toLowerCase().match(/\p{L}+/gu) ?? [];
+  return words.some((w) => !HEADING_WORDS.has(w) && w !== currency?.toLowerCase());
 }

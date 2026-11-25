@@ -294,6 +294,10 @@ describe('parseSalaryText: sanity', () => {
     expect(core(parseSalaryText('OTE $150K+ uncapped'))).toEqual({ min: 150000, currency: 'USD', period: 'year' });
     // "+ commission" adds to the amount; it does not make it open-ended.
     expect(core(parseSalaryText('$150K + uncapped commission'))).toEqual({ min: 150000, max: 150000, currency: 'USD', period: 'year' });
+    // ... nor does a benefit with a word or two before it, while a glued "+" still means "or more".
+    expect(core(parseSalaryText('$120,000 + annual bonus'))).toEqual({ min: 120000, max: 120000, currency: 'USD', period: 'year' });
+    expect(core(parseSalaryText('$90,000 + monthly car allowance'))).toEqual({ min: 90000, max: 90000, currency: 'USD', period: 'year' });
+    expect(core(parseSalaryText('$90k+ with equity'))).toEqual({ min: 90000, currency: 'USD', period: 'year' });
   });
 
   it('is not fooled by years, headcounts, durations and identifiers', () => {

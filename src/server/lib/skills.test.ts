@@ -25,9 +25,11 @@ describe('extractSkills: names with symbols', () => {
   });
   it('does not produce false positives from symbol-bearing words', () => {
     const none = (text: string) => expect(extractSkills(text)).toEqual([]);
-    none('Report to the C-suite and drive R&D initiatives.');
+    // R&D is its own skill now; what matters is that neither R nor C fires.
+    expect(extractSkills('Report to the C-suite and drive R&D initiatives.')).toEqual(['Research and Development']);
     none('Our customers include AT&T and Verizon.');
-    none('You will own the P&L for the region.');
+    // Owning a P&L is a real skill now (Profit and Loss Management); the point is that no single-letter skill fires.
+    expect(extractSkills('You will own the P&L for the region.')).toEqual(['Profit and Loss Management']);
     none('We expect a swift response to customer issues.');
     none('You will excel at building relationships.');
     none('In a word, we move fast.');

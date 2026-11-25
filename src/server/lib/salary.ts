@@ -145,7 +145,12 @@ const EXTRA_WORDS =
 const EXTRA_AFTER_RE = new RegExp(String.raw`^\s*(?:[a-z][\w-]*\s+){0,3}?(?:${EXTRA_WORDS})\b`, 'i');
 const EXTRA_BEFORE_RE =
   /\b(?:bonus(?:es)?|sign[- ]?on|signing|equity|stock|rsus?|stipends?|allowances?|relocation|commissions?|referral|budget|reimbursement|per\s+diem|grants?|match(?:ing)?)\b[^\d$€£¥₹]{0,15}$/i;
-const PLUS_RE = new RegExp(String.raw`^\s*\+(?!\s*(?:${EXTRA_WORDS}|ote|uncapped\s+commission)\b)`, 'i');
+const PLUS_EXTRA = String.raw`${EXTRA_WORDS}|ote|uncapped\s+commission`;
+/**
+ * "+" meaning "or more". Not when it adds a benefit: "$150K + equity", and with a spaced " + " also
+ * "$120,000 + annual bonus" (a glued "$90k+ with equity" still means "or more").
+ */
+const PLUS_RE = new RegExp(String.raw`^(?:\+(?!\s*(?:${PLUS_EXTRA})\b)|\s+\+(?!\s*(?:[a-z][\w-]*\s+){0,2}(?:${PLUS_EXTRA})\b))`, 'i');
 const UNIT_WORD_RE =
   /^\s*\+?\s*(?:employees|people|persons|staff|users|customers|clients|members|engineers|developers|countries|offices|locations|years?|yrs?|months?|hours?|hrs?|days?|weeks?|students|downloads|installs|companies|businesses|partners|teams|times|x\b|%)/i;
 
@@ -549,7 +554,7 @@ function scopeAfter(text: string, end: number, nextStart: number, limit: number)
  * "up to"/"max" give max only. Bonus/equity/stipend amounts are skipped. The bounds are scaled up
  * for currencies whose unit is worth much less than a dollar (JPY, INR, KRW, …). The explicit unit
  * is looked for after the amount (up to the next amount), then before it in the same clause
- * ("Monthly: $6,500 - $9,500"); a period word that describes a benefit ("+ monthly stipend") is ignored.
+ * ("Monthly: $6,500 - $9,500"); a period word that describes a benefit ("plus a monthly stipend") is ignored.
  */
 export function parseSalaryText(text: string, opts: SalaryOptions = {}): Salary | undefined {
   if (typeof text !== 'string') return undefined;
