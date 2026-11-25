@@ -296,8 +296,10 @@ function isPieceRate(text: string, end: number): boolean {
 // Periods and qualifiers
 // ---------------------------------------------------------------------------
 
-const PERIOD_RE =
-  /\/\s*(hours?|hrs?|h|days?|d|weeks?|wks?|w|months?|mos?|m|years?|yrs?|y|annum)\b|\b(?:per|a|an|each|every)\s+(hours?|hrs?|days?|weeks?|wks?|months?|mos?|years?|yrs?|annum|calendar\s+month)\b|\b(hourly|daily|day\s+rate|(?<!bi-?|semi-?)weekly|(?<!bi-?|semi-?)monthly|yearly|annually|annual|p\.\s?a\b|pa|p\/a|pcm|ph|p\/h|lpa|ote|on[- ]target\s+earnings)\b/i;
+const PERIOD_G =
+  /\/\s*(hours?|hrs?|h|days?|d|weeks?|wks?|w|months?|mos?|m|years?|yrs?|y|annum)\b|\b(?:per|a|an|each|every)\s+(hours?|hrs?|days?|weeks?|wks?|months?|mos?|years?|yrs?|annum|calendar\s+month)\b|\b(hourly|daily|day\s+rate|(?<!bi-?|semi-?)weekly|(?<!bi-?|semi-?)monthly|yearly|annually|annual|p\.\s?a\b|pa|p\/a|pcm|ph|p\/h|lpa|ote|on[- ]target\s+earnings)\b/gi;
+/** A period word that qualifies a benefit ("a monthly wellness stipend", "annual bonus"), not the pay. */
+const QUALIFIES_EXTRA_RE = new RegExp(String.raw`^(?:[\s-]+[a-z]+)?[\s-]+(?:${EXTRA_WORDS})\b`, 'i');
 
 function periodOfWord(word: string): SalaryPeriod {
   const w = word.toLowerCase().replace(/\s+/g, ' ');
@@ -323,10 +325,12 @@ const FOREIGN_PERIODS: ReadonlyArray<readonly [SalaryPeriod, RegExp]> = [
 function findPeriod(scope: string): SalaryPeriod | undefined {
   let best: SalaryPeriod | undefined;
   let at = Infinity;
-  const m = PERIOD_RE.exec(scope);
-  if (m) {
+  for (const m of scope.matchAll(PERIOD_G)) {
+    const end = m.index + m[0].length;
+    if (QUALIFIES_EXTRA_RE.test(scope.slice(end, end + 40))) continue;
     best = periodOfWord(m[1] ?? m[2] ?? m[3] ?? 'year');
     at = m.index;
+    break;
   }
   for (const [period, re] of FOREIGN_PERIODS) {
     const f = re.exec(scope);
@@ -334,6 +338,44 @@ function findPeriod(scope: string): SalaryPeriod | undefined {
       best = period;
       at = f.index;
     }
+  }
+  return best;
+}
+
+/** Nouns naming the pay itself, which a period word before an amount has to qualify. */
+const PAY_NOUNS = String.raw`salary|salaries|compensation|comp|pay|wages?|rates?|range|earnings|income|remuneration|ote|base|gross|gehalt|vergütung|lohn|salaire|rémunération|salario|sueldo|retribuzione|stipendio|salaris|lønn|lön|løn|wynagrodzenie`;
+/** "monthly salary", "annual base salary", "Hourly:", "(monthly):" — read after the period word. */
+const PAY_NOUN_AFTER_RE = new RegExp(String.raw`^(?:\s*\)?\s*:|(?:[\s-]+\p{L}+){0,2}?[\s-]+(?:${PAY_NOUNS})${R})`, 'iu');
+/** "salary per month", "salaire mensuel", "Gehalt pro Monat" — read before the period word. */
+const PAY_NOUN_BEFORE_RE = new RegExp(String.raw`${L}(?:${PAY_NOUNS})(?:[\s-]+\p{L}+){0,2}?[\s-]+$`, 'iu');
+/**
+ * English period words that can stand before an amount. Abbreviations ("pa", "ph") and "a year" are left
+ * out: before an amount they are usually something else ("Pittsburgh, PA: $25").
+ */
+const BEFORE_PERIOD_G =
+  /\b(?:(hourly|daily|day(?=\s+rate)|(?<!bi-?|semi-?)weekly|(?<!bi-?|semi-?)monthly|yearly|annual|annually)|per\s+(hour|day|week|month|year|annum))\b/gi;
+const FOREIGN_PERIODS_G = FOREIGN_PERIODS.map(([period, re]) => [period, new RegExp(re.source, 'giu')] as const);
+
+/**
+ * The pay period named before an amount in `clause` (the text from the start of its clause up to the
+ * amount): the nearest period word that qualifies the pay ("The monthly salary range for this position
+ * is $6,500", "Hourly rate of $25", "Salaire mensuel : 3 500 €"). Period words about something else in
+ * the same clause ("weekly demos, and the salary is", "annual bonus and a salary of") do not count.
+ */
+function periodBefore(clause: string): SalaryPeriod | undefined {
+  let best: SalaryPeriod | undefined;
+  let at = -1;
+  const consider = (period: SalaryPeriod, index: number, end: number): void => {
+    if (index <= at) return;
+    const after = clause.slice(end, end + 60);
+    if (QUALIFIES_EXTRA_RE.test(after)) return;
+    if (!PAY_NOUN_AFTER_RE.test(after) && !PAY_NOUN_BEFORE_RE.test(clause.slice(Math.max(0, index - 60), index))) return;
+    best = period;
+    at = index;
+  };
+  for (const m of clause.matchAll(BEFORE_PERIOD_G)) consider(periodOfWord(m[1] ?? m[2] ?? 'year'), m.index, m.index + m[0].length);
+  for (const [period, re] of FOREIGN_PERIODS_G) {
+    for (const m of clause.matchAll(re)) consider(period, m.index, m.index + m[0].length);
   }
   return best;
 }
@@ -402,8 +444,14 @@ interface Pick {
   b?: Tok;
 }
 
-/** Turn one or two tokens into a salary. `periodScopes` are searched in order for an explicit period. */
-function fromTokens(text: string, pick: Pick, periodScopes: string[], opts: SalaryOptions, salaryText: string | undefined): Salary | undefined {
+/** Turn one or two tokens into a salary. The first defined entry of `periods` is the explicit period. */
+function fromTokens(
+  text: string,
+  pick: Pick,
+  periods: ReadonlyArray<SalaryPeriod | undefined>,
+  opts: SalaryOptions,
+  salaryText: string | undefined,
+): Salary | undefined {
   const { a, b } = pick;
   let lo = a.value;
   let hi = b?.value;
@@ -426,11 +474,7 @@ function fromTokens(text: string, pick: Pick, periodScopes: string[], opts: Sala
     else min = max = lo;
   }
   const kUsed = a.mult > 1 || (b?.mult ?? 1) > 1;
-  let period: SalaryPeriod | undefined = a.lpa || b?.lpa ? 'year' : undefined;
-  for (const scope of periodScopes) {
-    if (period) break;
-    period = findPeriod(scope);
-  }
+  const period = a.lpa || b?.lpa ? 'year' : periods.find((p) => p !== undefined);
   const money = a.money || Boolean(b?.money);
   // A bare number is only a salary with some supporting evidence.
   if (!money && !period && !kUsed && !a.grouped && !b?.grouped && Math.max(lo, hi ?? 0) < 1000) return undefined;
@@ -459,6 +503,37 @@ function prepare(text: string): string {
   return text.normalize('NFKC').replace(/[    ]/g, ' ');
 }
 
+/** For each token: where the previous money amount ends (0 if none) and where the next one starts (Infinity if none). */
+function moneyNeighbours(toks: readonly Tok[]): { prevEnd: number[]; nextStart: number[] } {
+  const prevEnd: number[] = [];
+  const nextStart: number[] = [];
+  let end = 0;
+  toks.forEach((t, k) => {
+    prevEnd[k] = end;
+    if (t.money) end = t.end;
+  });
+  let start = Infinity;
+  for (let k = toks.length - 1; k >= 0; k--) {
+    nextStart[k] = start;
+    const t = toks[k];
+    if (t?.money) start = t.start;
+  }
+  return { prevEnd, nextStart };
+}
+
+/**
+ * Text after an amount (from `end`, at most up to `limit`) that can still say what the amount is. Words
+ * after the next amount belong to it, and so does that amount's lead-in after the last clause break:
+ * in "$6,500 - $9,500 (annual $78,000 - $114,000)" the first range's scope ends at the "(".
+ */
+function scopeAfter(text: string, end: number, nextStart: number, limit: number): string {
+  if (nextStart > limit) return text.slice(end, limit);
+  const scope = text.slice(end, nextStart);
+  let cut = -1;
+  for (const m of scope.matchAll(/[(),;|]|\s\/(?=\s)/g)) cut = m.index;
+  return cut >= 0 ? scope.slice(0, cut) : scope;
+}
+
 /**
  * Parse a free-text salary. Must handle, at least:
  *   "$120k – $150k", "$120,000-$150,000 a year", "USD 100,000+", "up to £65,000 per annum",
@@ -472,7 +547,9 @@ function prepare(text: string): string {
  *
  * Details: a single amount gives min = max; "+"/"from"/"starting at"/"min" give min only and
  * "up to"/"max" give max only. Bonus/equity/stipend amounts are skipped. The bounds are scaled up
- * for currencies whose unit is worth much less than a dollar (JPY, INR, KRW, …).
+ * for currencies whose unit is worth much less than a dollar (JPY, INR, KRW, …). The explicit unit
+ * is looked for after the amount (up to the next amount), then before it in the same clause
+ * ("Monthly: $6,500 - $9,500"); a period word that describes a benefit ("+ monthly stipend") is ignored.
  */
 export function parseSalaryText(text: string, opts: SalaryOptions = {}): Salary | undefined {
   if (typeof text !== 'string') return undefined;
@@ -480,6 +557,7 @@ export function parseSalaryText(text: string, opts: SalaryOptions = {}): Salary 
   if (!original || !/\d/.test(original) || original.length > 2000) return undefined;
   const s = prepare(original);
   const toks = scanAmounts(s, opts.country).filter((t) => !isJunk(s, t) && !isExtra(s, t));
+  const { prevEnd, nextStart } = moneyNeighbours(toks);
   for (let i = 0; i < toks.length && i < 8; i++) {
     const a = toks[i];
     if (!a) break;
@@ -487,7 +565,10 @@ export function parseSalaryText(text: string, opts: SalaryOptions = {}): Salary 
     const b = next && isRangeGap(s, a, next) ? next : undefined;
     const last = b ?? a;
     if (isPieceRate(s, last.end)) return undefined;
-    const salary = fromTokens(s, { a, b }, [s.slice(a.start), s.slice(0, a.start)], opts, original);
+    const after = s.slice(a.start, last.end) + scopeAfter(s, last.end, nextStart[b ? i + 1 : i] ?? Infinity, s.length);
+    // A salary field is short and on topic, so any period word in the clause counts ("Monthly $6,500").
+    const before = clauseBefore(s, a.start, prevEnd[i] ?? 0);
+    const salary = fromTokens(s, { a, b }, [findPeriod(after), findPeriod(before)], opts, original);
     if (salary) return salary;
     // A range that failed is not retried from its upper bound ("$1 - $100,000" stays rejected).
     if (b && a.money) i++;
@@ -549,11 +630,11 @@ export function normalizeSalary(raw: RawSalary | undefined, opts: SalaryOptions 
 // ---------------------------------------------------------------------------
 
 const PAY_WORDS_RE =
-  /\b(?:salary|salaries|compensation|comp|pay|paid|pays|paying|wages?|earn|earns|earning|earnings?|remuneration|ote|on[- ]target|base|income|hourly|annual(?:ly)?|per\s+(?:hour|year|annum|month)|gehalt|vergütung|lohn|salaire|rémunération|salario|sueldo|retribuzione|stipendio|salaris|lønn|lön|løn|wynagrodzenie)\b/i;
+  /\b(?:salary|salaries|compensation|comp|pay|paid(?!\s+(?:media|social|search|ads?|advertising|acquisition|channels?|campaigns?|marketing|traffic)\b)|pays|paying|wages?|earn|earns|earning|earnings?|remuneration|ote|on[- ]target|base|income|hourly|annual(?:ly)?|per\s+(?:hour|year|annum|month)|gehalt|vergütung|lohn|salaire|rémunération|salario|sueldo|retribuzione|stipendio|salaris|lønn|lön|løn|wynagrodzenie)\b/i;
 const PAY_WORDS_G = new RegExp(PAY_WORDS_RE.source, 'gi');
 /** Pay vocabulary that names the amount itself; a single amount (not a range) needs one in its sentence. */
 const STRONG_PAY_RE =
-  /\b(?:salary|salaries|compensation|comp|pay|paid|pays|paying|wages?|earn|earns|earning|earnings?|remuneration|ote|on[- ]target|base|income|hourly|rate|gehalt|vergütung|lohn|salaire|rémunération|salario|sueldo|retribuzione|stipendio|salaris|lønn|lön|løn|wynagrodzenie)\b/i;
+  /\b(?:salary|salaries|compensation|comp|pay|paid(?!\s+(?:media|social|search|ads?|advertising|acquisition|channels?|campaigns?|marketing|traffic)\b)|pays|paying|wages?|earn|earns|earning|earnings?|remuneration|ote|on[- ]target|base|income|hourly|rate|gehalt|vergütung|lohn|salaire|rémunération|salario|sueldo|retribuzione|stipendio|salaris|lønn|lön|løn|wynagrodzenie)\b/i;
 /** Words that make an amount something other than pay when they come after the last pay word before it. */
 const NOT_PAY_G =
   /\b(?:raised?|raising|funding|funded|financing|series\s+[a-f]|seed\s+round|valuation|valued|investors?|investments?|backed|revenue|arr|mrr|gmv|turnover|market\s+cap|under\s+management|aum|ipo|acquired|acquisition|loans?|donat\w*|fundrais\w*|prizes?|spend|spent|price[ds]?|pricing|fees?|costs?)\b/gi;
@@ -592,16 +673,38 @@ function cutAtSentence(s: string): string {
   return i >= 0 ? s.slice(0, i) : s;
 }
 
+/** Like cutAtSentence, but also ends at a conjunction that starts another clause ("$25 – $30 and the monthly salary …"). */
+function cutAtClause(s: string): string {
+  const i = s.search(/[\n;]|\.\s+[A-Z]|\b(?:and|but|while|whereas)\b/i);
+  return i >= 0 ? s.slice(0, i) : s;
+}
+
+/** Move a sentence start that follows a line break up to a short heading line directly above it ("Compensation\n$120,000"). */
+function withHeadingLine(text: string, from: number): number {
+  if (from <= 0 || text[from - 1] !== '\n') return from;
+  let p = from - 1;
+  while (p > 0 && /\s/.test(text[p - 1] ?? '')) p--;
+  const lineStart = text.lastIndexOf('\n', p - 1) + 1;
+  return p - lineStart <= 80 ? lineStart : from;
+}
+
 /** The sentence around an amount, plus a short heading line directly above it ("Compensation\n$120,000"). */
 function payContext(text: string, start: number, end: number): string {
-  let from = sentenceStart(text, start);
-  if (from > 0 && text[from - 1] === '\n') {
-    let p = from - 1;
-    while (p > 0 && /\s/.test(text[p - 1] ?? '')) p--;
-    const lineStart = text.lastIndexOf('\n', p - 1) + 1;
-    if (p - lineStart <= 80) from = lineStart;
-  }
+  const from = withHeadingLine(text, sentenceStart(text, start));
   return text.slice(from, end) + cutAtSentence(text.slice(end, end + 60));
+}
+
+/**
+ * The clause before an amount: from the previous amount (`floor`), a line or ";" break, or the end of the
+ * previous sentence, plus a short heading line above. Unlike sentenceStart, a "." only ends a sentence
+ * before a capital letter, so "Monthly salary approx. $6,500" stays one clause.
+ */
+function clauseBefore(text: string, start: number, floor: number): string {
+  const from = Math.max(0, floor, start - 200);
+  const left = text.slice(from, start);
+  const sentenceEnd = /^[\s\S]*[.!?]\s+(?=\p{Lu})/u.exec(left);
+  const cut = Math.max(left.lastIndexOf('\n'), left.lastIndexOf(';'), sentenceEnd ? sentenceEnd[0].length - 1 : -1);
+  return text.slice(Math.max(floor, withHeadingLine(text, from + cut + 1)), start);
 }
 
 /**
@@ -619,6 +722,12 @@ function payContext(text: string, start: number, end: number): string {
  * "Zone 1: $150k–$200k; Zone 2: $135k–$180k" gives $135k–$200k while "Base $90k–$110k,
  * OTE $150k–$180k" gives $90k–$110k. Without any range, the first qualifying single amount is
  * used. `text` holds the matched amounts.
+ *
+ * The period is the one written right after the amount ("per month", "/hr"; words after the next
+ * amount are that amount's), else one written before it in the same clause when it qualifies the pay
+ * ("The monthly salary range … is $6,500 to $9,500", "Hourly rate of $25–$30", "Salaire mensuel :"),
+ * else inferred from magnitude. Period words of another sentence or about something else
+ * ("weekly demos", "a monthly wellness stipend") are ignored.
  */
 export function extractSalaryFromText(descriptionText: string, opts: SalaryOptions = {}): Salary | undefined {
   if (typeof descriptionText !== 'string' || !/\d/.test(descriptionText)) return undefined;
@@ -631,18 +740,20 @@ export function extractSalaryFromText(descriptionText: string, opts: SalaryOptio
     end: number;
   }
   const found: Found[] = [];
-  const consider = (a: Tok, b: Tok | undefined): boolean => {
+  const { prevEnd, nextStart } = moneyNeighbours(toks);
+  /** Considers toks[i] alone, or as a range with b = toks[i + 1]. */
+  const consider = (i: number, a: Tok, b: Tok | undefined): boolean => {
     const last = b ?? a;
     if (!a.money && !b?.money) return false;
     if (isPieceRate(s, last.end) || isBusinessFigure(s, a.start, last.end)) return false;
-    const after = cutAtSentence(s.slice(last.end, last.end + 40));
-    const before = s.slice(Math.max(0, a.start - 40), a.start);
+    const afterPeriod = findPeriod(cutAtClause(scopeAfter(s, last.end, nextStart[b ? i + 1 : i] ?? Infinity, last.end + 40)));
+    const beforePeriod = afterPeriod ? undefined : periodBefore(clauseBefore(s, a.start, prevEnd[i] ?? 0));
     const gap = b ? s.slice(a.end, b.start) : '';
     const near = s.slice(Math.max(0, a.start - 150), Math.min(s.length, last.end + 60));
-    if (!PAY_WORDS_RE.test(near) && !findPeriod(after)) return false;
+    if (!PAY_WORDS_RE.test(near) && !afterPeriod && !beforePeriod) return false;
     // A lone amount ("up to $1,000 per month for coworking") needs pay vocabulary in its own sentence.
     if (!b && !STRONG_PAY_RE.test(payContext(s, a.start, last.end))) return false;
-    const salary = fromTokens(s, { a, b }, [after, gap, before.slice(before.search(/[^\n;]*$/))], opts, undefined);
+    const salary = fromTokens(s, { a, b }, [afterPeriod, findPeriod(gap), beforePeriod], opts, undefined);
     if (!salary) return false;
     found.push({ salary, range: Boolean(b), start: a.start, end: last.end });
     return true;
@@ -654,12 +765,12 @@ export function extractSalaryFromText(descriptionText: string, opts: SalaryOptio
     const b = next && isRangeGap(s, a, next) ? next : undefined;
     if (b) {
       // A range that is a business figure or piece rate takes both of its bounds with it.
-      if (isPieceRate(s, b.end) || isBusinessFigure(s, a.start, b.end) || consider(a, b)) {
+      if (isPieceRate(s, b.end) || isBusinessFigure(s, a.start, b.end) || consider(i, a, b)) {
         i++;
         continue;
       }
     }
-    if (a.money) consider(a, undefined);
+    if (a.money) consider(i, a, undefined);
   }
   const ranges = found.filter((f) => f.range);
   const first = ranges[0] ?? found[0];

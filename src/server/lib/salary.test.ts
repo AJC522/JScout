@@ -495,6 +495,7 @@ const NEGATIVE: string[] = [
   'We cover up to $500 per month for internet and phone.',
   'Projects range from $5,000 - $50,000.',
   'The role offers $150k incl. bonus.', // a lone amount needs pay vocabulary in its sentence
+  'Proven track record managing $300K to $1M+/month in paid media spend', // "paid media" is marketing, not pay
 ];
 
 describe('extractSalaryFromText', () => {
@@ -554,6 +555,66 @@ describe('extractSalaryFromText', () => {
     expect(core(r)).toEqual({ min: 100000, max: 120000, currency: 'USD', period: 'year' });
     // Only the first 200,000 characters are scanned.
     expect(extractSalaryFromText(`${'x '.repeat(100_001)}Salary: $100,000 - $120,000`)).toBeUndefined();
+  });
+});
+
+describe('period words written before the amount', () => {
+  it('reads the period from the same clause before the amount (regression: Zoox posting read as yearly)', () => {
+    const zoox =
+      'Compensation\nThe monthly salary range for this position is $6,500 to $9,500. Compensation will vary based on geographic location and level of education.';
+    const r = extractSalaryFromText(zoox, { country: 'US' });
+    expect(r).toMatchObject({ min: 6500, max: 9500, currency: 'USD', period: 'month', annualMin: 78000, annualMax: 114000 });
+    checkInvariants(r);
+  });
+
+  it.each<[string, Expect, string?]>([
+    ['The weekly pay for this assignment is $2,500 - $3,000.', { min: 2500, max: 3000, currency: 'USD', period: 'week' }],
+    ['Daily rate for contractors on this engagement is £450–£550.', { min: 450, max: 550, currency: 'GBP', period: 'day' }],
+    ['Our hourly pay rate, depending on experience, is $25–$30.', { min: 25, max: 30, currency: 'USD', period: 'hour' }],
+    ['Annual base salary of $120,000 – $150,000', { min: 120000, max: 150000, currency: 'USD', period: 'year' }],
+    ['Monthly Salary\n$6,500 – $9,500', { min: 6500, max: 9500, currency: 'USD', period: 'month' }],
+    ['The monthly salary is approx. $6,500 – $9,500.', { min: 6500, max: 9500, currency: 'USD', period: 'month' }],
+    ['The hourly rate is $25 – $30 and the monthly salary for full-time staff is $6,500 – $9,500.', { min: 25, max: 30, currency: 'USD', period: 'hour' }],
+    ['El salario mensual bruto ofrecido para esta posición en Madrid es de 3.000 € a 3.800 €.', { min: 3000, max: 3800, currency: 'EUR', period: 'month' }],
+    ['Das Gehalt pro Monat für diese Position in Berlin beträgt 4.500 € – 5.500 €.', { min: 4500, max: 5500, currency: 'EUR', period: 'month' }],
+  ])('extract %j', (text, expected, country) => {
+    const r = extractSalaryFromText(text, country ? { country } : {});
+    expect(core(r)).toEqual(expected);
+    checkInvariants(r);
+  });
+
+  it.each<[string, Expect]>([
+    // Another sentence, or a clause about something else.
+    ['We offer monthly team lunches. The salary range is $100,000 - $120,000.', { min: 100000, max: 120000, currency: 'USD', period: 'year' }],
+    ['We have weekly demos, and the salary range is $100,000 - $120,000.', { min: 100000, max: 120000, currency: 'USD', period: 'year' }],
+    ['Bonuses are paid monthly; the base salary is $90,000 – $110,000.', { min: 90000, max: 110000, currency: 'USD', period: 'year' }],
+    ['Hourly employees are eligible for overtime.\nSalary: $90,000 - $110,000', { min: 90000, max: 110000, currency: 'USD', period: 'year' }],
+    ['A monthly wellness stipend and a salary of $90,000 – $110,000.', { min: 90000, max: 110000, currency: 'USD', period: 'year' }],
+    // After the amount: a benefit's period, or the next amount's.
+    ['The salary range is $100,000 - $120,000, plus a monthly wellness stipend.', { min: 100000, max: 120000, currency: 'USD', period: 'year' }],
+    ['Monthly salary of $6,500 to $9,500 (annual $78,000 - $114,000).', { min: 6500, max: 9500, currency: 'USD', period: 'month' }],
+  ])('extract does not leak a period word: %j', (text, expected) => {
+    const r = extractSalaryFromText(text);
+    expect(core(r)).toEqual(expected);
+    checkInvariants(r);
+  });
+
+  it.each<[string, Expect]>([
+    ['Monthly: $6,500 - $9,500', { min: 6500, max: 9500, currency: 'USD', period: 'month' }],
+    ['Weekly pay: $1,200', { min: 1200, max: 1200, currency: 'USD', period: 'week' }],
+    ['Monthly salary approx. €4.500', { min: 4500, max: 4500, currency: 'EUR', period: 'month' }],
+    ['Monthly: $6,500 - $9,500 (Annual: $78,000 - $114,000)', { min: 6500, max: 9500, currency: 'USD', period: 'month' }],
+    ['Annual: $78,000 / Monthly: $6,500', { min: 78000, max: 78000, currency: 'USD', period: 'year' }],
+    ['Paid weekly. Salary: $90,000', { min: 90000, max: 90000, currency: 'USD', period: 'year' }],
+    ['$90,000 plus a monthly car allowance', { min: 90000, max: 90000, currency: 'USD', period: 'year' }],
+  ])('parse %j', (text, expected) => {
+    const r = parseSalaryText(text);
+    expect(core(r)).toEqual(expected);
+    checkInvariants(r);
+  });
+
+  it('still reads "Monthly: $6,500 - $9,500" as $78k–$114k a year', () => {
+    expect(parseSalaryText('Monthly: $6,500 - $9,500')).toMatchObject({ annualMin: 78000, annualMax: 114000 });
   });
 });
 

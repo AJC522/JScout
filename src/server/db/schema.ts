@@ -205,4 +205,16 @@ export const MIGRATIONS: string[] = [
     viewed_at    TEXT NOT NULL
   );
   `,
+  // 2 — search indexes (search engine). Covering indexes so the count path and the first search pass
+  // never read table rows: description_html sits before posted_at/closed_at in a row, so reading those
+  // columns from the table walks the description's overflow pages. cluster_key follows closed_at so
+  // COUNT(DISTINCT cluster_key) over open postings streams in index order instead of sorting.
+  `
+  CREATE INDEX jobs_search ON jobs (
+    closed_at, cluster_key, remote, employment_type, seniority, source, company_key,
+    posted_at, first_seen_at, salary_currency, salary_annual_max, salary_annual_min, (description_html != '')
+  );
+  CREATE INDEX job_places_area ON job_places (country, kind, admin1, city, job_rid);
+  CREATE INDEX job_places_geo  ON job_places (lat, lon, kind, job_rid);
+  `,
 ];
