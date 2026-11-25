@@ -104,6 +104,7 @@ export const fakeTitles = {
     return fakeTitles.analyzeTitle(title).seniority;
   },
   findRole,
+  rolesForSkills: (): RoleRef[] => [],
 };
 
 const city = (name: string, admin1: string, country: string, lat: number, lon: number): Place => ({
@@ -381,3 +382,31 @@ export const salesProfile = makeProfile(
 export function savedAnswer(id: string, question: string, answer: string, tags: string[] = []): SavedAnswer {
   return { id, question, answer, tags, updatedAt: NOW };
 }
+
+/**
+ * A full résumé for the software profile, laid out the usual way: contact line, headed sections,
+ * dated jobs with bullets. Some bullets are deliberately weak ("Responsible for…", "I wrote…").
+ */
+export const softwareResume = `Maya Chen
+Austin, TX | maya@example.com | (512) 555-0134 | linkedin.com/in/mayachen
+
+EXPERIENCE
+
+Software Engineer, Brightline Health
+Mar 2021 – Present
+- Responsible for maintaining the internal admin dashboard used by support staff
+- Worked on the patient onboarding flow with the design team
+- Built a claims payment service in TypeScript and Node.js that processes $40M a month
+- Led the migration of billing data to PostgreSQL with zero downtime
+
+Junior Developer, Cobalt Labs
+Jun 2018 – Feb 2021
+- Helped build React dashboards for enterprise customers
+- I wrote the first automated test suite for the billing API
+
+EDUCATION
+University of Texas at Austin, BS Computer Science, 2018
+
+SKILLS
+React, Docker, TypeScript, Node.js, PostgreSQL, AWS
+`;

@@ -48,6 +48,11 @@ import type {
   ProfileCompleteness,
   QuickFillField,
   ResumeAnalysis,
+  ResumeReview,
+  ResumeReviewRequest,
+  ResumeReworkRequest,
+  ResumeReworkResult,
+  ResumeScoreSummary,
   SavedSearch,
   SearchQuery,
   SearchResponse,
@@ -301,6 +306,12 @@ export interface ApplyKitService {
   analyze(target: { jobId?: string; applicationId?: string }): FitAnalysis;
   coverLetter(request: CoverLetterRequest): Promise<DraftResult>;
   answer(request: AnswerDraftRequest): Promise<AnswerDraftResult>;
+  /** Score the saved résumé (or `resumeText`) against a job, application or pasted posting. */
+  reviewResume(request: ResumeReviewRequest): ResumeReview;
+  /** A tailored résumé draft for that target (returned, never saved). */
+  reworkResume(request: ResumeReworkRequest): Promise<ResumeReworkResult>;
+  /** The saved résumé scored against every active application ([] without a résumé). */
+  resumeScores(): ResumeScoreSummary[];
   aiStatus(): AiStatus;
   aiTest(): Promise<AiStatus>;
 }

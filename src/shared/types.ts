@@ -688,7 +688,7 @@ export interface ApplicationEvent {
   detail: string;
 }
 
-export type DocumentKind = 'cover-letter' | 'answer' | 'resume-notes' | 'email' | 'other';
+export type DocumentKind = 'cover-letter' | 'answer' | 'resume' | 'resume-notes' | 'email' | 'other';
 export type GeneratedBy = 'manual' | 'template' | 'ai';
 
 export interface ApplicationDocument {
@@ -813,6 +813,145 @@ export interface QuickFillField {
   label: string;
   value: string;
   group: 'contact' | 'links' | 'work' | 'education' | 'other';
+}
+
+// --- résumé review ------------------------------------------------------------
+
+/** A job description pasted by the user, for postings that are not in the index or the tracker. */
+export interface PastedPosting {
+  title: string;
+  company?: string;
+  description: string;
+}
+
+/** What a résumé review compares against: an indexed job, a tracked application, or a pasted posting. */
+export interface ResumeTarget {
+  jobId?: string;
+  applicationId?: string;
+  posting?: PastedPosting;
+}
+
+export interface ResumeReviewRequest extends ResumeTarget {
+  /** Review this text instead of the saved résumé (an edited or tailored draft). */
+  resumeText?: string;
+}
+
+export type RequirementLevel = 'required' | 'preferred';
+export type RequirementKind = 'skill' | 'experience' | 'education' | 'credential' | 'soft' | 'other';
+export type RequirementStatus = 'met' | 'partial' | 'missing';
+
+/** One requirement or "nice to have" from the posting, checked against the résumé. */
+export interface RequirementCheck {
+  /** As written in the posting. */
+  text: string;
+  level: RequirementLevel;
+  kind: RequirementKind;
+  status: RequirementStatus;
+  /** Terms from the requirement the résumé shows, and those it does not. */
+  matched: string[];
+  missing: string[];
+  /** The résumé line that best shows the requirement. */
+  evidence?: string;
+  /** Extra context, e.g. "Your résumé dates cover about 4 years". */
+  note?: string;
+}
+
+export type ResumeCategoryKey = 'skills' | 'requirements' | 'keywords' | 'title' | 'experience' | 'quality';
+
+export interface ResumeScoreCategory {
+  key: ResumeCategoryKey;
+  label: string;
+  /** 0–100, or null when the posting or résumé gives nothing to compare (left out of the total). */
+  score: number | null;
+  /** Points out of 100 this category is worth when it can be assessed. */
+  weight: number;
+  detail: string;
+}
+
+export type RecommendationPriority = 'high' | 'medium' | 'low';
+export type RecommendationArea = 'skills' | 'requirements' | 'keywords' | 'title' | 'experience' | 'summary' | 'bullets' | 'format' | 'contact';
+
+export interface ResumeRecommendation {
+  /** Stable key, e.g. "add-skill:Kubernetes". */
+  id: string;
+  priority: RecommendationPriority;
+  area: RecommendationArea;
+  title: string;
+  detail: string;
+  /** A concrete example of the change. */
+  before?: string;
+  after?: string;
+}
+
+export type BulletIssue = 'weak-start' | 'no-metric' | 'too-long' | 'too-short' | 'first-person' | 'passive';
+
+/** One bullet of the résumé's experience, how relevant it is to the posting, and how it could be stronger. */
+export interface BulletReview {
+  text: string;
+  /** The job or section heading the bullet sits under. */
+  context: string;
+  /** 0–1: how much of the posting's important vocabulary it covers. */
+  relevance: number;
+  /** Posting terms this bullet already shows. */
+  covers: string[];
+  issues: BulletIssue[];
+  /** A safer, stronger wording (only when one can be made without changing the facts). */
+  rewrite?: string;
+}
+
+export interface ResumeCheck {
+  key: string;
+  label: string;
+  ok: boolean;
+  detail: string;
+}
+
+export interface ResumeReview {
+  /** 0–100 match of the résumé to the posting. */
+  score: number;
+  band: string;
+  summary: string;
+  job: { title: string; company: string };
+  /** Which text was reviewed: the saved résumé or a draft sent with the request. */
+  source: 'saved' | 'draft';
+  categories: ResumeScoreCategory[];
+  requirements: RequirementCheck[];
+  skillsMatched: string[];
+  skillsMissing: string[];
+  /** Skills the posting asks for that your profile lists but your résumé does not show. */
+  skillsInProfileOnly: string[];
+  keywords: KeywordCoverage[];
+  recommendations: ResumeRecommendation[];
+  bullets: BulletReview[];
+  checks: ResumeCheck[];
+  stats: { words: number; bullets: number; bulletsWithNumbers: number; yearsExperience: number | null };
+  /** Problems that limit the review (no description, unreadable dates…). */
+  warnings: string[];
+}
+
+export interface ResumeReworkRequest extends ResumeReviewRequest {
+  /** 'ai' requires a configured AI key; 'template' always works. */
+  mode: 'template' | 'ai';
+}
+
+export interface ResumeReworkResult extends DraftResult {
+  /** What was changed, in plain sentences. */
+  changes: string[];
+}
+
+/** The résumé's score against one tracked application. */
+export interface ResumeScoreSummary {
+  applicationId: string;
+  jobId?: string;
+  title: string;
+  company: string;
+  status: ApplicationStatus;
+  score: number;
+  band: string;
+  requiredMet: number;
+  requiredTotal: number;
+  /** True when the posting has little or no description, so the score says little. */
+  limited: boolean;
 }
 
 export interface AiStatus {

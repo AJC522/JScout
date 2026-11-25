@@ -1,7 +1,7 @@
 /** TanStack Query setup: one client for the app and the query-key factories every feature shares. */
 import { QueryClient } from '@tanstack/react-query';
 import type { CompanyListQuery } from '../../shared/api';
-import type { ApplicationStatus, SearchQuery } from '../../shared/types';
+import type { ApplicationStatus, ResumeTarget, SearchQuery } from '../../shared/types';
 import { ApiRequestError } from '../api/client';
 
 /** Retry a failed query once, except when the server answered 4xx: asking again cannot change that answer. */
@@ -87,6 +87,10 @@ export const qk = {
 
   /** Apply-kit fit analysis for an application or job. Under profile-extras because profile edits change it. */
   fitAnalysis: (target: { applicationId?: string; jobId?: string }) => ['profile-extras', 'fit', compactParams(target)] as const,
+  /** Résumé review of the saved résumé against a job, application or pasted posting. Profile edits change it too. */
+  resumeReview: (target: ResumeTarget) => ['profile-extras', 'resume-review', compactParams(target)] as const,
+  /** The saved résumé scored against every active application. */
+  resumeScores: () => ['profile-extras', 'resume-scores'] as const,
 
   /** Prefix of every result set made by `qk.search(query)` (not history or from-profile). */
   searchResults: () => ['search', 'results'] as const,

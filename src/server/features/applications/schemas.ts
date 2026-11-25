@@ -87,7 +87,7 @@ export const applicationPatchSchema = z.strictObject({
 });
 
 export const applicationEventTypeSchema = z.enum(['created', 'status', 'note', 'interview', 'follow-up', 'document', 'contact']);
-export const documentKindSchema = z.enum(['cover-letter', 'answer', 'resume-notes', 'email', 'other']);
+export const documentKindSchema = z.enum(['cover-letter', 'answer', 'resume', 'resume-notes', 'email', 'other']);
 export const generatedBySchema = z.enum(['manual', 'template', 'ai']);
 
 export const eventCreateSchema = z.strictObject({
