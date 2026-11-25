@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_PORT } from '../shared/constants';
+import { legacyDataDir, userDataDir } from './data-dir';
 
 export interface AppConfig {
   /** App version from package.json. */
@@ -11,6 +12,11 @@ export interface AppConfig {
   port: number;
   /** Directory holding the SQLite database and uploaded files. */
   dataDir: string;
+  /**
+   * The app-folder `data` directory older versions used, set only when dataDir is the default per-user
+   * folder (not chosen with JSCOUT_DATA_DIR): its data is moved into dataDir at startup.
+   */
+  legacyDataDir?: string;
   dbPath: string;
   /** Built client assets (dist/client); undefined when not built (dev uses Vite). */
   clientDir?: string;
@@ -48,15 +54,11 @@ function readVersion(root: string): string {
   }
 }
 
-function defaultDataDir(root: string): string {
-  // Keep data next to the app when running from a checkout; this is a personal,
-  // local-first tool and a visible ./data folder is easy to back up or delete.
-  return path.join(root, 'data');
-}
-
 export function loadConfig(overrides: Partial<AppConfig> = {}, env: NodeJS.ProcessEnv = process.env): AppConfig {
   const root = findProjectRoot();
-  const dataDir = path.resolve(overrides.dataDir ?? env.JSCOUT_DATA_DIR ?? defaultDataDir(root));
+  // A per-user folder (see data-dir.ts), so a new copy of the app still finds the saved profile and résumé.
+  const chosen = overrides.dataDir ?? (env.JSCOUT_DATA_DIR || undefined);
+  const dataDir = path.resolve(chosen ?? userDataDir(env));
   const clientCandidate = path.join(root, 'dist', 'client');
   const referenceCandidates = [path.join(here, 'data'), path.join(root, 'src', 'server', 'data')];
   const referenceDir = referenceCandidates.find((p) => fs.existsSync(p)) ?? referenceCandidates[0]!;
@@ -66,6 +68,7 @@ export function loadConfig(overrides: Partial<AppConfig> = {}, env: NodeJS.Proce
     host: env.JSCOUT_HOST ?? '127.0.0.1',
     port: Number.isFinite(port) && port > 0 ? port : DEFAULT_PORT,
     dataDir,
+    ...(chosen === undefined ? { legacyDataDir: legacyDataDir(root) } : {}),
     dbPath: path.join(dataDir, 'jscout.db'),
     clientDir: fs.existsSync(path.join(clientCandidate, 'index.html')) ? clientCandidate : undefined,
     referenceDir,

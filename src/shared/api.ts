@@ -33,6 +33,8 @@ import type {
   EducationEntry,
   ExperienceEntry,
   FitAnalysis,
+  GapAnalysis,
+  GapRequest,
   GeneratedBy,
   IndexSummary,
   IsoDate,
@@ -282,6 +284,8 @@ export interface ApiRoutes {
   'POST /api/applykit/resume-rework': { body: ResumeReworkRequest; res: ResumeReworkResult };
   /** The saved résumé scored against every active application. */
   'GET /api/applykit/resume-scores': { res: ResumeScoreSummary[] };
+  /** What a set of jobs asks for that the profile and résumé don't show, with recommendations. */
+  'POST /api/gaps': { body: GapRequest; res: GapAnalysis };
   'GET /api/ai/status': { res: AiStatus };
   'POST /api/ai/test': { res: AiStatus };
 }

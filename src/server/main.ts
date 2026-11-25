@@ -1,7 +1,9 @@
 import './quiet-warnings';
 import { spawn } from 'node:child_process';
+import path from 'node:path';
 import { buildApp } from './app';
-import { loadConfig } from './config';
+import { type AppConfig, loadConfig } from './config';
+import { adoptLegacyData, describeMove } from './data-dir';
 import { databaseProblem } from './startup-errors';
 
 const [major = 0, minor = 0] = process.versions.node.split('.').map(Number);
@@ -26,8 +28,21 @@ function openInBrowser(url: string): void {
   }
 }
 
+/**
+ * Bring data from the app-folder `data` directory of an older version into the per-user folder, once.
+ * If that cannot be done, keep using the old folder so nothing seems lost.
+ */
+function settleDataDir(config: AppConfig): AppConfig {
+  if (!config.legacyDataDir) return config;
+  const move = adoptLegacyData(config.legacyDataDir, config.dataDir);
+  const message = describeMove(move);
+  if (message) (move.kind === 'failed' ? console.warn : console.log)(`\n  ${message}`);
+  if (move.kind !== 'failed') return config;
+  return { ...config, dataDir: move.from, dbPath: path.join(move.from, 'jscout.db') };
+}
+
 async function main(): Promise<void> {
-  const config = loadConfig();
+  const config = settleDataDir(loadConfig());
   let built: Awaited<ReturnType<typeof buildApp>>;
   try {
     built = await buildApp({ config });

@@ -4,7 +4,7 @@
  */
 import { useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { ClipboardPaste, FileCheck, FileText, RefreshCw, SquareKanban } from 'lucide-react';
+import { ClipboardPaste, FileCheck, FileText, RefreshCw, SquareKanban, Target } from 'lucide-react';
 import { STATUS_LABELS } from '../../../shared/constants';
 import type { PastedPosting, ResumeScoreSummary, ResumeTarget } from '../../../shared/types';
 import { Page } from '../../components/layout/Page';
@@ -283,6 +283,11 @@ export function ResumeReviewPage() {
       <PageHeader
         title="Résumé review"
         description="Score your résumé against the jobs you're applying to, see which requirements it shows and what to change, then get a version tailored to each job."
+        actions={
+          <Button asChild leadingIcon={<Target />}>
+            <Link to="/gaps">Skill gaps across jobs</Link>
+          </Button>
+        }
       />
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-6">

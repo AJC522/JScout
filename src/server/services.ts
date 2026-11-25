@@ -36,6 +36,8 @@ import type {
   CoverLetterRequest,
   DraftResult,
   FitAnalysis,
+  GapAnalysis,
+  GapRequest,
   IndexSummary,
   IsoDate,
   JobDetail,
@@ -56,6 +58,7 @@ import type {
   SavedSearch,
   SearchQuery,
   SearchResponse,
+  Seniority,
   SkillSuggestion,
   SourceInfo,
   TitleSuggestion,
@@ -253,6 +256,11 @@ export interface SearchService {
   jobDetail(id: string, query?: SearchQuery): JobDetail | undefined;
   /** A ready-to-run query built from the saved profile's preferences. */
   queryFromProfile(): SearchQuery;
+  /**
+   * Up to `limit` postings for a query, most relevant first (deduplicated and filtered like search()),
+   * with what the profile match reads. For analysing a set of jobs (skill gaps), not for showing them.
+   */
+  sampleJobs(query: SearchQuery, limit: number): SampledJob[];
   /** Translate a user query for upstream "search"-mode sources. */
   toUpstreamQuery(query: SearchQuery): UpstreamQuery;
   suggestTitles(q: string, limit?: number): TitleSuggestion[];
@@ -262,6 +270,16 @@ export interface SearchService {
   history(limit?: number): SearchHistoryEntry[];
   recordHistory(query: SearchQuery, total: number): void;
   clearHistory(): void;
+}
+
+/** A posting as the profile match sees it. */
+export interface SampledJob {
+  id: string;
+  title: string;
+  titleCore: string;
+  roleId?: string;
+  skills: string[];
+  seniority: Seniority;
 }
 
 // --- saved searches ------------------------------------------------------------------------
@@ -316,6 +334,13 @@ export interface ApplyKitService {
   aiTest(): Promise<AiStatus>;
 }
 
+// --- skill gaps ------------------------------------------------------------------------------
+
+export interface GapService {
+  /** What a set of jobs asks for that the profile and résumé don't show, and what to do about it. */
+  analyze(request: GapRequest): GapAnalysis;
+}
+
 // --- container ---------------------------------------------------------------------------------
 
 export interface Services {
@@ -329,6 +354,7 @@ export interface Services {
   search: SearchService;
   savedSearches: SavedSearchService;
   applyKit: ApplyKitService;
+  gaps: GapService;
 }
 
 export interface Logger {

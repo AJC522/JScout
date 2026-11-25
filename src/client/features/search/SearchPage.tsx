@@ -3,9 +3,9 @@
  * list and (on wide screens) the job detail beside it. The URL holds the whole state.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUp, BookmarkPlus, Keyboard, MousePointerClick, SlidersHorizontal } from 'lucide-react';
+import { ArrowUp, BookmarkPlus, Keyboard, MousePointerClick, SlidersHorizontal, Target } from 'lucide-react';
 import type { JobDetail, SearchQuery, SearchResultItem, SearchSort } from '../../../shared/types';
 import { SEARCH_DEFAULTS } from '../../../shared/constants';
 import { api, errorMessage } from '../../api/client';
@@ -17,6 +17,7 @@ import { cn } from '../../lib/cn';
 import { pluralize } from '../../lib/format';
 import { useDocumentTitle, useHotkey, useMediaQuery } from '../../lib/hooks';
 import { qk } from '../../lib/query';
+import { gapsUrl } from '../gaps/model';
 import { useMarkViewed as useMarkSavedSearchViewed } from '../saved/queries';
 import { FiltersPanel } from './FiltersPanel';
 import { IndexStatus } from './IndexStatus';
@@ -327,6 +328,13 @@ export function SearchPage() {
                 <span className="flex min-w-0 flex-1 items-center gap-2 text-xs text-subtle">
                   {updating ? <Spinner size="sm" label="Updating results" /> : response ? `in ${response.tookMs} ms` : null}
                 </span>
+                {response && response.total > 0 ? (
+                  <Button asChild size="sm" variant="ghost" leadingIcon={<Target />}>
+                    <Link to={gapsUrl('search', query)} title="What these jobs ask for that you don’t show yet">
+                      Skill gaps
+                    </Link>
+                  </Button>
+                ) : null}
                 <Select
                   aria-label="Sort by"
                   size="sm"

@@ -1,7 +1,7 @@
 /** TanStack Query setup: one client for the app and the query-key factories every feature shares. */
 import { QueryClient } from '@tanstack/react-query';
 import type { CompanyListQuery } from '../../shared/api';
-import type { ApplicationStatus, ResumeTarget, SearchQuery } from '../../shared/types';
+import type { ApplicationStatus, GapRequest, ResumeTarget, SearchQuery } from '../../shared/types';
 import { ApiRequestError } from '../api/client';
 
 /** Retry a failed query once, except when the server answered 4xx: asking again cannot change that answer. */
@@ -91,6 +91,8 @@ export const qk = {
   resumeReview: (target: ResumeTarget) => ['profile-extras', 'resume-review', compactParams(target)] as const,
   /** The saved résumé scored against every active application. */
   resumeScores: () => ['profile-extras', 'resume-scores'] as const,
+  /** Skill gaps across a set of jobs. Profile edits (a skill added) change it. */
+  gaps: (request: GapRequest) => ['profile-extras', 'gaps', compactParams(request)] as const,
 
   /** Prefix of every result set made by `qk.search(query)` (not history or from-profile). */
   searchResults: () => ['search', 'results'] as const,

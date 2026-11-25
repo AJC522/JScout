@@ -1046,6 +1046,119 @@ export interface AppSettingsUpdate {
   ai?: { apiKey?: string | null; model?: string };
 }
 
+// --- skill gaps ----------------------------------------------------------------
+
+/** Which jobs a skill-gap analysis looks at. */
+export type GapScope = 'profile' | 'applications' | 'search';
+
+export interface GapRequest {
+  scope: GapScope;
+  /** The search to analyse; required for scope 'search'. */
+  query?: SearchQuery;
+}
+
+/** A skill or certification the jobs list that you don't show, and what showing it would do to your match. */
+export interface GapItem {
+  name: string;
+  kind: 'skill' | 'certification';
+  /** Skills-dictionary category, e.g. "cloud-devops". */
+  category?: string;
+  /** Jobs that list it. */
+  jobs: number;
+  /** Share of the jobs that list any skills, 0–100. */
+  share: number;
+  /** Average rise of the match %, over the jobs that list it. */
+  avgGain: number;
+  /** Jobs that would move up a match tier (10-point bands). */
+  tierUps: number;
+}
+
+/** A skill you have, and how many of the jobs ask for it. */
+export interface SkillDemand {
+  name: string;
+  kind: 'skill' | 'certification';
+  jobs: number;
+  /** Share of the jobs that list any skills, 0–100. */
+  share: number;
+}
+
+/** How the jobs' stated seniority compares with yours. */
+export interface LevelFit {
+  /** Jobs below, at and above the nearest level that fits you (wellAbove: two or more steps above; part of above). */
+  below: number;
+  at: number;
+  above: number;
+  wellAbove: number;
+  /** Jobs that state no level, or all jobs when your level is unknown. */
+  unknown: number;
+  /** Your levels: the ones you prefer and the one your years of experience suggest. */
+  yours: Seniority[];
+  years: number | null;
+}
+
+export type GapRecommendationKind =
+  | 'add-resume'
+  | 'add-skills'
+  | 'add-targets'
+  | 'add-experience'
+  | 'resume-skills'
+  | 'learn-skill'
+  | 'get-certification'
+  | 'level-above'
+  | 'level-below';
+
+export interface GapRecommendation {
+  /** Stable key, e.g. "learn-skill:Kubernetes". */
+  id: string;
+  kind: GapRecommendationKind;
+  priority: RecommendationPriority;
+  title: string;
+  detail: string;
+  /** The skills or certifications it is about. */
+  skills?: string[];
+  /** The estimated effect, e.g. "+6 points on 41 jobs". */
+  impact?: string;
+}
+
+/** The match if the top missing skills and certifications were added together. */
+export interface GapProjection {
+  added: string[];
+  avgMatch: number;
+  strongJobs: number;
+}
+
+export interface GapAnalysis {
+  scope: GapScope;
+  /** What the jobs are, e.g. "Security Analyst, Crime Analyst near Honolulu, HI". */
+  basis: string;
+  /** Why there is nothing to analyse. */
+  blocker?: 'no-targets' | 'no-applications' | 'no-jobs';
+  hasResume: boolean;
+  /** Jobs looked at. */
+  jobs: number;
+  /** Jobs that list skills: the denominator of every share. */
+  jobsWithSkills: number;
+  /** Jobs with a match %. */
+  jobsMatched: number;
+  avgMatch: number | null;
+  /** Jobs at `strongThreshold`% or more. */
+  strongJobs: number;
+  strongThreshold: number;
+  /** Jobs per 10-point match tier, lowest tier first (low = 0, 10, … 90). */
+  tiers: Array<{ low: number; count: number }>;
+  /** Most impactful first. */
+  missingSkills: GapItem[];
+  missingCerts: GapItem[];
+  /** Your skills that these jobs ask for most. */
+  strengths: SkillDemand[];
+  /** Skills you have that these jobs ask for, but your résumé doesn't mention. */
+  resumeGaps: SkillDemand[];
+  level: LevelFit;
+  projection?: GapProjection;
+  /** Most important first. */
+  recommendations: GapRecommendation[];
+}
+
 export interface Bootstrap {
   version: string;
   settings: AppSettings;
