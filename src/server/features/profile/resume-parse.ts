@@ -75,10 +75,19 @@ export function headingKind(line: string): SectionKind | undefined {
   return HEADING_KINDS.get(s);
 }
 
+/** Drop Markdown decoration: heading markers and emphasis ("### **Engineer**" -> "Engineer"); "* item" bullets stay. */
+function stripMarkdown(line: string): string {
+  return line
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/\*\*|__/g, '')
+    .replace(/^[*_](?=\S)|(?<=\S)[*_]$/g, '')
+    .trim();
+}
+
 export function splitSections(text: string): Section[] {
   const sections: Section[] = [{ kind: 'header', heading: '', lines: [] }];
   for (const raw of text.split('\n')) {
-    const line = raw.trim();
+    const line = stripMarkdown(raw.trim());
     if (!line) continue;
     const kind = headingKind(line);
     if (kind) sections.push({ kind, heading: line, lines: [] });

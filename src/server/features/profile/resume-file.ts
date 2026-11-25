@@ -95,6 +95,8 @@ export function detectResumeKind(fileName: string, bytes: Buffer): ResumeKind {
   if (looksLikeImage(bytes) || ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic', '.tif', '.tiff', '.bmp'].includes(ext)) {
     throw badRequest(`This is an image, and JScout cannot read text from pictures. ${WHAT_TO_UPLOAD}`);
   }
+  if (ext === '.pdf') throw badRequest('This file is named .pdf but is not a valid PDF. Try exporting it again, or paste the text instead.');
+  if (ext === '.docx') throw badRequest('This file is named .docx but is not a valid Word document. Try saving it again, or paste the text instead.');
   if (isUtf8Text(bytes)) {
     if (TEXT_EXTENSIONS.has(ext)) return 'text';
     if (ext === '.doc' || ext === '.rtf' || ext === '.pages' || ext === '.odt') {
@@ -105,8 +107,6 @@ export function detectResumeKind(fileName: string, bytes: Buffer): ResumeKind {
   if (TEXT_EXTENSIONS.has(ext) && ext !== '') {
     throw badRequest('This text file is not UTF-8 encoded. Save it as UTF-8 (or paste the text instead) and try again.');
   }
-  if (ext === '.pdf') throw badRequest('This file is named .pdf but is not a valid PDF. Try exporting it again, or paste the text instead.');
-  if (ext === '.docx') throw badRequest('This file is named .docx but is not a valid Word document. Try saving it again, or paste the text instead.');
   throw badRequest(`This file type is not supported. ${WHAT_TO_UPLOAD}`);
 }
 

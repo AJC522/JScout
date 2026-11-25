@@ -95,8 +95,9 @@ const SENIORITY = /^(?:senior|sr\.?|junior|jr\.?|lead|staff|principal)\s+/i;
 
 export const titlesModule = {
   findRole(text: string): RoleRef | undefined {
-    const t = text.trim().toLowerCase().replace(SENIORITY, '').replace(/\s+(?:i{1,3}|iv)$/i, '');
-    return ROLES.find((r) => r.title.toLowerCase() === t || r.aliases.includes(t));
+    const match = (t: string) => ROLES.find((r) => r.title.toLowerCase() === t || r.aliases.includes(t));
+    const t = text.trim().toLowerCase();
+    return match(t) ?? match(t.replace(SENIORITY, '').replace(/\s+(?:i{1,3}|iv)$/i, ''));
   },
   rolesForSkills(skills: string[], limit = 6): RoleRef[] {
     return ROLES.map((r) => ({ r, overlap: r.skills.filter((s) => skills.includes(s)).length }))

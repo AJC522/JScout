@@ -32,7 +32,8 @@ const DATE = [
 const PRESENT = '(?:present|current(?:ly)?|now|today|ongoing|to\\s+date|till\\s+date|date)';
 const SEPARATOR = '(?:\\s*[-–—‒―~]+\\s*|\\s+(?:to|until|till|through|thru)\\s+)';
 
-const RANGE_RE = new RegExp(`(?<![\\w/.])(${DATE})${SEPARATOR}(${DATE}|${PRESENT})(?![\\w/])`, 'gi');
+// Not part of a longer number run such as an ISBN or a phone number ("77-2019-2021", "2019-2021-77").
+const RANGE_RE = new RegExp(`(?<![\\w/.]|\\d-)(${DATE})${SEPARATOR}(${DATE}|${PRESENT})(?![\\w/]|-\\d)`, 'gi');
 const SEASON_RE = new RegExp(`(?<![\\w/.])(${SEASON})\\s*(${YEAR})(?![\\w/])`, 'gi');
 const SINGLE_RE = new RegExp(`(?<![\\w/.])(${DATE})(?![\\w/])`, 'gi');
 

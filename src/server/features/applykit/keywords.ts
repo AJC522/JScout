@@ -7,9 +7,10 @@
  * heading, and by appearing early, then normalised to 0–1.
  */
 import type { KeywordCoverage } from '../../../shared/types';
-import { foldText } from '../../lib/text';
+import { resolvePlace } from '../../lib/location';
+import { escapeRegExp, foldText } from '../../lib/text';
 import type { JobContext, ProfileContext } from './context';
-import { STOPWORDS, containsPhrase, occurrences, phraseKey, type Word, words } from './text';
+import { STOPWORDS, containsPhrase, nearPhrase, occurrences, phraseKey, type Word, words } from './text';
 
 export interface Keyword extends KeywordCoverage {
   kind: 'skill' | 'phrase' | 'word' | 'name';
@@ -34,7 +35,8 @@ const GENERIC = new Set(
     'highly related equivalent environment day days time benefits salary pay apply applicant applicants employer ' +
     'large small high fast other various multiple key core main least minimum maximum similar relevant ' +
     'looking seeking join help ensure provide support use using within across based must need needs want ' +
-    'someone people person like make making get one two three four five six seven eight nine ten' +
+    'someone people person like make making get one two three four five six seven eight nine ten ' +
+    'active valid current hour hours week weeks month months up down out off able' +
     ' monday tuesday wednesday thursday friday saturday sunday january february march april may june july' +
     ' august september october november december'
   ).split(' '),
@@ -78,12 +80,26 @@ function sectionRanges(text: string): Ranges {
   const boilerplate: Array<[number, number]> = [];
   let offset = 0;
   let reqStart = -1;
+  let sawList = false;
+  let afterBlank = false;
   for (const line of text.split('\n')) {
     const end = offset + line.length + 1;
     const trimmed = line.trim();
+    const isList = trimmed.startsWith('- ');
+    // A requirements list ends at the first prose paragraph after it.
+    if (reqStart >= 0 && sawList && afterBlank && trimmed && !isList && !isHeading(trimmed)) {
+      requirements.push([reqStart, offset]);
+      reqStart = -1;
+    }
+    if (reqStart >= 0 && isList) sawList = true;
+    if (trimmed) afterBlank = false;
+    else afterBlank = true;
     if (isHeading(trimmed)) {
       const isReq = REQUIREMENT_HEADING.test(trimmed);
-      if (isReq && reqStart < 0) reqStart = offset;
+      if (isReq && reqStart < 0) {
+        reqStart = offset;
+        sawList = false;
+      }
       if (!isReq && reqStart >= 0) {
         requirements.push([reqStart, offset]);
         reqStart = -1;
@@ -154,6 +170,13 @@ function wordCandidates(text: string, ws: Word[], ranges: Ranges, excluded: Set<
   return [...byStem.values()].filter((c) => c.positions.length >= 3);
 }
 
+/** Place names ("Illinois", "United States") are capitalised but are not skills or tools. */
+function isPlaceName(term: string, text: string): boolean {
+  const t = escapeRegExp(term);
+  const pair = new RegExp(`(\\p{Lu}\\p{L}+ ${t}|${t} \\p{Lu}\\p{L}+)(?![\\p{L}])`, 'u').exec(text)?.[0];
+  return [term, pair].some((p) => p !== undefined && resolvePlace(p) !== undefined);
+}
+
 /** Capitalised words used like names (never lower-case in the posting), e.g. "Salesforce", "Epic", "ACLS". */
 function nameCandidates(text: string, ws: Word[], ranges: Ranges, excluded: Set<string>): Candidate[] {
   const stats = new Map<string, { term: string; positions: number[]; midSentence: number; lower: number }>();
@@ -168,7 +191,7 @@ function nameCandidates(text: string, ws: Word[], ranges: Ranges, excluded: Set<
     else if (i > 0 && !breakBetween(text, ws[i - 1]!, w)) s.midSentence++;
   }
   return [...stats.values()]
-    .filter((s) => s.lower === 0 && s.midSentence > 0)
+    .filter((s) => s.lower === 0 && s.midSentence > 0 && !isPlaceName(s.term, text))
     .map((s) => ({ term: s.term, key: phraseKey(s.term), kind: 'name' as const, positions: s.positions }));
 }
 
@@ -211,10 +234,12 @@ export function extractKeywords(job: JobContext, profile: ProfileContext): Keywo
       const inRequirements = c.positions.some((p) => inRanges(ranges.requirements, ws[p]!.index));
       const count = Math.max(c.positions.length, 1);
       const firstAt = c.positions.length > 0 ? c.positions[0]! / total : 0.5;
-      const eligible = c.kind === 'skill' || count >= 2 || inRequirements;
+      const size = c.key.split(' ').length;
+      // A one-off three-word phrase is rarely better than its two-word parts.
+      const eligible = c.kind === 'skill' || count >= 2 || (inRequirements && size < 3);
       const base = { skill: 2, name: 1.2, phrase: 1, word: 0.9 }[c.kind];
       const score = base * (1 + Math.log2(count)) * (inRequirements ? 1.5 : 1) * (firstAt < 0.25 ? 1.2 : 1);
-      return { c, count, firstAt, eligible, score };
+      return { c, count, firstAt, eligible, score, size };
     })
     .sort((a, b) => b.score - a.score || a.firstAt - b.firstAt);
 
@@ -228,7 +253,7 @@ export function extractKeywords(job: JobContext, profile: ProfileContext): Keywo
   };
   take(scored.filter((s) => s.eligible), MAX_KEYWORDS);
   // Short postings: top up with single-mention phrases so there is something to check against.
-  take(scored.filter((s) => !s.eligible), MIN_KEYWORDS);
+  take(scored.filter((s) => !s.eligible && s.size < 3), MIN_KEYWORDS);
 
   const top = chosen[0]?.score ?? 1;
   const userSkills = new Set(profile.skills.map(foldText));
@@ -236,7 +261,10 @@ export function extractKeywords(job: JobContext, profile: ProfileContext): Keywo
     .sort((a, b) => b.score - a.score)
     .map(({ c, count, firstAt, score }) => ({
       term: c.term,
-      present: (c.kind === 'skill' && userSkills.has(foldText(c.term))) || containsPhrase(profile.corpus, c.key),
+      present:
+        (c.kind === 'skill' && userSkills.has(foldText(c.term))) ||
+        containsPhrase(profile.corpus, c.key) ||
+        (c.kind === 'phrase' && nearPhrase(profile.corpusStems, c.key)),
       weight: Math.round((score / top) * 100) / 100,
       kind: c.kind,
       key: c.key,

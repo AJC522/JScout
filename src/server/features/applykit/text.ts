@@ -69,6 +69,21 @@ export function countPhrase(stemmed: string, key: string): number {
   return count;
 }
 
+/**
+ * Loose phrase match: every stem of `key` within a few words of each other, so "RN license"
+ * is found in "Registered Nurse (RN), Illinois license".
+ */
+export function nearPhrase(stems: string[], key: string, window = 6): boolean {
+  const parts = key.split(' ');
+  if (parts.length < 2) return false;
+  for (let i = 0; i < stems.length; i++) {
+    if (!parts.includes(stems[i]!)) continue;
+    const span = new Set(stems.slice(Math.max(0, i - window + 1), i + window));
+    if (parts.every((p) => span.has(p))) return true;
+  }
+  return false;
+}
+
 /** Word indices where the stem sequence `key` starts. */
 export function occurrences(ws: Word[], key: string[]): number[] {
   const out: number[] = [];

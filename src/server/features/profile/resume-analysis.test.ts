@@ -226,8 +226,8 @@ describe('experience', () => {
 
   it('reads a nurse résumé where employer and title come before numeric dates', () => {
     expect(jobs(NURSE)).toEqual([
-      { title: 'Charge Nurse, Emergency Department', company: 'Tampa General Hospital', location: 'Tampa, FL', start: '2019-08', end: '', current: true },
-      { title: 'Staff Nurse, Medical-Surgical Unit', company: "St. Joseph's Hospital", location: 'Tampa, FL', start: '2016-05', end: '2019-07', current: false },
+      { title: 'Charge Nurse', company: 'Tampa General Hospital', location: 'Tampa, FL', start: '2019-08', end: '', current: true },
+      { title: 'Staff Nurse', company: "St. Joseph's Hospital", location: 'Tampa, FL', start: '2016-05', end: '2019-07', current: false },
     ]);
   });
 
@@ -283,13 +283,21 @@ describe('titles, skills and years', () => {
     expect(result.skills).toEqual(expect.arrayContaining(['TypeScript', 'Go', 'Kubernetes', 'Node.js', 'PostgreSQL', 'Python', 'AWS']));
   });
 
-  it('fills suggestions from skills when titles are not recognised', () => {
+  it('maps a non-tech résumé the same way', () => {
     const result = analyze(NURSE);
     expect(result.titles).toEqual([
-      { title: 'Charge Nurse, Emergency Department' },
-      { title: 'Staff Nurse, Medical-Surgical Unit' },
+      { title: 'Charge Nurse', roleId: 'registered-nurse' },
+      { title: 'Staff Nurse', roleId: 'registered-nurse' },
     ]);
     expect(result.suggestedTitles).toEqual(['Registered Nurse']);
+    expect(result.skills).toEqual(['Patient care', 'IV therapy', 'Epic']);
+  });
+
+  it('fills suggestions from skills when titles are not recognised', () => {
+    const text = 'Experience\nShift Supervisor, Blue Bottle Coffee  2019 - 2021\n• Kept the books in QuickBooks and Excel.\n';
+    const result = analyze(text);
+    expect(result.titles).toEqual([{ title: 'Shift Supervisor' }]);
+    expect(result.suggestedTitles).toEqual(['Accountant', 'Data Analyst', 'Bookkeeper']);
   });
 
   it('merges overlapping ranges and caps "Present" at today', () => {

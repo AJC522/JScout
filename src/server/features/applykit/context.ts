@@ -114,6 +114,8 @@ export interface ProfileContext {
   resumeText: string;
   /** Stemmed text of everything the user has told us about their background. */
   corpus: string;
+  /** The same as a list of stems, for proximity matching. */
+  corpusStems: string[];
   /** Stemmed résumé text alone ('' when there is no résumé). */
   resumeCorpus: string;
 }
@@ -132,11 +134,13 @@ export function loadProfile(profiles: ProfileService): ProfileContext {
     ...profile.experience.flatMap((e) => [e.title, e.summary, ...e.highlights]),
     ...profile.education.flatMap((e) => [e.degree, e.field]),
   ];
+  const corpus = stemmedText(parts.filter(Boolean).join('\n'));
   return {
     profile,
     skills,
     resumeText,
-    corpus: stemmedText(parts.filter(Boolean).join('\n')),
+    corpus,
+    corpusStems: corpus.trim().split(' '),
     resumeCorpus: resumeText ? stemmedText(resumeText) : '',
   };
 }
