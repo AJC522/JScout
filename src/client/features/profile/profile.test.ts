@@ -30,6 +30,7 @@ const job = (title: string, company: string, extra: Partial<ExperienceEntry> = {
 const analysis = (changes: Partial<ResumeAnalysis> = {}): ResumeAnalysis => ({
   contact: {},
   skills: [],
+  certifications: [],
   titles: [],
   suggestedTitles: [],
   experience: [],
@@ -150,6 +151,16 @@ describe('resume-apply', () => {
     expect(patch.experience?.map((e) => e.title)).toEqual(['Developer', 'Frontend Engineer']);
     expect(patch.experience?.[1]?.id).not.toBe('');
     expect(patch.work).toEqual({ yearsExperience: 6, currentTitle: 'Frontend Engineer', currentCompany: 'Acme' });
+  });
+
+  it('adds certifications from the résumé to the certifications list, not the skills', () => {
+    const withCerts = analysis({ ...found, certifications: ['CompTIA Security+', 'PMP'] });
+    const current = profile((p) => (p.preferences.certifications = ['PMP']));
+    const selection = initialSelection(withCerts, current);
+    expect(selection.certifications).toEqual(['CompTIA Security+', 'PMP']);
+    const patch = buildResumePatch(selection, withCerts, current);
+    expect(patch.preferences?.certifications).toEqual(['PMP', 'CompTIA Security+']);
+    expect(patch.preferences?.skills).toEqual(['TypeScript', 'React']);
   });
 
   it('returns an empty patch when the profile already has everything', () => {

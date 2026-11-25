@@ -192,11 +192,57 @@ export interface MatchExplanation {
   reasons: MatchReason[];
 }
 
+/** One component of a profile match. */
+export interface FitPart {
+  key: 'skills' | 'certifications' | 'role' | 'level';
+  /** Short human sentence, e.g. "You have 6 of 9 listed skills". */
+  label: string;
+  /** 0–100 for this component alone. */
+  score: number;
+  /** Points out of 100 this component is worth when it can be assessed. */
+  weight: number;
+}
+
+/**
+ * Where a posting is against the user's location preferences, best first when remote work is acceptable:
+ * remote (open to the user's country), local (in or near a preferred place), area (elsewhere in the same
+ * state), country (elsewhere in the same country), unknown, abroad, remote-elsewhere (remote but limited
+ * to other countries). When remote work is not acceptable, local and area come before remote.
+ */
+export type LocationFitKind = 'remote' | 'local' | 'area' | 'country' | 'unknown' | 'abroad' | 'remote-elsewhere';
+
+export interface LocationFit {
+  kind: LocationFitKind;
+  /** E.g. "12 km from Austin, TX, United States", "Remote, open to your location". */
+  label: string;
+  /** Position in the location order (0 = best). */
+  rank: number;
+  distanceKm?: number;
+}
+
+/** How well the user's background (résumé, skills, certifications, roles, level) fits a posting. */
+export interface ProfileFit {
+  /** 0–100, or null when the profile or posting gives too little to compare. */
+  percent: number | null;
+  /** The tier used for ordering, e.g. "80–89% tier". */
+  band: string;
+  parts: FitPart[];
+  skillsMatched: string[];
+  skillsMissing: string[];
+  certsMatched: string[];
+  certsMissing: string[];
+  location: LocationFit;
+  /** Yearly pay used for ordering: the middle of the stated range, in the search currency. */
+  pay?: { annual: number; currency: string };
+}
+
 export interface SearchResultItem {
   job: JobPosting;
   /** 0–100 overall relevance. */
   score: number;
   match: MatchExplanation;
+  /** Profile match; absent when the profile is not used or holds nothing to compare. */
+  fit?: ProfileFit;
   /** Other postings of the same job (other sources), best first, excluding `job`. */
   duplicates: JobSourceLink[];
   userState: JobUserState;
@@ -219,7 +265,11 @@ export interface LivenessResult {
 // Search
 // ---------------------------------------------------------------------------
 
-export type SearchSort = 'relevance' | 'date' | 'salary';
+/**
+ * 'match': profile match tier (10-point bands), then location fit, then pay — falls back to 'relevance'
+ * when the profile is not used or holds nothing to compare.
+ */
+export type SearchSort = 'match' | 'relevance' | 'date' | 'salary';
 
 export interface SearchQuery {
   /**
@@ -519,6 +569,8 @@ export interface WorkDetails {
 export interface SearchPreferences {
   targetTitles: string[];
   skills: string[];
+  /** Certifications and licences the user holds ("CompTIA Security+", "PMP", "CDL"); canonical names where known. */
+  certifications: string[];
   /** Places the user wants to work in, free text each. */
   locations: string[];
   radiusKm: number;
@@ -593,6 +645,8 @@ export interface ResumeAnalysis {
     Pick<PersonalInfo, 'fullName' | 'email' | 'phone' | 'location' | 'linkedin' | 'github' | 'website'>
   >;
   skills: string[];
+  /** Certifications and licences named in the résumé (kept out of `skills`). */
+  certifications: string[];
   /** Titles found in the résumé mapped to taxonomy roles where possible. */
   titles: Array<{ title: string; roleId?: string }>;
   /** Roles worth targeting based on titles and skills. */

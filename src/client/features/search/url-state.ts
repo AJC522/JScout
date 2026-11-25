@@ -10,7 +10,7 @@ import type { EmploymentType, RemoteMode, SearchQuery, SearchSort, Seniority } f
 export const PAGE_PARAMS = { job: 'job', from: 'from', saved: 'saved' } as const;
 
 const SENIORITIES: readonly Seniority[] = [...SENIORITY_ORDER, 'unknown'];
-const SORTS: readonly SearchSort[] = ['relevance', 'date', 'salary'];
+const SORTS: readonly SearchSort[] = ['match', 'relevance', 'date', 'salary'];
 /** Upper bounds that keep a mistyped URL from producing absurd requests. */
 const MAX_RADIUS_KM = 1000;
 const MAX_DAYS = 3650;

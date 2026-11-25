@@ -18,12 +18,12 @@ export type PreferencesValue = Pick<
   SearchPreferences,
   'targetTitles' | 'locations' | 'radiusKm' | 'remote' | 'salaryMin' | 'salaryCurrency' | 'employmentTypes' | 'seniority'
 > &
-  Partial<Pick<SearchPreferences, 'skills' | 'excludeCompanies' | 'excludeTerms'>>;
+  Partial<Pick<SearchPreferences, 'skills' | 'certifications' | 'excludeCompanies' | 'excludeTerms'>>;
 
 interface PreferencesFieldsProps<V extends PreferencesValue> {
   value: V;
   onChange: (next: V) => void;
-  /** Also show skills and the exclusion lists (the profile page; onboarding keeps it short). */
+  /** Also show skills, certifications and the exclusion lists (the profile page; onboarding keeps it short). */
   extended?: boolean;
 }
 
@@ -132,12 +132,25 @@ export function PreferencesFields<V extends PreferencesValue>({ value, onChange,
 
       {extended ? (
         <>
-          <Field label="Skills" hint="Jobs that ask for these rank higher." error={errors.skills}>
+          <Field label="Skills" hint="Jobs that ask for these rank higher. Skills in your résumé count too." error={errors.skills}>
             <TagInput
               value={value.skills ?? []}
               onChange={(next) => set('skills', next)}
               loadSuggestions={suggest.skills}
               placeholder="e.g. Figma"
+            />
+          </Field>
+          <Field
+            label="Certifications and licences"
+            optional
+            hint="Jobs that list certifications you hold get a higher match."
+            error={errors.certifications}
+          >
+            <TagInput
+              value={value.certifications ?? []}
+              onChange={(next) => set('certifications', next)}
+              loadSuggestions={suggest.certifications}
+              placeholder="e.g. CompTIA Security+"
             />
           </Field>
           <Field label="Companies to leave out" optional hint="Their jobs never show up in your results." error={errors.excludeCompanies}>

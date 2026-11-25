@@ -44,13 +44,14 @@ export function toggle<T>(list: readonly T[], item: T): T[] {
   return list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
 }
 
-type ListKey = 'targetTitles' | 'locations' | 'skills' | 'excludeCompanies' | 'excludeTerms';
+type ListKey = 'targetTitles' | 'locations' | 'skills' | 'certifications' | 'excludeCompanies' | 'excludeTerms';
 
 /** The most items the server keeps in each list (src/server/features/profile/normalize.ts). */
 export const LIST_LIMITS: Record<ListKey, number> = {
   targetTitles: 60,
   locations: 50,
   skills: 300,
+  certifications: 60,
   excludeCompanies: 200,
   excludeTerms: 100,
 };

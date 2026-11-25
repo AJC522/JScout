@@ -56,7 +56,12 @@ export function ResumeSuggestions({
   const schools = newEducation(profile.education, analysis.education);
   const contactFields = CONTACT_FIELDS.filter((field) => analysis.contact[field]);
   const foundNothing =
-    contactFields.length === 0 && analysis.skills.length === 0 && analysis.suggestedTitles.length === 0 && jobs.length === 0 && schools.length === 0;
+    contactFields.length === 0 &&
+    analysis.skills.length === 0 &&
+    analysis.certifications.length === 0 &&
+    analysis.suggestedTitles.length === 0 &&
+    jobs.length === 0 &&
+    schools.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -107,6 +112,18 @@ export function ResumeSuggestions({
             onChange={(skills) => update({ skills })}
             loadSuggestions={suggest.skills}
             placeholder="Add a skill"
+          />
+        </Group>
+      ) : null}
+
+      {analysis.certifications.length > 0 ? (
+        <Group title="Certifications and licences" hint="Jobs that list these get a higher match. Remove any you no longer hold.">
+          <TagInput
+            aria-label="Certifications from your résumé"
+            value={selection.certifications}
+            onChange={(certifications) => update({ certifications })}
+            loadSuggestions={suggest.certifications}
+            placeholder="Add a certification"
           />
         </Group>
       ) : null}

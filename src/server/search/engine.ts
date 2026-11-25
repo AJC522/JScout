@@ -210,3 +210,43 @@ export function fetchScoringRows(db: Db, rids: number[]): Map<number, ScoringRow
   );
   return new Map(rows.map((r) => [r.rid, r]));
 }
+
+/** Columns the profile match, location fit and pay need, for every result of a "Best match" search. */
+export interface MatchRow {
+  rid: number;
+  title: string;
+  titleCore: string;
+  roleId: string | null;
+  skills: string;
+  places: string;
+  remoteScope: string;
+  salaryCurrency: string | null;
+  salaryAnnualMin: number | null;
+  salaryAnnualMax: number | null;
+}
+
+type MatchTuple = [number, string, string, string | null, string, string, string, string | null, number | null, number | null];
+
+export function fetchMatchRows(db: Db, rids: number[]): Map<number, MatchRow> {
+  const tuples = arrayStatement(
+    db,
+    `SELECT rid, title, title_core, role_id, skills, places, remote_scope, salary_currency, salary_annual_min, salary_annual_max
+     FROM jobs WHERE rid IN (SELECT value FROM json_each(?))`,
+  ).all(JSON.stringify(rids)) as unknown as MatchTuple[];
+  const out = new Map<number, MatchRow>();
+  for (const t of tuples) {
+    out.set(t[0], {
+      rid: t[0],
+      title: t[1],
+      titleCore: t[2],
+      roleId: t[3],
+      skills: t[4],
+      places: t[5],
+      remoteScope: t[6],
+      salaryCurrency: t[7],
+      salaryAnnualMin: t[8],
+      salaryAnnualMax: t[9],
+    });
+  }
+  return out;
+}
