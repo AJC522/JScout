@@ -14,8 +14,8 @@ const GAP = 10;
 const ESTIMATED_ROW = 150;
 /** Start loading the next page this many rows before the end. */
 const PREFETCH_ROWS = 8;
-/** Short lists do not need the total repeated at their end. */
-const SHOW_TOTAL_FROM = 10;
+/** Short lists do not need an end marker. */
+const SHOW_END_FROM = 10;
 
 export interface ResultsListHandle {
   scrollToJob: (id: string) => void;
@@ -112,8 +112,8 @@ export function ResultsList({ items, total, newSince, selectedId, cursorId, savi
       <div className="flex min-h-12 items-center justify-center text-sm text-subtle">
         {loadingMore ? (
           <Spinner size="sm" label="Loading more jobs" />
-        ) : !hasMore && items.length > 0 ? (
-          <span>{total > SHOW_TOTAL_FROM ? `That's all ${pluralize(total, 'job')}.` : "You've reached the end."}</span>
+        ) : !hasMore && items.length >= SHOW_END_FROM ? (
+          <span>That's all {pluralize(total, 'job')}.</span>
         ) : null}
       </div>
     </div>

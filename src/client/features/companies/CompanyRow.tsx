@@ -5,6 +5,7 @@ import type { CompanyBoard } from '../../../shared/types';
 import { Badge, IconButton, Spinner, Switch, Tooltip } from '../../components/ui';
 import { formatNumber, formatRelativeTime } from '../../lib/format';
 import { cn } from '../../lib/cn';
+import { industryLabel } from '../onboarding/industries';
 import { ATS_LABELS } from './model';
 
 /** Column template shared with the header row in CompaniesPage. */
@@ -63,7 +64,7 @@ export const CompanyRow = memo(function CompanyRow({ company, now, onToggle, onR
           </p>
           <p className="mt-0.5 truncate text-xs text-subtle sm:hidden">
             {ATS_LABELS[company.ats]}
-            {company.industry ? ` · ${company.industry}` : ''} · {formatNumber(company.jobCount)} open jobs
+            {company.industry ? ` · ${industryLabel(company.industry)}` : ''} · {formatNumber(company.jobCount)} open jobs
           </p>
         </div>
         <Switch
@@ -74,7 +75,7 @@ export const CompanyRow = memo(function CompanyRow({ company, now, onToggle, onR
         />
       </div>
       <span className="hidden truncate text-muted sm:block">{ATS_LABELS[company.ats]}</span>
-      <span className="hidden truncate text-muted sm:block">{company.industry ?? '—'}</span>
+      <span className="hidden truncate text-muted sm:block">{company.industry ? industryLabel(company.industry) : '—'}</span>
       <span className="hidden text-right text-fg tabular-nums sm:block">{formatNumber(company.jobCount)}</span>
       <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2 text-xs sm:mt-0 sm:text-sm">
         <SyncCell company={company} now={now} />
@@ -85,7 +86,7 @@ export const CompanyRow = memo(function CompanyRow({ company, now, onToggle, onR
       <div className="hidden sm:flex sm:justify-center">
         <Switch aria-label={`Follow ${company.name}`} checked={company.enabled} onCheckedChange={(on) => onToggle(company, on)} />
       </div>
-      <div className="hidden sm:flex sm:justify-end">
+      <div className="hidden sm:flex sm:h-7 sm:justify-end">
         {company.origin === 'user' ? <IconButton size="sm" variant="danger" label={`Remove ${company.name}`} icon={<Trash2 />} onClick={() => onRemove(company)} /> : null}
       </div>
     </li>

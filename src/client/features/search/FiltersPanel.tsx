@@ -25,7 +25,8 @@ function countOf(facet: readonly FacetCount[] | undefined, value: string): numbe
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <fieldset className="border-t border-border pt-3.5 first:border-t-0 first:pt-0">
+    // min-w-0: a fieldset is otherwise as wide as its content's minimum, which overflows the column.
+    <fieldset className="min-w-0 border-t border-border pt-3.5 first:border-t-0 first:pt-0">
       <legend className="float-left mb-2 w-full text-xs font-semibold tracking-wide text-subtle uppercase">{title}</legend>
       <div className="clear-left">{children}</div>
     </fieldset>
@@ -38,7 +39,9 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
  */
 function CheckList({ options, selected, facet, onChange }: { options: Option[]; selected: readonly string[]; facet?: readonly FacetCount[]; onChange: (next: string[]) => void }) {
   const [showAll, setShowAll] = useState(false);
-  const visible = options.filter((o) => showAll || !facet || selected.includes(o.value) || (countOf(facet, o.value) ?? 0) > 0);
+  // With no matches at all (a search that found nothing) every option stays visible.
+  const tuck = facet !== undefined && facet.some((f) => f.count > 0);
+  const visible = options.filter((o) => showAll || !tuck || selected.includes(o.value) || (countOf(facet, o.value) ?? 0) > 0);
   const hiddenCount = options.length - visible.length;
   return (
     <ul className="space-y-0.5">
@@ -83,11 +86,11 @@ function SalaryFilter({ query, onChange }: { query: SearchQuery; onChange: (next
   };
   return (
     <div className="space-y-2">
-      <div className="flex gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
         <Input
           aria-label="Minimum yearly salary"
           inputMode="numeric"
-          placeholder="Minimum per year"
+          placeholder="Min. per year"
           size="sm"
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -98,7 +101,6 @@ function SalaryFilter({ query, onChange }: { query: SearchQuery; onChange: (next
               commit();
             }
           }}
-          wrapperClassName="min-w-0 flex-1"
         />
         <Select
           aria-label="Currency"
@@ -107,7 +109,6 @@ function SalaryFilter({ query, onChange }: { query: SearchQuery; onChange: (next
           value={query.salaryCurrency ?? 'USD'}
           onChange={(e) => onChange(applyPatch(query, { salaryCurrency: e.target.value }))}
           disabled={!query.salaryMin}
-          wrapperClassName="w-22"
         />
       </div>
       {query.salaryMin ? (

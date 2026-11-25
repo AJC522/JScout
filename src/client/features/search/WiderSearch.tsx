@@ -5,8 +5,7 @@
 import { ArrowUpRight, SearchX, Sparkles } from 'lucide-react';
 import type { BroadenSuggestion, ExternalSearchLink, SearchQuery } from '../../../shared/types';
 import { Button } from '../../components/ui';
-import { cn } from '../../lib/cn';
-import { broadenChips, gainLabel } from './summary';
+import { broadenChips, gainLabel, isUseful } from './summary';
 import { applyPatch, clearFilters, countActiveFilters } from './url-state';
 
 export interface WiderSearchProps {
@@ -19,13 +18,13 @@ export interface WiderSearchProps {
 
 export function WiderSearch({ query, total, suggestions, externalLinks, onChange }: WiderSearchProps) {
   // Related roles are offered here too: with few results they are the most useful widening.
-  const options = [...suggestions.filter((s) => s.kind === 'related-role'), ...broadenChips(suggestions)]
+  const options = [...suggestions.filter((s) => s.kind === 'related-role' && isUseful(s)), ...broadenChips(suggestions)]
     .toSorted((a, b) => (b.extraResults ?? -1) - (a.extraResults ?? -1))
     .slice(0, 8);
   const filters = countActiveFilters(query);
 
   return (
-    <section aria-labelledby="wider-title" className={cn('rounded-card border border-border bg-surface p-4 sm:p-5', total === 0 && 'mt-1')}>
+    <section aria-labelledby="wider-title" className="rounded-card border border-border bg-surface p-4 sm:p-5">
       {total === 0 ? (
         <div className="mb-4 flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted">

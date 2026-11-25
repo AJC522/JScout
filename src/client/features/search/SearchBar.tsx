@@ -62,9 +62,10 @@ export function SearchBar({ query, resolvedPlace, onSearch, whatRef }: SearchBar
   const [synced, setSynced] = useState({ q: query.q, location: query.location, radiusKm: query.radiusKm });
   if (synced.q !== query.q || synced.location !== query.location || synced.radiusKm !== query.radiusKm) {
     setSynced({ q: query.q, location: query.location, radiusKm: query.radiusKm });
-    setWhat(query.q);
-    setWhere(query.location ?? '');
-    setRadius(query.radiusKm ?? 0);
+    // Only the fields that changed, so a search started from one box keeps what is typed in the other.
+    if (synced.q !== query.q) setWhat(query.q);
+    if (synced.location !== query.location) setWhere(query.location ?? '');
+    if (synced.radiusKm !== query.radiusKm) setRadius(query.radiusKm ?? 0);
   }
 
   const cityPlace =

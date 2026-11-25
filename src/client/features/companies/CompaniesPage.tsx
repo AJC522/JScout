@@ -8,6 +8,7 @@ import { Button, Chip, EmptyState, ErrorState, IconButton, Input, PageHeader, Se
 import { cn } from '../../lib/cn';
 import { formatNumber, pluralize } from '../../lib/format';
 import { useDebouncedValue, useDocumentTitle, useNow } from '../../lib/hooks';
+import { industryLabel } from '../onboarding/industries';
 import { AddCompanyDialog } from './AddCompanyDialog';
 import { CompanyRow, ROW_GRID } from './CompanyRow';
 import { ATS_KINDS, ATS_LABELS, COMPANIES_PAGE_SIZE, DEFAULT_FILTERS, hasFilters, pageRange, planBulk, toListQuery, type CompanyFilters, type FollowFilter } from './model';
@@ -124,7 +125,7 @@ export function CompaniesPage() {
           />
           <Select aria-label="Job board" options={ATS_OPTIONS} value={filters.ats ?? ''} onChange={(e) => update({ ats: (e.target.value || undefined) as AtsKind | undefined })} wrapperClassName="sm:w-44" />
           <SegmentedControl aria-label="Following" options={FOLLOW_OPTIONS} value={filters.follow} onValueChange={(follow) => update({ follow })} />
-          <Chip selected={filters.mine} onSelectedChange={(mine) => update({ mine })}>
+          <Chip selected={filters.mine} onSelectedChange={(mine) => update({ mine })} className="self-start sm:self-auto">
             Added by you
           </Chip>
         </div>
@@ -133,7 +134,7 @@ export function CompaniesPage() {
           <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Industry">
             {shownIndustries.map((i) => (
               <Chip key={i.value} size="sm" selected={filters.industry === i.value} count={formatNumber(i.count)} onSelectedChange={(on) => update({ industry: on ? i.value : undefined })}>
-                {i.value}
+                {industryLabel(i.value)}
               </Chip>
             ))}
             {industries.length > INDUSTRY_CHIPS ? (
@@ -145,9 +146,9 @@ export function CompaniesPage() {
         ) : null}
 
         <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-muted" aria-live="polite">
+          <div className="text-sm text-muted" aria-live="polite">
             {summary ?? <Skeleton className="h-4 w-64" />}
-          </p>
+          </div>
           {data && data.items.length > 0 ? (
             <div className="flex gap-1">
               <Button size="sm" variant="ghost" onClick={() => void runBulk(true)} disabled={bulk.isPending}>

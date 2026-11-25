@@ -82,10 +82,15 @@ export function roleLabel(roleId: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** A suggestion known to add nothing is not worth a click. */
+export function isUseful(suggestion: BroadenSuggestion): boolean {
+  return suggestion.extraResults !== 0;
+}
+
 /** Broaden chips shown on their own row: everything except related roles (those live in the interpretation bar). */
 export function broadenChips(suggestions: readonly BroadenSuggestion[]): BroadenSuggestion[] {
   return suggestions
-    .filter((s) => s.kind !== 'related-role' && s.kind !== 'external')
+    .filter((s) => s.kind !== 'related-role' && s.kind !== 'external' && isUseful(s))
     .toSorted((a, b) => (b.extraResults ?? -1) - (a.extraResults ?? -1));
 }
 

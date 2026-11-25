@@ -79,6 +79,8 @@ export function JobDetailView({ jobId, placeholder, actions, variant, onClose }:
   const detail = useJobDetail(jobId, placeholder);
   const data = detail.data;
   const { view } = actions;
+  const check = useCheckLiveness();
+  const toast = useToast();
 
   // Opening a job marks it viewed, once per job shown here.
   const viewedRef = useRef<string | null>(null);
@@ -106,11 +108,16 @@ export function JobDetailView({ jobId, placeholder, actions, variant, onClose }:
   }
 
   const descriptionLoading = detail.isPlaceholderData && detail.isFetching;
+  const runCheck = () =>
+    check.mutate(data.job.id, {
+      onSuccess: (result) => toast[result.status === 'closed' ? 'error' : 'info'](livenessTitle(result), { description: result.detail }),
+      onError: (error) => toast.error('Could not check the posting', { description: errorMessage(error) }),
+    });
   return (
     <article className="space-y-5" aria-busy={descriptionLoading || undefined}>
       {variant === 'panel' ? <PanelHeading data={data} onClose={onClose} /> : null}
       <Facts data={data} />
-      <ActionRow data={data} actions={actions} showFullPageLink={variant === 'panel'} />
+      <ActionRow data={data} actions={actions} showFullPageLink={variant === 'panel'} onCheck={runCheck} checking={check.isPending} />
       {actions.askingAbout === data.job.id ? <ApplyPrompt data={data} actions={actions} /> : null}
       {data.job.closedAt ? (
         <p className="flex items-start gap-2 rounded-control bg-warning-soft px-3 py-2 text-sm text-warning">
@@ -118,7 +125,7 @@ export function JobDetailView({ jobId, placeholder, actions, variant, onClose }:
           This posting looks closed (noticed {formatDate(data.job.closedAt, 'medium')}). It may no longer take applications.
         </p>
       ) : null}
-      <SourceLine data={data} />
+      <SourceLine data={data} onCheck={runCheck} checking={check.isPending} />
 
       <Tabs defaultValue="details">
         <TabsList aria-label="Job sections">
@@ -189,18 +196,19 @@ function Facts({ data }: { data: JobDetail }) {
   );
 }
 
-function ActionRow({ data, actions, showFullPageLink }: { data: JobDetail; actions: JobActions; showFullPageLink: boolean }) {
+interface ActionRowProps {
+  data: JobDetail;
+  actions: JobActions;
+  showFullPageLink: boolean;
+  onCheck: () => void;
+  checking: boolean;
+}
+
+function ActionRow({ data, actions, showFullPageLink, onCheck, checking }: ActionRowProps) {
   const { job, userState } = data;
   const toast = useToast();
   const { copy } = useCopyToClipboard();
-  const check = useCheckLiveness();
   const saved = Boolean(userState.applicationStatus);
-
-  const runCheck = () =>
-    check.mutate(job.id, {
-      onSuccess: (result) => toast[result.status === 'closed' ? 'error' : 'info'](livenessTitle(result), { description: result.detail }),
-      onError: (error) => toast.error('Could not check the posting', { description: errorMessage(error) }),
-    });
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -224,7 +232,7 @@ function ActionRow({ data, actions, showFullPageLink }: { data: JobDetail; actio
           <IconButton label="More actions" icon={<MoreHorizontal />} />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem icon={<Activity />} onSelect={runCheck} disabled={check.isPending}>
+          <DropdownMenuItem icon={<Activity />} onSelect={onCheck} disabled={checking}>
             Check if it's still open
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -240,7 +248,7 @@ function ActionRow({ data, actions, showFullPageLink }: { data: JobDetail; actio
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
-      {check.isPending ? <span className="text-xs text-muted">Checking the posting…</span> : null}
+      {checking ? <span className="text-xs text-muted">Checking the posting…</span> : null}
     </div>
   );
 }
@@ -270,7 +278,7 @@ function ApplyPrompt({ data, actions }: { data: JobDetail; actions: JobActions }
   );
 }
 
-function SourceLine({ data }: { data: JobDetail }) {
+function SourceLine({ data, onCheck, checking }: { data: JobDetail; onCheck: () => void; checking: boolean }) {
   const sources = useSources();
   const { job, duplicates, liveness } = data;
   const sourceIds = [job.source, ...duplicates.map((d) => d.source)];
@@ -305,7 +313,14 @@ function SourceLine({ data }: { data: JobDetail }) {
             </span>{' '}
             (checked {formatRelativeTime(liveness.checkedAt)})
           </span>
-        ) : null}
+        ) : (
+          <>
+            {' · '}
+            <button type="button" onClick={onCheck} disabled={checking} className="font-medium text-primary hover:underline disabled:opacity-60">
+              {checking ? 'Checking…' : "Check if it's still open"}
+            </button>
+          </>
+        )}
       </p>
       {credits.map((credit) => (
         <p key={credit} className="text-subtle">

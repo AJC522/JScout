@@ -105,7 +105,7 @@ export function SearchPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [cursorId, setCursorId] = useState<string | null>(null);
+  const [cursorId, setCursorId] = useState<string | null>(selectedId ?? null);
   const [freshJobs, setFreshJobs] = useState(false);
 
   const blank = isBlankQuery(query);
@@ -120,7 +120,8 @@ export function SearchPage() {
     return query.includeHidden ? all : all.filter((item) => !item.userState.hidden);
   }, [results.data, query.includeHidden]);
   const ids = useMemo(() => items.map((item) => item.job.id), [items]);
-  const newSince = useVisitBoundary(signature, enabled && results.isSuccess && !results.isPlaceholderData);
+  // Recorded as soon as the query is known, so the badges are there with the first results.
+  const newSince = useVisitBoundary(signature, enabled);
 
   // A new search starts without a cursor or a pending "new jobs" notice.
   const [lastSignature, setLastSignature] = useState(signature);
@@ -128,6 +129,12 @@ export function SearchPage() {
     setLastSignature(signature);
     setCursorId(null);
     setFreshJobs(false);
+  }
+  // The cursor follows a selection made elsewhere (a click, back/forward).
+  const [lastSelected, setLastSelected] = useState(selectedId);
+  if (lastSelected !== selectedId) {
+    setLastSelected(selectedId);
+    if (selectedId) setCursorId(selectedId);
   }
   // Keep the cursor near its place when the job under it disappears (hidden, or gone after a refresh).
   const [lastIds, setLastIds] = useState(ids);
@@ -165,7 +172,8 @@ export function SearchPage() {
   const onChange = useCallback(
     (next: SearchQuery, label?: string) => {
       setQuery(next);
-      if (label) toast.info(label, { action: { label: 'Undo', onClick: () => navigate(-1) } });
+      // One notice at a time: each widening replaces the last one's undo.
+      if (label) toast.info(label, { id: 'search-widened', action: { label: 'Undo', onClick: () => navigate(-1) } });
     },
     [setQuery, toast, navigate],
   );
@@ -193,8 +201,8 @@ export function SearchPage() {
   // --- keyboard -------------------------------------------------------------------------
   const active = !blank && items.length > 0;
   const move = (delta: 1 | -1) => {
-    const origin = split ? (selectedId ?? cursorId) : cursorId;
-    const next = cursorReducer({ id: origin }, { type: 'move', delta, ids }).id;
+    // The cursor, not the URL, is the origin: it is already updated when keys repeat quickly.
+    const next = cursorReducer({ id: cursorId }, { type: 'move', delta, ids }).id;
     if (!next) return;
     setCursorId(next);
     listRef.current?.scrollToJob(next);
@@ -333,7 +341,16 @@ export function SearchPage() {
                 indexNode={index ? <IndexStatus index={index} /> : null}
               >
                 {response ? (
-                  <div className={cn('transition-opacity', updating && 'opacity-60')}>
+                  <div className={cn('space-y-3 transition-opacity', updating && 'opacity-60')}>
+                    {response.total === 0 && syncing ? (
+                      <p className="flex items-center gap-2 text-sm text-muted">
+                        <Spinner size="sm" label={null} /> Still fetching jobs. Matches will show up here as they arrive.
+                      </p>
+                    ) : null}
+                    {/* With only a few matches, ways to widen the search come first. */}
+                    {response.total < FEW_RESULTS ? (
+                      <WiderSearch query={query} total={response.total} suggestions={response.suggestions} externalLinks={response.externalLinks} onChange={onChange} />
+                    ) : null}
                     {items.length > 0 ? (
                       <ResultsList
                         ref={listRef}
@@ -353,14 +370,6 @@ export function SearchPage() {
                     ) : null}
                     {results.isFetchNextPageError ? (
                       <ErrorState compact title="Could not load more jobs" error={results.error} onRetry={loadMore} retrying={results.isFetchingNextPage} />
-                    ) : null}
-                    {response.total === 0 && syncing ? (
-                      <p className="mb-2 flex items-center gap-2 text-sm text-muted">
-                        <Spinner size="sm" label={null} /> Still fetching jobs. Matches will show up here as they arrive.
-                      </p>
-                    ) : null}
-                    {response.total < FEW_RESULTS ? (
-                      <WiderSearch query={query} total={response.total} suggestions={response.suggestions} externalLinks={response.externalLinks} onChange={onChange} />
                     ) : null}
                   </div>
                 ) : null}

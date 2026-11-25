@@ -1,5 +1,5 @@
 /** Find an employer's job board from a careers-page link or a name, then follow it. */
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Building2, Search } from 'lucide-react';
 import type { CompanyDetection } from '../../../shared/types';
 import { errorMessage } from '../../api/client';
@@ -19,12 +19,15 @@ export function AddCompanyDialog({ open, onOpenChange }: { open: boolean; onOpen
   // Start fresh every time the dialog opens.
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) {
-      setInput('');
-      detect.reset();
-      add.reset();
-    }
+    if (open) setInput('');
   }
+  const { reset: resetDetect } = detect;
+  const { reset: resetAdd } = add;
+  useEffect(() => {
+    if (!open) return;
+    resetDetect();
+    resetAdd();
+  }, [open, resetDetect, resetAdd]);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();

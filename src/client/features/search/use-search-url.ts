@@ -36,7 +36,8 @@ export function useSearchUrl() {
   const selectJob = useCallback(
     (id: string | undefined, options: { push?: boolean } = {}) => {
       const current = new URLSearchParams(serialized);
-      if (id === current.get(PAGE_PARAMS.job) || (!id && !current.has(PAGE_PARAMS.job))) return;
+      // No "already selected" shortcut: while keys repeat, the URL seen here can lag a step behind.
+      if (!id && !current.has(PAGE_PARAMS.job)) return;
       if (!id && detailPushed) {
         navigate(-1);
         return;

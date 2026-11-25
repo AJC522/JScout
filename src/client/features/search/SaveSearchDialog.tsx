@@ -1,5 +1,5 @@
 /** Names and saves the current search; the name starts as a plain-English summary of the query. */
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import type { SearchQuery } from '../../../shared/types';
 import { errorMessage } from '../../api/client';
@@ -29,11 +29,12 @@ export function SaveSearchDialog({ open, onOpenChange, query }: SaveSearchDialog
   // Prefill each time the dialog opens, from the query at that moment.
   if (open !== openedFor) {
     setOpenedFor(open);
-    if (open) {
-      setName(defaultSearchName(query));
-      save.reset();
-    }
+    if (open) setName(defaultSearchName(query));
   }
+  const { reset } = save;
+  useEffect(() => {
+    if (open) reset();
+  }, [open, reset]);
 
   const trimmed = name.trim();
   const onSubmit = (event: FormEvent) => {

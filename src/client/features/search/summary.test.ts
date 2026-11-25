@@ -69,6 +69,7 @@ describe('related roles and broaden chips', () => {
 
   it('orders broaden chips by gain and leaves related roles out', () => {
     expect(broadenChips(suggestions).map((s) => s.id)).toEqual(['s3', 's2', 's4']);
+    expect(broadenChips([{ id: 'z', kind: 'date', label: 'Any date', description: '', patch: {}, extraResults: 0 }])).toEqual([]);
   });
 
   it('formats labels', () => {
