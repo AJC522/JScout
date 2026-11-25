@@ -92,15 +92,18 @@ export function Combobox<T = string>({
     return staticOptions.filter((option) => getOptionLabel(option).toLowerCase().includes(needle)).slice(0, STATIC_LIMIT);
   }, [staticOptions, remote.options, value, minChars, getOptionLabel]);
 
-  // A new set of options invalidates the highlighted row.
-  const [optionsSeen, setOptionsSeen] = useState(options);
-  if (optionsSeen !== options) {
-    setOptionsSeen(options);
+  const keyOf = getOptionKey ?? getOptionLabel;
+  // A different set of options invalidates the highlighted row. Compared by content, not identity,
+  // because callers often pass inline label functions that produce a new array every render.
+  const signature = options.map(keyOf).join('\u0000');
+  const [seenSignature, setSeenSignature] = useState(signature);
+  if (seenSignature !== signature) {
+    setSeenSignature(signature);
     setActiveIndex(-1);
   }
 
-  const keyOf = getOptionKey ?? getOptionLabel;
   const loading = !staticOptions && remote.loading;
+  const emptyShown = value.trim().length >= Math.max(1, minChars) ? emptyMessage : undefined;
   const active = activeIndex >= 0 ? options[activeIndex] : undefined;
 
   const select = (option: T) => {
@@ -148,7 +151,7 @@ export function Combobox<T = string>({
         aria-describedby={field['aria-describedby']}
         aria-invalid={field['aria-invalid']}
         aria-autocomplete="list"
-        aria-expanded={open && (options.length > 0 || loading)}
+        aria-expanded={open && (options.length > 0 || loading || emptyShown !== undefined)}
         aria-controls={listId}
         aria-activedescendant={active !== undefined ? optionId(listId, activeIndex) : undefined}
         value={value}
@@ -234,7 +237,7 @@ export function Combobox<T = string>({
       getKey={keyOf}
       label={props['aria-label']}
       loading={loading}
-      emptyMessage={value.trim().length >= Math.max(1, minChars) ? emptyMessage : undefined}
+      emptyMessage={emptyShown}
       renderOption={(option, isActive) =>
         renderOption ? (
           renderOption(option, { active: isActive, query: value })

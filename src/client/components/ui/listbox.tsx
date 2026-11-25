@@ -139,6 +139,8 @@ export function OptionList<T>({ listId, open, onOpenChange, anchor, options, act
             id={listId}
             role="listbox"
             aria-label={label}
+            // mousedown anywhere in the list (an option, the scrollbar) would blur the text box and close it.
+            onMouseDown={(event) => event.preventDefault()}
             className="max-h-[min(20rem,var(--radix-popover-content-available-height))] overflow-y-auto p-1"
           >
             {options.map((option, index) => {
@@ -149,8 +151,6 @@ export function OptionList<T>({ listId, open, onOpenChange, anchor, options, act
                   id={optionId(listId, index)}
                   role="option"
                   aria-selected={active}
-                  // mousedown would blur the text box before the click lands.
-                  onMouseDown={(event) => event.preventDefault()}
                   onMouseMove={() => {
                     if (!active) onActiveIndexChange(index);
                   }}

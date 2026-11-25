@@ -269,7 +269,8 @@ function isJunk(text: string, t: Tok): boolean {
 /** Bonus, equity, stipend, allowance, … amounts. */
 function isExtra(text: string, t: Tok): boolean {
   let after = text.slice(t.end, t.end + 48);
-  const cut = after.search(/[+,;(|\n]|\band\b|\bplus\b|\bwith\b|\.\s/i);
+  // "$150k including equity" / "incl. bonus": the words describe what the amount covers, not what it is.
+  const cut = after.search(/[+,;(|\n]|\band\b|\bplus\b|\bwith\b|\bincl(?:uding|usive|\.)?|\bexcl(?:uding|usive|\.)?|\.\s/i);
   if (cut >= 0) after = after.slice(0, cut);
   if (EXTRA_AFTER_RE.test(after)) return true;
   let before = text.slice(Math.max(0, t.start - 48), t.start);
@@ -301,11 +302,34 @@ function periodOfWord(word: string): SalaryPeriod {
   return 'year';
 }
 
-/** First explicit pay period in `scope`. */
+const L = String.raw`(?<![\p{L}])`;
+const R = String.raw`(?![\p{L}])`;
+/** Pay periods written in German, French, Spanish, Portuguese, Italian, Dutch, Nordic languages and Polish. */
+const FOREIGN_PERIODS: ReadonlyArray<readonly [SalaryPeriod, RegExp]> = [
+  ['hour', new RegExp(String.raw`${L}(?:pro\s+stunde|pro\s+std\.?|stündlich|par\s+heure|de\s+l['’]heure|por\s+hora|all['’]ora|per\s+uur|i\s+timmen|za\s+godzinę|na\s+godzinę)${R}|\/\s*(?:std|stunde|heure|hora|ora|uur|tim|godz)\.?${R}`, 'iu')],
+  ['day', new RegExp(String.raw`${L}(?:pro\s+tag|tagessatz|par\s+jour|por\s+d[ií]a|al\s+giorno|per\s+dag|dziennie)${R}|\/\s*(?:tag|jour|d[ií]a|giorno|dag)${R}`, 'iu')],
+  ['week', new RegExp(String.raw`${L}(?:pro\s+woche|wöchentlich|par\s+semaine|por\s+semana|a\s+settimana|tygodniowo)${R}|\/\s*(?:woche|semaine|semana|settimana)${R}`, 'iu')],
+  ['month', new RegExp(String.raw`${L}(?:monatlich|pro\s+monat|im\s+monat|mensuel(?:le)?|par\s+mois|por\s+mes|al\s+mes|mensual(?:es)?|por\s+m[eê]s|mensa(?:l|is)|al\s+mese|mensil[ei]|per\s+maand|per\s+m[aå]nad|i\s+m[aå]naden|m[aå]nedlig|miesięcznie|měsíčně)${R}|\/\s*(?:monat|mois|mes|mês|mese|maand|m[aå]n|mnd|mies|měs)\.?${R}`, 'iu')],
+  ['year', new RegExp(String.raw`${L}(?:jährlich|pro\s+jahr|im\s+jahr|par\s+an|annuel(?:le)?|por\s+a[ñn]o|al\s+a[ñn]o|anual(?:es)?|all['’]anno|annu[oi]|lordi\s+annui|per\s+jaar|per\s+år|årlig|rocznie|ročně)${R}|\/\s*(?:jahr|an|año|ano|anno|jaar|år|rok)${R}`, 'iu')],
+];
+
+/** First (leftmost) explicit pay period in `scope`. */
 function findPeriod(scope: string): SalaryPeriod | undefined {
+  let best: SalaryPeriod | undefined;
+  let at = Infinity;
   const m = PERIOD_RE.exec(scope);
-  if (!m) return undefined;
-  return periodOfWord(m[1] ?? m[2] ?? m[3] ?? 'year');
+  if (m) {
+    best = periodOfWord(m[1] ?? m[2] ?? m[3] ?? 'year');
+    at = m.index;
+  }
+  for (const [period, re] of FOREIGN_PERIODS) {
+    const f = re.exec(scope);
+    if (f && f.index < at) {
+      best = period;
+      at = f.index;
+    }
+  }
+  return best;
 }
 
 /** Documented magnitude rule: < 500 -> hour, < 2,000 -> day unless a k-suffix was used, otherwise year. */
@@ -387,6 +411,8 @@ function fromTokens(text: string, pick: Pick, periodScopes: string[], opts: Sala
   if (hi !== undefined) {
     min = Math.min(lo, hi);
     max = Math.max(lo, hi);
+    // "Level 3 - $120,000", "$1 - $100,000": not a real range.
+    if (max > min * 10) return undefined;
   } else {
     const before = text.slice(Math.max(0, a.start - 30), a.start);
     if (a.plus || MIN_QUALIFIER_RE.test(before)) min = lo;
@@ -448,16 +474,25 @@ export function parseSalaryText(text: string, opts: SalaryOptions = {}): Salary 
   if (!original || !/\d/.test(original) || original.length > 2000) return undefined;
   const s = prepare(original);
   const toks = scanAmounts(s, opts.country).filter((t) => !isJunk(s, t) && !isExtra(s, t));
-  const a = toks[0];
-  if (!a) return undefined;
-  const b = toks[1] && isRangeGap(s, a, toks[1]) ? toks[1] : undefined;
-  const last = b ?? a;
-  if (isPieceRate(s, last.end)) return undefined;
-  return fromTokens(s, { a, b }, [s.slice(a.start), s.slice(0, a.start)], opts, original);
+  for (let i = 0; i < toks.length && i < 8; i++) {
+    const a = toks[i];
+    if (!a) break;
+    const next = toks[i + 1];
+    const b = next && isRangeGap(s, a, next) ? next : undefined;
+    const last = b ?? a;
+    if (isPieceRate(s, last.end)) return undefined;
+    const salary = fromTokens(s, { a, b }, [s.slice(a.start), s.slice(0, a.start)], opts, original);
+    if (salary) return salary;
+    // A range that failed is not retried from its upper bound ("$1 - $100,000" stays rejected).
+    if (b && a.money) i++;
+  }
+  return undefined;
 }
 
+/** A positive finite number; numeric strings ("120000", " 85000.50 ") from loosely typed APIs are accepted. */
 function positive(n: unknown): number | undefined {
-  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : undefined;
+  const v = typeof n === 'string' && /^\s*\d+(?:\.\d+)?\s*$/.test(n) ? Number(n) : n;
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : undefined;
 }
 
 const PERIODS = new Set<SalaryPeriod>(['year', 'month', 'week', 'day', 'hour']);
@@ -508,21 +543,59 @@ export function normalizeSalary(raw: RawSalary | undefined, opts: SalaryOptions 
 // ---------------------------------------------------------------------------
 
 const PAY_WORDS_RE =
-  /\b(?:salary|salaries|compensation|comp|pay|paid|pays|paying|wages?|earnings?|remuneration|ote|on[- ]target|base|income|hourly|annual(?:ly)?|per\s+(?:hour|year|annum|month)|gehalt|vergütung|salaire|rémunération|salario|sueldo|retribuzione|salaris|lønn|lön|løn)\b/i;
-const NOT_PAY_RE =
-  /\b(?:raised?|raising|funding|funded|series\s+[a-f]|seed|valuation|valued|investors?|investments?|backed|revenue|arr|mrr|gmv|sales|bookings|turnover|market\s+cap|assets|aum|under\s+management|capital|prize|spend|spent|savings|saved|customers?|users|donat\w*|fundrais\w*|ipo|acquired|acquisition|loans?|deals?|contracts?\s+worth|worth\s+of|price[ds]?|pricing|costs?|fees?)\b/i;
+  /\b(?:salary|salaries|compensation|comp|pay|paid|pays|paying|wages?|earn|earns|earning|earnings?|remuneration|ote|on[- ]target|base|income|hourly|annual(?:ly)?|per\s+(?:hour|year|annum|month)|gehalt|vergütung|lohn|salaire|rémunération|salario|sueldo|retribuzione|stipendio|salaris|lønn|lön|løn|wynagrodzenie)\b/i;
+const PAY_WORDS_G = new RegExp(PAY_WORDS_RE.source, 'gi');
+/** Pay vocabulary that names the amount itself; a single amount (not a range) needs one in its sentence. */
+const STRONG_PAY_RE =
+  /\b(?:salary|salaries|compensation|comp|pay|paid|pays|paying|wages?|earn|earns|earning|earnings?|remuneration|ote|on[- ]target|base|income|hourly|rate|gehalt|vergütung|lohn|salaire|rémunération|salario|sueldo|retribuzione|stipendio|salaris|lønn|lön|løn|wynagrodzenie)\b/i;
+/** Words that make an amount something other than pay when they come after the last pay word before it. */
+const NOT_PAY_G =
+  /\b(?:raised?|raising|funding|funded|financing|series\s+[a-f]|seed\s+round|valuation|valued|investors?|investments?|backed|revenue|arr|mrr|gmv|turnover|market\s+cap|under\s+management|aum|ipo|acquired|acquisition|loans?|donat\w*|fundrais\w*|prizes?|spend|spent|price[ds]?|pricing|fees?|costs?)\b/gi;
+/** Weak signals that only count right before the amount ("our customers save $150,000"). */
+const NOT_PAY_JUST_BEFORE_RE =
+  /\b(?:sales|bookings|customers?|clients?|users|members|partners)\s+(?:of|reached|hit|grew(?:\s+to)?|totall?ing|exceed(?:ing|ed)?|over|save[ds]?|saving|spend|spent|worth|generated?|pay|pays|paid|paying)\s*(?:about|around|over|more\s+than|up\s+to)?\s*$/i;
+/** Amounts immediately followed by these are business figures ("$120M ARR", "$2B in payments"). */
+const NOT_PAY_AFTER_RE =
+  /^[\s,)(-]{0,3}(?:in\s+|of\s+)?(?:(?:annual|annually|recurring|total|new|seed|series\s+[a-f])\s+)?(?:funding|financing|revenue|arr|mrr|gmv|valuation|sales|bookings|turnover|investments?|capital|assets|aum|raised|round|seed|series\s+[a-f]|users|customers|clients|downloads|market\s+cap|transactions|payments|savings|in\s+savings|under\s+management)\b/i;
 
-function sentenceAround(text: string, start: number, end: number): string {
-  const left = text.slice(Math.max(0, start - 200), start);
-  const right = text.slice(end, end + 200);
-  const l = Math.max(left.lastIndexOf('\n'), left.lastIndexOf(';'), left.search(/\.\s+[^.]*$/));
-  const rIdx = right.search(/[\n;]|\.\s/);
-  return left.slice(l + 1) + text.slice(start, end) + (rIdx >= 0 ? right.slice(0, rIdx) : right);
+/** Index where the sentence holding `start` begins (newline, ";" or ". " boundary, at most 200 chars back). */
+function sentenceStart(text: string, start: number): number {
+  const from = Math.max(0, start - 200);
+  const left = text.slice(from, start);
+  const cut = Math.max(left.lastIndexOf('\n'), left.lastIndexOf(';'), left.search(/\.\s+[^.]*$/));
+  return from + cut + 1;
+}
+
+function lastMatchIndex(re: RegExp, s: string): number {
+  let at = -1;
+  re.lastIndex = 0;
+  for (let m = re.exec(s); m; m = re.exec(s)) at = m.index;
+  return at;
+}
+
+/** Funding, revenue, prices, customer savings, …: an amount whose context says it is not pay. */
+function isBusinessFigure(text: string, start: number, end: number): boolean {
+  const left = text.slice(sentenceStart(text, start), start).replace(/\bcost\s+of\s+living\b/gi, ' ');
+  if (lastMatchIndex(NOT_PAY_G, left) > lastMatchIndex(PAY_WORDS_G, left)) return true;
+  if (NOT_PAY_JUST_BEFORE_RE.test(left)) return true;
+  return NOT_PAY_AFTER_RE.test(text.slice(end, end + 60));
 }
 
 function cutAtSentence(s: string): string {
   const i = s.search(/[\n;]|\.\s+[A-Z]/);
   return i >= 0 ? s.slice(0, i) : s;
+}
+
+/** The sentence around an amount, plus a short heading line directly above it ("Compensation\n$120,000"). */
+function payContext(text: string, start: number, end: number): string {
+  let from = sentenceStart(text, start);
+  if (from > 0 && text[from - 1] === '\n') {
+    let p = from - 1;
+    while (p > 0 && /\s/.test(text[p - 1] ?? '')) p--;
+    const lineStart = text.lastIndexOf('\n', p - 1) + 1;
+    if (p - lineStart <= 80) from = lineStart;
+  }
+  return text.slice(from, end) + cutAtSentence(text.slice(end, end + 60));
 }
 
 /**
@@ -532,14 +605,19 @@ function cutAtSentence(s: string): string {
  * revenue, benefits stipends ("$1,000 home office stipend"), and sign-on bonuses.
  * The result has `inferred: true`.
  *
- * Several ranges (split by location, zone or level): the ranges that share the currency and
- * period of the first one are merged into the overall widest range (lowest min, highest max).
- * Without any range, the first qualifying single amount is used.
+ * Details: a range needs a currency on at least one bound ("SGD 96,000 – 132,000") and pay
+ * vocabulary nearby or an explicit period; a single amount needs pay vocabulary ("salary", "pay",
+ * "OTE", "rate", …) in its own sentence or in a heading line right above. Ranges win over single
+ * amounts. Several ranges (split by location, zone or level): the first range is
+ * taken, widened by every later range in the same currency and period that overlaps it, so
+ * "Zone 1: $150k–$200k; Zone 2: $135k–$180k" gives $135k–$200k while "Base $90k–$110k,
+ * OTE $150k–$180k" gives $90k–$110k. Without any range, the first qualifying single amount is
+ * used. `text` holds the matched amounts.
  */
 export function extractSalaryFromText(descriptionText: string, opts: SalaryOptions = {}): Salary | undefined {
   if (typeof descriptionText !== 'string' || !/\d/.test(descriptionText)) return undefined;
   const s = prepare(descriptionText.slice(0, 200_000));
-  const toks = scanAmounts(s, opts.country).filter((t) => t.money && !isJunk(s, t) && !isExtra(s, t));
+  const toks = scanAmounts(s, opts.country).filter((t) => !isJunk(s, t) && !isExtra(s, t));
   interface Found {
     salary: Salary;
     range: boolean;
@@ -547,41 +625,61 @@ export function extractSalaryFromText(descriptionText: string, opts: SalaryOptio
     end: number;
   }
   const found: Found[] = [];
-  for (let i = 0; i < toks.length; i++) {
-    const a = toks[i];
-    if (!a) continue;
-    const next = toks[i + 1];
-    const b = next && isRangeGap(s, a, next) ? next : undefined;
-    if (b) i++;
+  const consider = (a: Tok, b: Tok | undefined): boolean => {
     const last = b ?? a;
-    if (isPieceRate(s, last.end)) continue;
-    if (NOT_PAY_RE.test(sentenceAround(s, a.start, last.end))) continue;
+    if (!a.money && !b?.money) return false;
+    if (isPieceRate(s, last.end) || isBusinessFigure(s, a.start, last.end)) return false;
     const after = cutAtSentence(s.slice(last.end, last.end + 40));
     const before = s.slice(Math.max(0, a.start - 40), a.start);
     const gap = b ? s.slice(a.end, b.start) : '';
     const near = s.slice(Math.max(0, a.start - 150), Math.min(s.length, last.end + 60));
-    if (!PAY_WORDS_RE.test(near) && !findPeriod(after)) continue;
+    if (!PAY_WORDS_RE.test(near) && !findPeriod(after)) return false;
+    // A lone amount ("up to $1,000 per month for coworking") needs pay vocabulary in its own sentence.
+    if (!b && !STRONG_PAY_RE.test(payContext(s, a.start, last.end))) return false;
     const salary = fromTokens(s, { a, b }, [after, gap, before.slice(before.search(/[^\n;]*$/))], opts, undefined);
-    if (!salary) continue;
+    if (!salary) return false;
     found.push({ salary, range: Boolean(b), start: a.start, end: last.end });
+    return true;
+  };
+  for (let i = 0; i < toks.length && found.length < 50; i++) {
+    const a = toks[i];
+    if (!a) continue;
+    const next = toks[i + 1];
+    const b = next && isRangeGap(s, a, next) ? next : undefined;
+    if (b) {
+      // A range that is a business figure or piece rate takes both of its bounds with it.
+      if (isPieceRate(s, b.end) || isBusinessFigure(s, a.start, b.end) || consider(a, b)) {
+        i++;
+        continue;
+      }
+    }
+    if (a.money) consider(a, undefined);
   }
   const ranges = found.filter((f) => f.range);
-  const pool = ranges.length > 0 ? ranges : found.slice(0, 1);
-  const first = pool[0];
+  const first = ranges[0] ?? found[0];
   if (!first) return undefined;
-  const same = pool.filter((f) => f.salary.currency === first.salary.currency && f.salary.period === first.salary.period);
-  const mins = same.map((f) => f.salary.min).filter((n): n is number => n !== undefined);
-  const maxs = same.map((f) => f.salary.max).filter((n): n is number => n !== undefined);
-  const text = same
-    .slice(0, 4)
-    .map((f) => s.slice(f.start, f.end).trim())
-    .join('; ');
+  let min = first.salary.min;
+  let max = first.salary.max;
+  const used = [first];
+  if (first.range && min !== undefined && max !== undefined) {
+    for (const f of ranges.slice(1)) {
+      const r = f.salary;
+      if (r.currency !== first.salary.currency || r.period !== first.salary.period) continue;
+      if (r.min === undefined || r.max === undefined || r.min > max || r.max < min) continue;
+      min = Math.min(min, r.min);
+      max = Math.max(max, r.max);
+      used.push(f);
+    }
+  }
   const merged = finish({
-    ...(mins.length > 0 ? { min: Math.min(...mins) } : {}),
-    ...(maxs.length > 0 ? { max: Math.max(...maxs) } : {}),
+    ...(min !== undefined ? { min } : {}),
+    ...(max !== undefined ? { max } : {}),
     ...(first.salary.currency ? { currency: first.salary.currency } : {}),
     period: first.salary.period ?? 'year',
-    text,
+    text: used
+      .slice(0, 4)
+      .map((f) => s.slice(f.start, f.end).trim())
+      .join('; '),
   });
   return merged ? { ...merged, inferred: true } : undefined;
 }
@@ -607,7 +705,20 @@ function compact(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(2);
 }
 
-/** Short display string, e.g. "$120k–$150k/yr", "£450/day", "From €60k/yr", "Up to $45/hr". */
+/** Indian rupee amounts read in lakh/crore: 1800000 -> "18L", 12000000 -> "1.2Cr". */
+function compactInr(n: number): string {
+  if (n >= 9_995_000) return `${trimZeros((n / 1e7).toFixed(2))}Cr`;
+  if (n >= 99_950) return `${trimZeros((n / 1e5).toFixed(1))}L`;
+  return compact(n);
+}
+
+/**
+ * Short display string, e.g. "$120k–$150k/yr", "£450/day", "From €60k/yr", "Up to $45/hr".
+ *
+ * Details: well-known currencies use their symbol ("CA$", "A$", "₹"), others the ISO code
+ * ("CHF 120k–140k/yr"); amounts are compact ("142k", "63.8k", "1.2M", "28.50"), INR in lakh/crore
+ * ("₹18L–₹25L/yr"). Missing or invalid numbers fall back to `text`, else "" — never "NaN"/"undefined".
+ */
 export function formatSalary(salary: Salary): string {
   if (!salary || typeof salary !== 'object') return '';
   const min = positive(salary.min);
@@ -615,7 +726,7 @@ export function formatSalary(salary: Salary): string {
   const code = typeof salary.currency === 'string' && /^[A-Za-z]{3}$/.test(salary.currency) ? salary.currency.toUpperCase() : undefined;
   const sym = code ? DISPLAY_SYMBOL[code] : undefined;
   const prefix = !sym && code ? `${code} ` : '';
-  const amount = (n: number): string => `${sym ?? ''}${compact(n)}`;
+  const amount = (n: number): string => `${sym ?? ''}${code === 'INR' ? compactInr(n) : compact(n)}`;
   const suffix = salary.period && PERIODS.has(salary.period) ? PERIOD_SUFFIX[salary.period] : '';
   if (min !== undefined && max !== undefined) {
     const a = amount(min);
