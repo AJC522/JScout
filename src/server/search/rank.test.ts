@@ -38,6 +38,17 @@ describe('titleTier with generic synonyms', () => {
     expect(plain.points).toBe(26);
     expect(np.points).toBeLessThan(plain.points);
   });
+
+  it('treats another recognised role sharing only "nurse" as a word overlap, not the same role', () => {
+    const lpn = titleTier(
+      { title: 'Licensed Practical Nurse – NY license required', titleCore: 'licensed practical nurse', roleId: 'licensed-practical-nurse' },
+      u,
+    );
+    expect(lpn).toMatchObject({ kind: 'partial', points: 10, words: [expect.stringMatching(/^nurse$/i)] });
+    // Well below a same-role title, so recency or a stated salary cannot lift it above one.
+    const sameRole = titleTier({ title: 'New Patient Nurse', titleCore: 'new patient nurse', roleId: 'registered-nurse' }, u);
+    expect(sameRole.points - lpn.points).toBeGreaterThanOrEqual(16);
+  });
 });
 
 describe('scorePosting', () => {

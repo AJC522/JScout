@@ -121,7 +121,10 @@ export function titleTier(input: Pick<ScoreInput, 'title' | 'titleCore' | 'roleI
     if (input.roleId === undefined) return tier('synonym', 26, contained[0]);
     if (!typed.concat(synonyms).some((x) => x.roleId === input.roleId)) {
       const relatedRole = find(related, (p, x) => containsPhrase(core, p) || x.roleId === input.roleId);
-      return relatedRole ? tier('related', 22, relatedRole) : tier('synonym', 18, contained[0]);
+      if (relatedRole) return tier('related', 22, relatedRole);
+      // Recognised as a different role and sharing only a generic word ("Licensed Practical Nurse"
+      // for a "registered nurse" search): a word overlap, not the same job.
+      return { kind: 'partial', points: 10, words: [contained[0]!.phrase] };
     }
   }
   if (input.roleId && (t = find([...typed, ...synonyms], (_, x) => x.roleId === input.roleId))) return tier('synonym', 28, t);
