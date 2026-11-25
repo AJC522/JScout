@@ -3,6 +3,12 @@ import { parseAtsUrl, tokenCandidates } from './ats-detect';
 
 describe('parseAtsUrl', () => {
   it.each([
+    // GovernmentJobs (NEOGOV)
+    ['https://www.governmentjobs.com/careers/seattle', 'governmentjobs', 'seattle'],
+    ['governmentjobs.com/careers/HonoluluPD/jobs/4550695/police-communications-officer-i', 'governmentjobs', 'honolulupd'],
+    ['https://www.governmentjobs.com/careers/washington?department[0]=Office%20of%20Financial%20Management', 'governmentjobs', 'washington'],
+    ['https://agency.governmentjobs.com/lacounty/default.cfm', 'governmentjobs', 'lacounty'],
+    ['https://www.governmentjobs.com/SearchEngine/JobsFeed?agency=michigan', 'governmentjobs', 'michigan'],
     // Greenhouse
     ['https://boards.greenhouse.io/stripe', 'greenhouse', 'stripe'],
     ['boards.greenhouse.io/stripe', 'greenhouse', 'stripe'],
@@ -66,6 +72,12 @@ describe('parseAtsUrl', () => {
     ['https://jobs.smartrecruiters.com/'],
     ['https://apply.workable.com/'],
     ['https://apply.workable.com/j/1A2B3C4D5E'],
+    ['https://www.governmentjobs.com/'],
+    ['https://www.governmentjobs.com/careers/'],
+    ['https://www.governmentjobs.com/jobs/5559617-0/crime-analyst'],
+    ['https://www.governmentjobs.com/careers/home/index'],
+    ['https://www.governmentjobs.com/SearchEngine/JobsFeed'],
+    ['https://agency.governmentjobs.com/'],
     ['ftp://boards.greenhouse.io/stripe'],
     ['javascript:alert(1)'],
     ['https://boards.greenhouse.io.evil.example/stripe'],

@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:joblisting="http://www.neogov.com/namespaces/JobListing" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel xmlns:joblisting="http://www.neogov.com/namespaces/JobListing" xmlns:atom="http://www.w3.org/2005/Atom">
+    <title>Arlington Police Department (TX), TX</title>
+    <link>https://agency.governmentjobs.com/arlingtontx</link>
+    <description>Latest Employment Information</description>
+    <language>en-us</language>
+    <generator>www.neogov.com</generator>
+    <atom:link href="https://agency.governmentjobs.com/arlingtontx/default.cfm?format=xml&amp;promotionaljobs=0&amp;transfer=0" rel="self" type="application/rss+xml" />
+    <ttl>360</ttl>
+    <joblisting:timeZone>Central Time (US &amp; Canada)</joblisting:timeZone>
+    <joblisting:UTCOffset>-6.00</joblisting:UTCOffset>
+  </channel>
+</rss>

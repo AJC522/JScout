@@ -290,6 +290,31 @@ export const TITLE_ABBREVIATIONS: Record<string, string> = {
  * Used only for mapping a title to a role (never offered as synonyms or suggestions); a taxonomy
  * title/alias with the same text wins. Ids missing from the taxonomy are ignored.
  */
+/**
+ * Federal IT Specialist (OPM series 2210) titles name their specialty in parentheses:
+ * "IT Specialist (INFOSEC)", "Information Technology Specialist (APPSW)", "IT Specialist (SYSADMIN/NETWORK)".
+ * The heads below take the first specialty code found in an aside; the code picks the role and stays
+ * in the core, so an agency's INFOSEC and SYSADMIN openings in one city are not merged as duplicates.
+ */
+export const FEDERAL_IT_HEADS = words(
+  'it specialist|information technology specialist|it cybersecurity specialist|information technology cybersecurity specialist|' +
+    'supervisory it specialist|supervisory information technology specialist|supervisory it cybersecurity specialist|' +
+    'information technology management specialist|it management specialist|lead it specialist|lead information technology specialist',
+);
+export const FEDERAL_IT_SPECIALTIES: Record<string, string> = {
+  infosec: 'security-analyst',
+  sysadmin: 'systems-administrator',
+  os: 'systems-administrator',
+  network: 'network-administrator',
+  appsw: 'software-engineer',
+  datamgt: 'database-administrator',
+  custspt: 'it-support-specialist',
+  entarch: 'solutions-architect',
+  inet: 'web-developer',
+  plcypln: 'it-manager',
+  sysanalysis: 'business-analyst',
+};
+
 export const CURATED_TITLE_ALIASES: Record<string, string> = {
   'member of technical staff': 'software-engineer',
   'member of the technical staff': 'software-engineer',

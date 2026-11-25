@@ -56,6 +56,8 @@ export interface SeedCompany {
   token: string;
   industry: string;
   jobs: number;
+  /** Seed version that added this board (default 1); installs seeded earlier receive it on upgrade. */
+  since?: number;
 }
 
 interface ReferenceFiles {

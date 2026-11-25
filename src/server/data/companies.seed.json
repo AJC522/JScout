@@ -42,11 +42,27 @@
     "jobs": 33
   },
   {
+    "name": "Accela",
+    "ats": "greenhouse",
+    "token": "accela",
+    "industry": "govtech-defense",
+    "jobs": 7,
+    "since": 2
+  },
+  {
     "name": "Acumen",
     "ats": "greenhouse",
     "token": "acumen",
     "industry": "nonprofit-research",
     "jobs": 8
+  },
+  {
+    "name": "Ada County, ID",
+    "ats": "governmentjobs",
+    "token": "adacounty",
+    "industry": "government",
+    "jobs": 38,
+    "since": 2
   },
   {
     "name": "Adaptive Biotechnologies",
@@ -75,6 +91,14 @@
     "token": "affirm",
     "industry": "fintech",
     "jobs": 216
+  },
+  {
+    "name": "Agile Six",
+    "ats": "greenhouse",
+    "token": "agilesix",
+    "industry": "govtech-defense",
+    "jobs": 1,
+    "since": 2
   },
   {
     "name": "Agility Robotics",
@@ -112,6 +136,22 @@
     "jobs": 501
   },
   {
+    "name": "Alachua County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "alachuasheriff",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "Albedo",
+    "ats": "greenhouse",
+    "token": "albedo",
+    "industry": "govtech-defense",
+    "jobs": 11,
+    "since": 2
+  },
+  {
     "name": "Alchemy",
     "ats": "ashby",
     "token": "alchemy",
@@ -145,6 +185,14 @@
     "token": "anchorage",
     "industry": "fintech",
     "jobs": 19
+  },
+  {
+    "name": "Anduril Industries",
+    "ats": "greenhouse",
+    "token": "andurilindustries",
+    "industry": "govtech-defense",
+    "jobs": 2602,
+    "since": 2
   },
   {
     "name": "Anthropic",
@@ -276,7 +324,7 @@
     "name": "Axon",
     "ats": "greenhouse",
     "token": "axon",
-    "industry": "hardware-robotics",
+    "industry": "govtech-defense",
     "jobs": 465
   },
   {
@@ -287,11 +335,35 @@
     "jobs": 19
   },
   {
+    "name": "Babel Street",
+    "ats": "greenhouse",
+    "token": "babelstreet",
+    "industry": "govtech-defense",
+    "jobs": 10,
+    "since": 2
+  },
+  {
     "name": "Babylist",
     "ats": "greenhouse",
     "token": "babylist",
     "industry": "consumer",
     "jobs": 27
+  },
+  {
+    "name": "Baldwin County, AL",
+    "ats": "governmentjobs",
+    "token": "baldwincountyal",
+    "industry": "government",
+    "jobs": 10,
+    "since": 2
+  },
+  {
+    "name": "Baltimore County, MD",
+    "ats": "governmentjobs",
+    "token": "baltimorecounty",
+    "industry": "government",
+    "jobs": 146,
+    "since": 2
   },
   {
     "name": "Barstool Sports",
@@ -306,6 +378,22 @@
     "token": "baseten",
     "industry": "ai",
     "jobs": 109
+  },
+  {
+    "name": "Bay County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "bayso",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "Berkeley County Government, SC",
+    "ats": "governmentjobs",
+    "token": "berkeleycountysc",
+    "industry": "government",
+    "jobs": 35,
+    "since": 2
   },
   {
     "name": "Betterment",
@@ -327,6 +415,14 @@
     "token": "bitwarden",
     "industry": "security",
     "jobs": 39
+  },
+  {
+    "name": "BlackSky",
+    "ats": "greenhouse",
+    "token": "blacksky",
+    "industry": "govtech-defense",
+    "jobs": 39,
+    "since": 2
   },
   {
     "name": "Bland AI",
@@ -364,6 +460,14 @@
     "jobs": 7
   },
   {
+    "name": "Boulder County, CO",
+    "ats": "governmentjobs",
+    "token": "boulder",
+    "industry": "government",
+    "jobs": 21,
+    "since": 2
+  },
+  {
     "name": "Braze",
     "ats": "greenhouse",
     "token": "braze",
@@ -371,11 +475,43 @@
     "jobs": 347
   },
   {
+    "name": "Brazoria County, TX",
+    "ats": "governmentjobs",
+    "token": "brazoriacounty",
+    "industry": "government",
+    "jobs": 12,
+    "since": 2
+  },
+  {
     "name": "Brex",
     "ats": "greenhouse",
     "token": "brex",
     "industry": "fintech",
     "jobs": 261
+  },
+  {
+    "name": "BRINC",
+    "ats": "ashby",
+    "token": "brinc",
+    "industry": "govtech-defense",
+    "jobs": 27,
+    "since": 2
+  },
+  {
+    "name": "Broward County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "browardsheriff",
+    "industry": "government",
+    "jobs": 15,
+    "since": 2
+  },
+  {
+    "name": "Brown County, WI",
+    "ats": "governmentjobs",
+    "token": "browncounty",
+    "industry": "government",
+    "jobs": 45,
+    "since": 2
   },
   {
     "name": "Bugcrowd",
@@ -399,11 +535,27 @@
     "jobs": 1
   },
   {
+    "name": "Butte County, CA",
+    "ats": "governmentjobs",
+    "token": "buttecountyca",
+    "industry": "government",
+    "jobs": 22,
+    "since": 2
+  },
+  {
     "name": "BuzzFeed",
     "ats": "greenhouse",
     "token": "buzzfeed",
     "industry": "media-entertainment",
     "jobs": 4
+  },
+  {
+    "name": "Cabarrus County, NC",
+    "ats": "governmentjobs",
+    "token": "cabarruscounty",
+    "industry": "government",
+    "jobs": 22,
+    "since": 2
   },
   {
     "name": "Calendly",
@@ -462,11 +614,27 @@
     "jobs": 1
   },
   {
+    "name": "Censys",
+    "ats": "greenhouse",
+    "token": "censys",
+    "industry": "security",
+    "jobs": 27,
+    "since": 2
+  },
+  {
     "name": "Chai Discovery",
     "ats": "ashby",
     "token": "chaidiscovery",
     "industry": "biotech-pharma",
     "jobs": 23
+  },
+  {
+    "name": "Chainalysis",
+    "ats": "ashby",
+    "token": "chainalysis-careers",
+    "industry": "govtech-defense",
+    "jobs": 50,
+    "since": 2
   },
   {
     "name": "Chainguard",
@@ -483,6 +651,14 @@
     "jobs": 4
   },
   {
+    "name": "Chaos Industries",
+    "ats": "greenhouse",
+    "token": "chaosindustries",
+    "industry": "govtech-defense",
+    "jobs": 193,
+    "since": 2
+  },
+  {
     "name": "Character.AI",
     "ats": "ashby",
     "token": "character",
@@ -490,11 +666,27 @@
     "jobs": 13
   },
   {
+    "name": "Charleston County Government, SC",
+    "ats": "governmentjobs",
+    "token": "charlestoncounty",
+    "industry": "government",
+    "jobs": 63,
+    "since": 2
+  },
+  {
     "name": "Charlie Health",
     "ats": "greenhouse",
     "token": "charliehealth",
     "industry": "healthcare",
     "jobs": 276
+  },
+  {
+    "name": "Chatham County Government, GA",
+    "ats": "governmentjobs",
+    "token": "chathamcounty",
+    "industry": "government",
+    "jobs": 32,
+    "since": 2
   },
   {
     "name": "Cherre",
@@ -525,11 +717,1483 @@
     "jobs": 15
   },
   {
+    "name": "Citizen",
+    "ats": "ashby",
+    "token": "citizen",
+    "industry": "govtech-defense",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City & Borough of Juneau, AK",
+    "ats": "governmentjobs",
+    "token": "juneau",
+    "industry": "government",
+    "jobs": 40,
+    "since": 2
+  },
+  {
+    "name": "City and County of Honolulu, HI",
+    "ats": "governmentjobs",
+    "token": "honolulu",
+    "industry": "government",
+    "jobs": 80,
+    "since": 2
+  },
+  {
+    "name": "City and County of San Francisco",
+    "ats": "smartrecruiters",
+    "token": "CityAndCountyOfSanFrancisco1",
+    "industry": "government",
+    "jobs": 213,
+    "since": 2
+  },
+  {
+    "name": "City of Akron, OH",
+    "ats": "governmentjobs",
+    "token": "akron",
+    "industry": "government",
+    "jobs": 17,
+    "since": 2
+  },
+  {
+    "name": "City of Alexandria, VA",
+    "ats": "governmentjobs",
+    "token": "alexandria",
+    "industry": "government",
+    "jobs": 56,
+    "since": 2
+  },
+  {
+    "name": "City of Allen, TX",
+    "ats": "governmentjobs",
+    "token": "allen",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Ames, IA",
+    "ats": "governmentjobs",
+    "token": "cityofames",
+    "industry": "government",
+    "jobs": 14,
+    "since": 2
+  },
+  {
+    "name": "City of Anaheim, CA",
+    "ats": "governmentjobs",
+    "token": "anaheim",
+    "industry": "government",
+    "jobs": 15,
+    "since": 2
+  },
+  {
+    "name": "City of Appleton, WI",
+    "ats": "governmentjobs",
+    "token": "appletonwi",
+    "industry": "government",
+    "jobs": 16,
+    "since": 2
+  },
+  {
+    "name": "City of Asheville, NC",
+    "ats": "governmentjobs",
+    "token": "ashevillenc",
+    "industry": "government",
+    "jobs": 27,
+    "since": 2
+  },
+  {
+    "name": "City of Avondale, AZ",
+    "ats": "governmentjobs",
+    "token": "avondale",
+    "industry": "government",
+    "jobs": 13,
+    "since": 2
+  },
+  {
+    "name": "City of Bakersfield, CA",
+    "ats": "governmentjobs",
+    "token": "bakersfield",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "City of Bellevue, WA",
+    "ats": "governmentjobs",
+    "token": "bellevuewa",
+    "industry": "government",
+    "jobs": 17,
+    "since": 2
+  },
+  {
+    "name": "City of Berkeley, CA",
+    "ats": "governmentjobs",
+    "token": "berkeley",
+    "industry": "government",
+    "jobs": 18,
+    "since": 2
+  },
+  {
+    "name": "City of Beverly Hills, CA",
+    "ats": "governmentjobs",
+    "token": "beverlyhills",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
+    "name": "City of Billings, MT",
+    "ats": "governmentjobs",
+    "token": "billingsmt",
+    "industry": "government",
+    "jobs": 32,
+    "since": 2
+  },
+  {
+    "name": "City of Bismarck, ND",
+    "ats": "governmentjobs",
+    "token": "bismarcknd",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "City of Bloomington, MN",
+    "ats": "governmentjobs",
+    "token": "bloomingtonmn",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
+    "name": "City of Boca Raton, FL",
+    "ats": "governmentjobs",
+    "token": "bocaratonfl",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "City of Boise, ID",
+    "ats": "governmentjobs",
+    "token": "boiseid",
+    "industry": "government",
+    "jobs": 17,
+    "since": 2
+  },
+  {
+    "name": "City of Boston, MA",
+    "ats": "governmentjobs",
+    "token": "boston",
+    "industry": "government",
+    "jobs": 73,
+    "since": 2
+  },
+  {
+    "name": "City of Bozeman, MT",
+    "ats": "governmentjobs",
+    "token": "bozeman",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of Brentwood, TN",
+    "ats": "governmentjobs",
+    "token": "brentwoodtn",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
+    "name": "City of Broken Arrow, OK",
+    "ats": "governmentjobs",
+    "token": "brokenarrowok",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "City of Buckeye, AZ",
+    "ats": "governmentjobs",
+    "token": "buckeyeaz",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Buffalo, NY",
+    "ats": "governmentjobs",
+    "token": "buffalony",
+    "industry": "government",
+    "jobs": 40,
+    "since": 2
+  },
+  {
+    "name": "City of Burbank, CA",
+    "ats": "governmentjobs",
+    "token": "burbankca",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Cape Coral, FL",
+    "ats": "governmentjobs",
+    "token": "capecoral",
+    "industry": "government",
+    "jobs": 7,
+    "since": 2
+  },
+  {
+    "name": "City of Casper, WY",
+    "ats": "governmentjobs",
+    "token": "casperwy",
+    "industry": "government",
+    "jobs": 18,
+    "since": 2
+  },
+  {
+    "name": "City of Cedar Rapids, IA",
+    "ats": "governmentjobs",
+    "token": "cedarrapids",
+    "industry": "government",
+    "jobs": 13,
+    "since": 2
+  },
+  {
+    "name": "City of Chandler, AZ",
+    "ats": "governmentjobs",
+    "token": "chandleraz",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Chula Vista, CA",
+    "ats": "governmentjobs",
+    "token": "chulavista",
+    "industry": "government",
+    "jobs": 16,
+    "since": 2
+  },
+  {
+    "name": "City of Cincinnati, OH",
+    "ats": "governmentjobs",
+    "token": "cincinnati",
+    "industry": "government",
+    "jobs": 32,
+    "since": 2
+  },
+  {
+    "name": "City of Clarksville, TN",
+    "ats": "governmentjobs",
+    "token": "clarksvilletn",
+    "industry": "government",
+    "jobs": 31,
+    "since": 2
+  },
+  {
+    "name": "City of Clearwater, FL",
+    "ats": "governmentjobs",
+    "token": "clearwaterfl",
+    "industry": "government",
+    "jobs": 3,
+    "since": 2
+  },
+  {
+    "name": "City of Cleveland, OH",
+    "ats": "governmentjobs",
+    "token": "cleveland",
+    "industry": "government",
+    "jobs": 37,
+    "since": 2
+  },
+  {
+    "name": "City of Clovis, CA",
+    "ats": "governmentjobs",
+    "token": "clovisca",
+    "industry": "government",
+    "jobs": 10,
+    "since": 2
+  },
+  {
+    "name": "City of Columbia, SC",
+    "ats": "governmentjobs",
+    "token": "columbiasc",
+    "industry": "government",
+    "jobs": 45,
+    "since": 2
+  },
+  {
+    "name": "City of Columbus, OH",
+    "ats": "governmentjobs",
+    "token": "columbusoh",
+    "industry": "government",
+    "jobs": 26,
+    "since": 2
+  },
+  {
+    "name": "City of Concord, CA",
+    "ats": "governmentjobs",
+    "token": "concord",
+    "industry": "government",
+    "jobs": 20,
+    "since": 2
+  },
+  {
+    "name": "City of Coral Springs, FL",
+    "ats": "governmentjobs",
+    "token": "coralspringsfl",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Corona, CA",
+    "ats": "governmentjobs",
+    "token": "coronaca",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "City of Davenport, IA",
+    "ats": "governmentjobs",
+    "token": "davenport",
+    "industry": "government",
+    "jobs": 12,
+    "since": 2
+  },
+  {
+    "name": "City of Delray Beach, FL",
+    "ats": "governmentjobs",
+    "token": "delraybeach",
+    "industry": "government",
+    "jobs": 12,
+    "since": 2
+  },
+  {
+    "name": "City of Denton, TX",
+    "ats": "governmentjobs",
+    "token": "dentontx",
+    "industry": "government",
+    "jobs": 45,
+    "since": 2
+  },
+  {
+    "name": "City of Des Moines, IA",
+    "ats": "governmentjobs",
+    "token": "desmoines",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
+  },
+  {
+    "name": "City of Detroit, MI",
+    "ats": "governmentjobs",
+    "token": "detroit",
+    "industry": "government",
+    "jobs": 50,
+    "since": 2
+  },
+  {
+    "name": "City of Doral, FL",
+    "ats": "governmentjobs",
+    "token": "doralfl",
+    "industry": "government",
+    "jobs": 7,
+    "since": 2
+  },
+  {
+    "name": "City of Dublin, OH",
+    "ats": "governmentjobs",
+    "token": "dublinoh",
+    "industry": "government",
+    "jobs": 7,
+    "since": 2
+  },
+  {
+    "name": "City of Duluth, MN",
+    "ats": "governmentjobs",
+    "token": "duluthmn",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of Durham, NC",
+    "ats": "governmentjobs",
+    "token": "durhamnc",
+    "industry": "government",
+    "jobs": 87,
+    "since": 2
+  },
+  {
+    "name": "City of El Paso, TX",
+    "ats": "governmentjobs",
+    "token": "elpaso",
+    "industry": "government",
+    "jobs": 21,
+    "since": 2
+  },
+  {
+    "name": "City of Elk Grove, CA",
+    "ats": "governmentjobs",
+    "token": "elkgrove",
+    "industry": "government",
+    "jobs": 2,
+    "since": 2
+  },
+  {
+    "name": "City of Escondido, CA",
+    "ats": "governmentjobs",
+    "token": "escondido",
+    "industry": "government",
+    "jobs": 13,
+    "since": 2
+  },
+  {
+    "name": "City of Eugene, OR",
+    "ats": "governmentjobs",
+    "token": "eugene",
+    "industry": "government",
+    "jobs": 17,
+    "since": 2
+  },
+  {
+    "name": "City of Everett, WA",
+    "ats": "governmentjobs",
+    "token": "everettwa",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "City of Fairbanks, AK",
+    "ats": "governmentjobs",
+    "token": "fairbanks",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
+    "name": "City of Fairfax, VA",
+    "ats": "governmentjobs",
+    "token": "fairfaxva",
+    "industry": "government",
+    "jobs": 21,
+    "since": 2
+  },
+  {
+    "name": "City of Fargo, ND",
+    "ats": "governmentjobs",
+    "token": "fargond",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
+  },
+  {
+    "name": "City of Fayetteville, NC",
+    "ats": "governmentjobs",
+    "token": "fayetteville",
+    "industry": "government",
+    "jobs": 23,
+    "since": 2
+  },
+  {
+    "name": "City of Flagstaff, AZ",
+    "ats": "governmentjobs",
+    "token": "flagstaff",
+    "industry": "government",
+    "jobs": 18,
+    "since": 2
+  },
+  {
+    "name": "City of Fontana, CA",
+    "ats": "governmentjobs",
+    "token": "fontanaca",
+    "industry": "government",
+    "jobs": 14,
+    "since": 2
+  },
+  {
+    "name": "City of Fort Lauderdale, FL",
+    "ats": "governmentjobs",
+    "token": "fortlauderdalefl",
+    "industry": "government",
+    "jobs": 18,
+    "since": 2
+  },
+  {
+    "name": "City of Fremont, CA",
+    "ats": "governmentjobs",
+    "token": "fremontca",
+    "industry": "government",
+    "jobs": 16,
+    "since": 2
+  },
+  {
+    "name": "City of Fresno, CA",
+    "ats": "governmentjobs",
+    "token": "cityoffresno",
+    "industry": "government",
+    "jobs": 43,
+    "since": 2
+  },
+  {
+    "name": "City of Fullerton, CA",
+    "ats": "governmentjobs",
+    "token": "fullerton",
+    "industry": "government",
+    "jobs": 3,
+    "since": 2
+  },
+  {
+    "name": "City of Gaithersburg, MD",
+    "ats": "governmentjobs",
+    "token": "gaithersburgmd",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "City of Glendale, AZ",
+    "ats": "governmentjobs",
+    "token": "glendaleaz",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Glendale, CA",
+    "ats": "governmentjobs",
+    "token": "glendaleca",
+    "industry": "government",
+    "jobs": 10,
+    "since": 2
+  },
+  {
+    "name": "City of Goodyear, AZ",
+    "ats": "governmentjobs",
+    "token": "goodyear",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "City of Grand Rapids, MI",
+    "ats": "governmentjobs",
+    "token": "grandrapids",
+    "industry": "government",
+    "jobs": 10,
+    "since": 2
+  },
+  {
+    "name": "City of Green Bay, WI",
+    "ats": "governmentjobs",
+    "token": "greenbaywi",
+    "industry": "government",
+    "jobs": 23,
+    "since": 2
+  },
+  {
+    "name": "City of Greensboro, NC",
+    "ats": "governmentjobs",
+    "token": "greensboronc",
+    "industry": "government",
+    "jobs": 22,
+    "since": 2
+  },
+  {
+    "name": "City of Greenville, SC",
+    "ats": "governmentjobs",
+    "token": "greenvillesc",
+    "industry": "government",
+    "jobs": 26,
+    "since": 2
+  },
+  {
+    "name": "City of Hampton, VA",
+    "ats": "governmentjobs",
+    "token": "hampton",
+    "industry": "government",
+    "jobs": 70,
+    "since": 2
+  },
+  {
+    "name": "City of Hayward, CA",
+    "ats": "governmentjobs",
+    "token": "haywardca",
+    "industry": "government",
+    "jobs": 13,
+    "since": 2
+  },
+  {
+    "name": "City of Henderson, NV",
+    "ats": "governmentjobs",
+    "token": "henderson",
+    "industry": "government",
+    "jobs": 22,
+    "since": 2
+  },
+  {
+    "name": "City of Hollywood, FL",
+    "ats": "governmentjobs",
+    "token": "hollywoodfl",
+    "industry": "government",
+    "jobs": 12,
+    "since": 2
+  },
+  {
+    "name": "City of Houston, TX",
+    "ats": "governmentjobs",
+    "token": "houston",
+    "industry": "government",
+    "jobs": 119,
+    "since": 2
+  },
+  {
+    "name": "City of Huntington Beach, CA",
+    "ats": "governmentjobs",
+    "token": "huntingtonbeach",
+    "industry": "government",
+    "jobs": 27,
+    "since": 2
+  },
+  {
+    "name": "City of Huntsville, AL",
+    "ats": "governmentjobs",
+    "token": "huntsville",
+    "industry": "government",
+    "jobs": 28,
+    "since": 2
+  },
+  {
+    "name": "City of Indianapolis and Marion County, IN",
+    "ats": "governmentjobs",
+    "token": "indianapolis",
+    "industry": "government",
+    "jobs": 73,
+    "since": 2
+  },
+  {
+    "name": "City of Irvine, CA",
+    "ats": "governmentjobs",
+    "token": "irvine",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "City of Irving, TX",
+    "ats": "governmentjobs",
+    "token": "cityofirving",
+    "industry": "government",
+    "jobs": 36,
+    "since": 2
+  },
+  {
+    "name": "City of Jacksonville, FL",
+    "ats": "governmentjobs",
+    "token": "jacksonvillefl",
+    "industry": "government",
+    "jobs": 37,
+    "since": 2
+  },
+  {
+    "name": "City of Jersey City, NJ",
+    "ats": "governmentjobs",
+    "token": "cityofjerseycity",
+    "industry": "government",
+    "jobs": 58,
+    "since": 2
+  },
+  {
+    "name": "City of Kenosha, WI",
+    "ats": "governmentjobs",
+    "token": "kenoshawi",
+    "industry": "government",
+    "jobs": 10,
+    "since": 2
+  },
+  {
+    "name": "City of Kettering, OH",
+    "ats": "governmentjobs",
+    "token": "ketteringoh",
+    "industry": "government",
+    "jobs": 14,
+    "since": 2
+  },
+  {
+    "name": "City of Lacey, WA",
+    "ats": "governmentjobs",
+    "token": "laceywa",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
+    "name": "City of Lakeland, Civil Service, FL",
+    "ats": "governmentjobs",
+    "token": "lakelandfl",
+    "industry": "government",
+    "jobs": 27,
+    "since": 2
+  },
+  {
+    "name": "City of Lansing, MI",
+    "ats": "governmentjobs",
+    "token": "lansingmi",
+    "industry": "government",
+    "jobs": 14,
+    "since": 2
+  },
+  {
+    "name": "City of Laredo, TX",
+    "ats": "governmentjobs",
+    "token": "laredo",
+    "industry": "government",
+    "jobs": 86,
+    "since": 2
+  },
+  {
+    "name": "City of Las Cruces, NM",
+    "ats": "governmentjobs",
+    "token": "lascruces",
+    "industry": "government",
+    "jobs": 28,
+    "since": 2
+  },
+  {
+    "name": "City of Las Vegas, NV",
+    "ats": "governmentjobs",
+    "token": "lasvegas",
+    "industry": "government",
+    "jobs": 23,
+    "since": 2
+  },
+  {
+    "name": "City of League City, TX",
+    "ats": "governmentjobs",
+    "token": "leaguecity",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Lincoln/Lancaster County, NE",
+    "ats": "governmentjobs",
+    "token": "lincolnne",
+    "industry": "government",
+    "jobs": 33,
+    "since": 2
+  },
+  {
+    "name": "City of Little Rock, AR",
+    "ats": "governmentjobs",
+    "token": "littlerock",
+    "industry": "government",
+    "jobs": 15,
+    "since": 2
+  },
+  {
+    "name": "City of Long Beach, CA",
+    "ats": "governmentjobs",
+    "token": "longbeach",
+    "industry": "government",
+    "jobs": 32,
+    "since": 2
+  },
+  {
+    "name": "City of Lubbock, TX",
+    "ats": "governmentjobs",
+    "token": "lubbock",
+    "industry": "government",
+    "jobs": 36,
+    "since": 2
+  },
+  {
+    "name": "City of Madison, WI",
+    "ats": "governmentjobs",
+    "token": "madisonwi",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of McKinney, TX",
+    "ats": "governmentjobs",
+    "token": "cityofmckinney",
+    "industry": "government",
+    "jobs": 44,
+    "since": 2
+  },
+  {
+    "name": "City of Mesa, AZ",
+    "ats": "governmentjobs",
+    "token": "mesaaz",
+    "industry": "government",
+    "jobs": 49,
+    "since": 2
+  },
+  {
+    "name": "City of Mesquite, TX",
+    "ats": "governmentjobs",
+    "token": "mesquitetx",
+    "industry": "government",
+    "jobs": 26,
+    "since": 2
+  },
+  {
+    "name": "City of Miami, FL",
+    "ats": "governmentjobs",
+    "token": "miamifl",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "City of Midland, TX",
+    "ats": "governmentjobs",
+    "token": "midlandtx",
+    "industry": "government",
+    "jobs": 47,
+    "since": 2
+  },
+  {
+    "name": "City of Minneapolis, MN",
+    "ats": "governmentjobs",
+    "token": "minneapolismn",
+    "industry": "government",
+    "jobs": 14,
+    "since": 2
+  },
+  {
+    "name": "City of Miramar, FL",
+    "ats": "governmentjobs",
+    "token": "miramar",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of Modesto, CA",
+    "ats": "governmentjobs",
+    "token": "modesto",
+    "industry": "government",
+    "jobs": 13,
+    "since": 2
+  },
+  {
+    "name": "City of Montgomery, AL",
+    "ats": "governmentjobs",
+    "token": "montgomeryal",
+    "industry": "government",
+    "jobs": 53,
+    "since": 2
+  },
+  {
+    "name": "City of Mountain View, CA",
+    "ats": "governmentjobs",
+    "token": "mountainview",
+    "industry": "government",
+    "jobs": 7,
+    "since": 2
+  },
+  {
+    "name": "City of Murfreesboro, TN",
+    "ats": "governmentjobs",
+    "token": "murfreesborotn",
+    "industry": "government",
+    "jobs": 15,
+    "since": 2
+  },
+  {
+    "name": "City of Naperville, IL",
+    "ats": "governmentjobs",
+    "token": "napervilleil",
+    "industry": "government",
+    "jobs": 1,
+    "since": 2
+  },
+  {
+    "name": "City of New Orleans, LA",
+    "ats": "governmentjobs",
+    "token": "neworleans",
+    "industry": "government",
+    "jobs": 125,
+    "since": 2
+  },
+  {
+    "name": "City of Noblesville, IN",
+    "ats": "governmentjobs",
+    "token": "noblesvillein",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
+    "name": "City of Norfolk, VA",
+    "ats": "governmentjobs",
+    "token": "norfolk",
+    "industry": "government",
+    "jobs": 45,
+    "since": 2
+  },
+  {
+    "name": "City of Oakland, CA",
+    "ats": "governmentjobs",
+    "token": "oaklandca",
+    "industry": "government",
+    "jobs": 33,
+    "since": 2
+  },
+  {
+    "name": "City of Ocala, FL",
+    "ats": "governmentjobs",
+    "token": "cityofocala",
+    "industry": "government",
+    "jobs": 19,
+    "since": 2
+  },
+  {
+    "name": "City of Oceanside, CA",
+    "ats": "governmentjobs",
+    "token": "oceansideca",
+    "industry": "government",
+    "jobs": 16,
+    "since": 2
+  },
+  {
+    "name": "City of Ontario, CA",
+    "ats": "governmentjobs",
+    "token": "ontario",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
+  },
+  {
+    "name": "City of Orange, CA",
+    "ats": "governmentjobs",
+    "token": "orange",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "City of Oxnard, CA",
+    "ats": "governmentjobs",
+    "token": "cityofoxnard",
+    "industry": "government",
+    "jobs": 34,
+    "since": 2
+  },
+  {
+    "name": "City of Palm Bay, FL",
+    "ats": "governmentjobs",
+    "token": "palmbay",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "City of Palmdale, CA",
+    "ats": "governmentjobs",
+    "token": "palmdale",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of Palo Alto, CA",
+    "ats": "governmentjobs",
+    "token": "paloaltoca",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
+  },
+  {
+    "name": "City of Pasadena, CA",
+    "ats": "governmentjobs",
+    "token": "pasadena",
+    "industry": "government",
+    "jobs": 19,
+    "since": 2
+  },
+  {
+    "name": "City of Pensacola, FL",
+    "ats": "governmentjobs",
+    "token": "pensacola",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "City of Pittsburgh, PA",
+    "ats": "governmentjobs",
+    "token": "pittsburgh",
+    "industry": "government",
+    "jobs": 34,
+    "since": 2
+  },
+  {
+    "name": "City of Plantation, FL",
+    "ats": "governmentjobs",
+    "token": "plantation",
+    "industry": "government",
+    "jobs": 14,
+    "since": 2
+  },
+  {
+    "name": "City of Pomona, CA",
+    "ats": "governmentjobs",
+    "token": "pomona",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Portland, OR",
+    "ats": "governmentjobs",
+    "token": "portlandor",
+    "industry": "government",
+    "jobs": 38,
+    "since": 2
+  },
+  {
+    "name": "City of Pueblo, CO",
+    "ats": "governmentjobs",
+    "token": "pueblo",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of Raleigh, NC",
+    "ats": "governmentjobs",
+    "token": "raleighnc",
+    "industry": "government",
+    "jobs": 47,
+    "since": 2
+  },
+  {
+    "name": "City of Redmond, WA",
+    "ats": "governmentjobs",
+    "token": "redmondwa",
+    "industry": "government",
+    "jobs": 10,
+    "since": 2
+  },
+  {
+    "name": "City of Reno, NV",
+    "ats": "governmentjobs",
+    "token": "reno",
+    "industry": "government",
+    "jobs": 20,
+    "since": 2
+  },
+  {
+    "name": "City of Renton, WA",
+    "ats": "governmentjobs",
+    "token": "rentonwa",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of Richmond, VA",
+    "ats": "governmentjobs",
+    "token": "richmond",
+    "industry": "government",
+    "jobs": 28,
+    "since": 2
+  },
+  {
+    "name": "City of Rochester, MN",
+    "ats": "governmentjobs",
+    "token": "rochester",
+    "industry": "government",
+    "jobs": 13,
+    "since": 2
+  },
+  {
+    "name": "City of Rochester, NY",
+    "ats": "governmentjobs",
+    "token": "cityofrochester",
+    "industry": "government",
+    "jobs": 39,
+    "since": 2
+  },
+  {
+    "name": "City of Rockford – Police, Fire and 911 Center, IL",
+    "ats": "governmentjobs",
+    "token": "rockfordpd",
+    "industry": "government",
+    "jobs": 1,
+    "since": 2
+  },
+  {
+    "name": "City of Rockville, MD",
+    "ats": "governmentjobs",
+    "token": "rockville",
+    "industry": "government",
+    "jobs": 23,
+    "since": 2
+  },
+  {
+    "name": "City of Roseville, CA",
+    "ats": "governmentjobs",
+    "token": "rosevilleca",
+    "industry": "government",
+    "jobs": 23,
+    "since": 2
+  },
+  {
+    "name": "City of Roseville, MN",
+    "ats": "governmentjobs",
+    "token": "roseville",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of Round Rock, TX",
+    "ats": "governmentjobs",
+    "token": "roundrock",
+    "industry": "government",
+    "jobs": 7,
+    "since": 2
+  },
+  {
+    "name": "City of Salinas, CA",
+    "ats": "governmentjobs",
+    "token": "salinas",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "City of San Antonio, TX",
+    "ats": "governmentjobs",
+    "token": "sanantoniotx",
+    "industry": "government",
+    "jobs": 84,
+    "since": 2
+  },
+  {
+    "name": "City of San Diego, CA",
+    "ats": "governmentjobs",
+    "token": "sandiego",
+    "industry": "government",
+    "jobs": 37,
+    "since": 2
+  },
+  {
+    "name": "City of San Jose, CA",
+    "ats": "governmentjobs",
+    "token": "sanjoseca",
+    "industry": "government",
+    "jobs": 48,
+    "since": 2
+  },
+  {
+    "name": "City of San Marcos, CA",
+    "ats": "governmentjobs",
+    "token": "sanmarcos",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
+    "name": "City of San Marcos, TX",
+    "ats": "governmentjobs",
+    "token": "sanmarcostx",
+    "industry": "government",
+    "jobs": 7,
+    "since": 2
+  },
+  {
+    "name": "City of Santa Ana, CA",
+    "ats": "governmentjobs",
+    "token": "santaana",
+    "industry": "government",
+    "jobs": 19,
+    "since": 2
+  },
+  {
+    "name": "City of Santa Clarita, CA",
+    "ats": "governmentjobs",
+    "token": "santaclarita",
+    "industry": "government",
+    "jobs": 7,
+    "since": 2
+  },
+  {
+    "name": "City of Santa Cruz, CA",
+    "ats": "governmentjobs",
+    "token": "santacruz",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of Santa Monica, CA",
+    "ats": "governmentjobs",
+    "token": "santamonica",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "City of Savannah, GA",
+    "ats": "governmentjobs",
+    "token": "savannah",
+    "industry": "government",
+    "jobs": 15,
+    "since": 2
+  },
+  {
+    "name": "City of Scottsdale, AZ",
+    "ats": "governmentjobs",
+    "token": "scottsdaleaz",
+    "industry": "government",
+    "jobs": 29,
+    "since": 2
+  },
+  {
+    "name": "City of Seattle, WA",
+    "ats": "governmentjobs",
+    "token": "seattle",
+    "industry": "government",
+    "jobs": 58,
+    "since": 2
+  },
+  {
+    "name": "City of Shreveport, LA",
+    "ats": "governmentjobs",
+    "token": "shreveportla",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "City of Sioux Falls, SD",
+    "ats": "governmentjobs",
+    "token": "siouxfallssd",
+    "industry": "government",
+    "jobs": 24,
+    "since": 2
+  },
+  {
+    "name": "City of Springfield, MA",
+    "ats": "governmentjobs",
+    "token": "springfieldma",
+    "industry": "government",
+    "jobs": 42,
+    "since": 2
+  },
+  {
+    "name": "City of Springfield, MO",
+    "ats": "governmentjobs",
+    "token": "springfieldmo",
+    "industry": "government",
+    "jobs": 19,
+    "since": 2
+  },
+  {
+    "name": "City of Stamford, CT",
+    "ats": "governmentjobs",
+    "token": "stamfordct",
+    "industry": "government",
+    "jobs": 21,
+    "since": 2
+  },
+  {
+    "name": "City of Stockton, CA",
+    "ats": "governmentjobs",
+    "token": "stockton",
+    "industry": "government",
+    "jobs": 16,
+    "since": 2
+  },
+  {
+    "name": "City of Sugar Land, TX",
+    "ats": "governmentjobs",
+    "token": "sugarlandtx",
+    "industry": "government",
+    "jobs": 12,
+    "since": 2
+  },
+  {
+    "name": "City of Sunnyvale, CA",
+    "ats": "governmentjobs",
+    "token": "sunnyvale",
+    "industry": "government",
+    "jobs": 20,
+    "since": 2
+  },
+  {
+    "name": "City of Sunrise, FL",
+    "ats": "governmentjobs",
+    "token": "sunrisefl",
+    "industry": "government",
+    "jobs": 23,
+    "since": 2
+  },
+  {
+    "name": "City of Surprise, AZ",
+    "ats": "governmentjobs",
+    "token": "surprise",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Tacoma, WA",
+    "ats": "governmentjobs",
+    "token": "tacoma",
+    "industry": "government",
+    "jobs": 16,
+    "since": 2
+  },
+  {
+    "name": "City of Thornton, CO",
+    "ats": "governmentjobs",
+    "token": "thornton",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
+  },
+  {
+    "name": "City of Torrance, CA",
+    "ats": "governmentjobs",
+    "token": "torranceca",
+    "industry": "government",
+    "jobs": 31,
+    "since": 2
+  },
+  {
+    "name": "City of Vallejo, CA",
+    "ats": "governmentjobs",
+    "token": "vallejo",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
+    "name": "City of Victorville, CA",
+    "ats": "governmentjobs",
+    "token": "victorvilleca",
+    "industry": "government",
+    "jobs": 3,
+    "since": 2
+  },
+  {
+    "name": "City of Visalia, CA",
+    "ats": "governmentjobs",
+    "token": "visalia",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
+    "name": "City of Waco, TX",
+    "ats": "governmentjobs",
+    "token": "wacotx",
+    "industry": "government",
+    "jobs": 28,
+    "since": 2
+  },
+  {
+    "name": "City of Warren, MI",
+    "ats": "governmentjobs",
+    "token": "cityofwarren",
+    "industry": "government",
+    "jobs": 1,
+    "since": 2
+  },
+  {
+    "name": "City of Westerville, OH",
+    "ats": "governmentjobs",
+    "token": "westerville",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "City of Westminster, CA",
+    "ats": "governmentjobs",
+    "token": "westminster",
+    "industry": "government",
+    "jobs": 14,
+    "since": 2
+  },
+  {
+    "name": "City of Westminster, CO",
+    "ats": "governmentjobs",
+    "token": "westminsterco",
+    "industry": "government",
+    "jobs": 12,
+    "since": 2
+  },
+  {
+    "name": "City of Wichita, KS",
+    "ats": "governmentjobs",
+    "token": "wichita",
+    "industry": "government",
+    "jobs": 48,
+    "since": 2
+  },
+  {
+    "name": "City of Wilmington, NC",
+    "ats": "governmentjobs",
+    "token": "wilmingtonnc",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "City of Winston-Salem, NC",
+    "ats": "governmentjobs",
+    "token": "winstonsalemnc",
+    "industry": "government",
+    "jobs": 25,
+    "since": 2
+  },
+  {
+    "name": "City of Yuma, AZ",
+    "ats": "governmentjobs",
+    "token": "yuma",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
     "name": "CivicActions",
     "ats": "greenhouse",
     "token": "civicactions",
-    "industry": "other",
+    "industry": "govtech-defense",
     "jobs": 1
+  },
+  {
+    "name": "CivicPlus",
+    "ats": "greenhouse",
+    "token": "civicplus",
+    "industry": "govtech-defense",
+    "jobs": 10,
+    "since": 2
+  },
+  {
+    "name": "Clark County, NV",
+    "ats": "governmentjobs",
+    "token": "clarkcounty",
+    "industry": "government",
+    "jobs": 17,
+    "since": 2
   },
   {
     "name": "Clay",
@@ -537,6 +2201,14 @@
     "token": "claylabs",
     "industry": "enterprise-software",
     "jobs": 60
+  },
+  {
+    "name": "Clay County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "claysheriff",
+    "industry": "government",
+    "jobs": 2,
+    "since": 2
   },
   {
     "name": "Clerk",
@@ -595,6 +2267,14 @@
     "jobs": 41
   },
   {
+    "name": "Cobb County Government, GA",
+    "ats": "governmentjobs",
+    "token": "cobbcounty",
+    "industry": "government",
+    "jobs": 76,
+    "since": 2
+  },
+  {
     "name": "Cockroach Labs",
     "ats": "greenhouse",
     "token": "cockroachlabs",
@@ -605,7 +2285,7 @@
     "name": "Code for America",
     "ats": "greenhouse",
     "token": "codeforamerica",
-    "industry": "nonprofit-research",
+    "industry": "govtech-defense",
     "jobs": 11
   },
   {
@@ -644,11 +2324,27 @@
     "jobs": 248
   },
   {
+    "name": "Columbus Consolidated Government, GA",
+    "ats": "governmentjobs",
+    "token": "columbusga",
+    "industry": "government",
+    "jobs": 56,
+    "since": 2
+  },
+  {
     "name": "Column",
     "ats": "ashby",
     "token": "column",
     "industry": "fintech",
     "jobs": 24
+  },
+  {
+    "name": "Commonwealth of Massachusetts",
+    "ats": "governmentjobs",
+    "token": "massachusetts",
+    "industry": "government",
+    "jobs": 69,
+    "since": 2
   },
   {
     "name": "Consensys",
@@ -670,6 +2366,118 @@
     "token": "cookunity",
     "industry": "consumer",
     "jobs": 136
+  },
+  {
+    "name": "Corelight",
+    "ats": "greenhouse",
+    "token": "corelight",
+    "industry": "security",
+    "jobs": 14,
+    "since": 2
+  },
+  {
+    "name": "County of Charlotte, FL",
+    "ats": "governmentjobs",
+    "token": "charlottecountyfl",
+    "industry": "government",
+    "jobs": 33,
+    "since": 2
+  },
+  {
+    "name": "County of El Paso, TX",
+    "ats": "governmentjobs",
+    "token": "elpasocounty",
+    "industry": "government",
+    "jobs": 24,
+    "since": 2
+  },
+  {
+    "name": "County of Fresno, CA",
+    "ats": "governmentjobs",
+    "token": "fresnoca",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
+  },
+  {
+    "name": "County of Humboldt, CA",
+    "ats": "governmentjobs",
+    "token": "humboldtcountyca",
+    "industry": "government",
+    "jobs": 22,
+    "since": 2
+  },
+  {
+    "name": "County of Imperial, CA",
+    "ats": "governmentjobs",
+    "token": "imperialcounty",
+    "industry": "government",
+    "jobs": 16,
+    "since": 2
+  },
+  {
+    "name": "County of Madera, CA",
+    "ats": "governmentjobs",
+    "token": "maderacountyca",
+    "industry": "government",
+    "jobs": 22,
+    "since": 2
+  },
+  {
+    "name": "County of Marin, CA",
+    "ats": "governmentjobs",
+    "token": "marincounty",
+    "industry": "government",
+    "jobs": 27,
+    "since": 2
+  },
+  {
+    "name": "County of Monterey, CA",
+    "ats": "governmentjobs",
+    "token": "montereycounty",
+    "industry": "government",
+    "jobs": 37,
+    "since": 2
+  },
+  {
+    "name": "County of Napa, CA",
+    "ats": "governmentjobs",
+    "token": "napacounty",
+    "industry": "government",
+    "jobs": 13,
+    "since": 2
+  },
+  {
+    "name": "County of Riverside, CA",
+    "ats": "governmentjobs",
+    "token": "riverside",
+    "industry": "government",
+    "jobs": 82,
+    "since": 2
+  },
+  {
+    "name": "County of Sacramento, CA",
+    "ats": "governmentjobs",
+    "token": "sacramento",
+    "industry": "government",
+    "jobs": 95,
+    "since": 2
+  },
+  {
+    "name": "County of San Mateo, CA",
+    "ats": "governmentjobs",
+    "token": "sanmateo",
+    "industry": "government",
+    "jobs": 80,
+    "since": 2
+  },
+  {
+    "name": "County of Santa Clara, CA",
+    "ats": "governmentjobs",
+    "token": "santaclara",
+    "industry": "government",
+    "jobs": 43,
+    "since": 2
   },
   {
     "name": "Coursera",
@@ -728,6 +2536,14 @@
     "jobs": 30
   },
   {
+    "name": "Cumberland County, NC",
+    "ats": "governmentjobs",
+    "token": "cumberlandcountync",
+    "industry": "government",
+    "jobs": 41,
+    "since": 2
+  },
+  {
     "name": "Current",
     "ats": "greenhouse",
     "token": "current",
@@ -740,6 +2556,14 @@
     "token": "customerio",
     "industry": "enterprise-software",
     "jobs": 22
+  },
+  {
+    "name": "CX2",
+    "ats": "lever",
+    "token": "cx2",
+    "industry": "govtech-defense",
+    "jobs": 7,
+    "since": 2
   },
   {
     "name": "Dashlane",
@@ -784,6 +2608,14 @@
     "jobs": 10
   },
   {
+    "name": "Defense Unicorns",
+    "ats": "greenhouse",
+    "token": "defenseunicorns",
+    "industry": "govtech-defense",
+    "jobs": 44,
+    "since": 2
+  },
+  {
     "name": "Degreed",
     "ats": "greenhouse",
     "token": "degreed",
@@ -796,6 +2628,14 @@
     "token": "deliveroo",
     "industry": "ecommerce-retail",
     "jobs": 195
+  },
+  {
+    "name": "Denton County, TX",
+    "ats": "governmentjobs",
+    "token": "dentoncounty",
+    "industry": "government",
+    "jobs": 35,
+    "since": 2
   },
   {
     "name": "Descript",
@@ -938,6 +2778,14 @@
     "jobs": 15
   },
   {
+    "name": "El Paso County, CO",
+    "ats": "governmentjobs",
+    "token": "elpasocountyco",
+    "industry": "government",
+    "jobs": 30,
+    "since": 2
+  },
+  {
     "name": "Elastic",
     "ats": "greenhouse",
     "token": "elastic",
@@ -966,6 +2814,14 @@
     "jobs": 106
   },
   {
+    "name": "Elliptic",
+    "ats": "ashby",
+    "token": "elliptic",
+    "industry": "govtech-defense",
+    "jobs": 24,
+    "since": 2
+  },
+  {
     "name": "Enode",
     "ats": "ashby",
     "token": "enode",
@@ -990,8 +2846,24 @@
     "name": "Epirus",
     "ats": "greenhouse",
     "token": "epirus",
-    "industry": "hardware-robotics",
+    "industry": "govtech-defense",
     "jobs": 40
+  },
+  {
+    "name": "Escambia County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "escambiaso",
+    "industry": "government",
+    "jobs": 3,
+    "since": 2
+  },
+  {
+    "name": "Esri",
+    "ats": "greenhouse",
+    "token": "esri",
+    "industry": "govtech-defense",
+    "jobs": 469,
+    "since": 2
   },
   {
     "name": "Etched",
@@ -1015,6 +2887,22 @@
     "jobs": 40
   },
   {
+    "name": "Excella",
+    "ats": "greenhouse",
+    "token": "excella",
+    "industry": "govtech-defense",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "Exiger",
+    "ats": "greenhouse",
+    "token": "exiger",
+    "industry": "govtech-defense",
+    "jobs": 51,
+    "since": 2
+  },
+  {
     "name": "Expel",
     "ats": "greenhouse",
     "token": "expel",
@@ -1027,6 +2915,14 @@
     "token": "faire",
     "industry": "ecommerce-retail",
     "jobs": 72
+  },
+  {
+    "name": "Fairfax County, VA",
+    "ats": "governmentjobs",
+    "token": "fairfaxcounty",
+    "industry": "government",
+    "jobs": 57,
+    "since": 2
   },
   {
     "name": "Fandom",
@@ -1092,6 +2988,14 @@
     "jobs": 103
   },
   {
+    "name": "Flagler County, FL",
+    "ats": "governmentjobs",
+    "token": "flaglercounty",
+    "industry": "government",
+    "jobs": 2,
+    "since": 2
+  },
+  {
     "name": "Flatiron Health",
     "ats": "greenhouse",
     "token": "flatironhealth",
@@ -1127,6 +3031,14 @@
     "jobs": 272
   },
   {
+    "name": "Forsyth County, NC",
+    "ats": "governmentjobs",
+    "token": "forsythcountync",
+    "industry": "government",
+    "jobs": 43,
+    "since": 2
+  },
+  {
     "name": "Forter",
     "ats": "greenhouse",
     "token": "forter",
@@ -1139,6 +3051,22 @@
     "token": "fourkites",
     "industry": "logistics-mobility",
     "jobs": 11
+  },
+  {
+    "name": "Franklin County Department of Human Resources, OH",
+    "ats": "governmentjobs",
+    "token": "franklincounty",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
+    "name": "Frederick County Government, MD",
+    "ats": "governmentjobs",
+    "token": "frederickmd",
+    "industry": "government",
+    "jobs": 36,
+    "since": 2
   },
   {
     "name": "Freenome",
@@ -1160,6 +3088,14 @@
     "token": "galileo",
     "industry": "healthcare",
     "jobs": 13
+  },
+  {
+    "name": "Galvanick",
+    "ats": "lever",
+    "token": "galvanick",
+    "industry": "govtech-defense",
+    "jobs": 5,
+    "since": 2
   },
   {
     "name": "Gamma",
@@ -1274,6 +3210,14 @@
     "jobs": 185
   },
   {
+    "name": "GreyNoise",
+    "ats": "greenhouse",
+    "token": "greynoiseintelligence",
+    "industry": "security",
+    "jobs": 6,
+    "since": 2
+  },
+  {
     "name": "Group14 Technologies",
     "ats": "greenhouse",
     "token": "group14",
@@ -1323,6 +3267,14 @@
     "jobs": 68
   },
   {
+    "name": "Harris County, TX",
+    "ats": "governmentjobs",
+    "token": "harriscountytx",
+    "industry": "government",
+    "jobs": 180,
+    "since": 2
+  },
+  {
     "name": "Harry's",
     "ats": "greenhouse",
     "token": "harrys",
@@ -1335,6 +3287,30 @@
     "token": "harvey",
     "industry": "ai",
     "jobs": 395
+  },
+  {
+    "name": "HawkEye 360",
+    "ats": "greenhouse",
+    "token": "hawkeye360",
+    "industry": "govtech-defense",
+    "jobs": 32,
+    "since": 2
+  },
+  {
+    "name": "Hayden AI",
+    "ats": "ashby",
+    "token": "haydenai",
+    "industry": "govtech-defense",
+    "jobs": 13,
+    "since": 2
+  },
+  {
+    "name": "Hays County, TX",
+    "ats": "governmentjobs",
+    "token": "hayscountytx",
+    "industry": "government",
+    "jobs": 39,
+    "since": 2
   },
   {
     "name": "Headway",
@@ -1358,11 +3334,27 @@
     "jobs": 360
   },
   {
+    "name": "Hermeus",
+    "ats": "lever",
+    "token": "hermeus",
+    "industry": "govtech-defense",
+    "jobs": 81,
+    "since": 2
+  },
+  {
     "name": "Hex",
     "ats": "ashby",
     "token": "hex",
     "industry": "developer-tools",
     "jobs": 44
+  },
+  {
+    "name": "Hidalgo County, TX",
+    "ats": "governmentjobs",
+    "token": "hidalgocountytx",
+    "industry": "government",
+    "jobs": 65,
+    "since": 2
   },
   {
     "name": "Hightouch",
@@ -1393,6 +3385,14 @@
     "jobs": 16
   },
   {
+    "name": "Honolulu Police Department, HI",
+    "ats": "governmentjobs",
+    "token": "honolulupd",
+    "industry": "government",
+    "jobs": 10,
+    "since": 2
+  },
+  {
     "name": "Hootsuite",
     "ats": "greenhouse",
     "token": "hootsuite",
@@ -1405,6 +3405,22 @@
     "token": "hopper",
     "industry": "travel-hospitality",
     "jobs": 29
+  },
+  {
+    "name": "Horry County, SC",
+    "ats": "governmentjobs",
+    "token": "horrycountysc",
+    "industry": "government",
+    "jobs": 24,
+    "since": 2
+  },
+  {
+    "name": "Howard County Government, MD",
+    "ats": "governmentjobs",
+    "token": "howardcounty",
+    "industry": "government",
+    "jobs": 51,
+    "since": 2
   },
   {
     "name": "Hudl",
@@ -1433,6 +3449,14 @@
     "token": "huntress",
     "industry": "security",
     "jobs": 45
+  },
+  {
+    "name": "ID.me",
+    "ats": "greenhouse",
+    "token": "idme",
+    "industry": "govtech-defense",
+    "jobs": 45,
+    "since": 2
   },
   {
     "name": "Ideogram",
@@ -1526,6 +3550,14 @@
     "jobs": 38
   },
   {
+    "name": "Jackson County, OR",
+    "ats": "governmentjobs",
+    "token": "jacksoncountyor",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
+  },
+  {
     "name": "JFrog",
     "ats": "greenhouse",
     "token": "jfrog",
@@ -1547,6 +3579,14 @@
     "jobs": 93
   },
   {
+    "name": "Kent County, MI",
+    "ats": "governmentjobs",
+    "token": "kentcountymi",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
     "name": "Khan Academy",
     "ats": "greenhouse",
     "token": "khanacademy",
@@ -1554,11 +3594,35 @@
     "jobs": 5
   },
   {
+    "name": "King County, WA",
+    "ats": "governmentjobs",
+    "token": "kingcounty",
+    "industry": "government",
+    "jobs": 108,
+    "since": 2
+  },
+  {
+    "name": "Kings County, CA",
+    "ats": "governmentjobs",
+    "token": "kingscounty",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
     "name": "Klaviyo",
     "ats": "greenhouse",
     "token": "klaviyo",
     "industry": "enterprise-software",
     "jobs": 120
+  },
+  {
+    "name": "Knox County, OH",
+    "ats": "governmentjobs",
+    "token": "knoxcounty",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
   },
   {
     "name": "Kodiak Robotics",
@@ -1596,11 +3660,27 @@
     "jobs": 3
   },
   {
+    "name": "Lake County, IL",
+    "ats": "governmentjobs",
+    "token": "lakecountyil",
+    "industry": "government",
+    "jobs": 98,
+    "since": 2
+  },
+  {
     "name": "Lambda",
     "ats": "ashby",
     "token": "lambda",
     "industry": "ai",
     "jobs": 100
+  },
+  {
+    "name": "Lane County, OR",
+    "ats": "governmentjobs",
+    "token": "lanecountyor",
+    "industry": "government",
+    "jobs": 27,
+    "since": 2
   },
   {
     "name": "LangChain",
@@ -1645,11 +3725,35 @@
     "jobs": 18
   },
   {
+    "name": "Lee County Government, FL",
+    "ats": "governmentjobs",
+    "token": "leecounty",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
     "name": "Legora",
     "ats": "ashby",
     "token": "legora",
     "industry": "other",
     "jobs": 326
+  },
+  {
+    "name": "Leon County Government, FL",
+    "ats": "governmentjobs",
+    "token": "leoncountyfl",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "Leon County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "leoncountyso",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
   },
   {
     "name": "Life360",
@@ -1673,11 +3777,35 @@
     "jobs": 88
   },
   {
+    "name": "Lincoln County, OR",
+    "ats": "governmentjobs",
+    "token": "lincoln",
+    "industry": "government",
+    "jobs": 19,
+    "since": 2
+  },
+  {
     "name": "Linear",
     "ats": "ashby",
     "token": "linear",
     "industry": "developer-tools",
     "jobs": 30
+  },
+  {
+    "name": "Linn County Sheriff's Office, OR",
+    "ats": "governmentjobs",
+    "token": "linnsheriff",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
+    "name": "Linn County, IA",
+    "ats": "governmentjobs",
+    "token": "linncountyia",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
   },
   {
     "name": "Liquid Death",
@@ -1706,6 +3834,14 @@
     "token": "loadsmart",
     "industry": "logistics-mobility",
     "jobs": 14
+  },
+  {
+    "name": "Louisville Metro Government, KY",
+    "ats": "governmentjobs",
+    "token": "louisvilleky",
+    "industry": "government",
+    "jobs": 40,
+    "since": 2
   },
   {
     "name": "Lovable",
@@ -1743,6 +3879,46 @@
     "jobs": 419
   },
   {
+    "name": "Mach Industries",
+    "ats": "greenhouse",
+    "token": "machindustries",
+    "industry": "govtech-defense",
+    "jobs": 193,
+    "since": 2
+  },
+  {
+    "name": "Madison County Commission, AL",
+    "ats": "governmentjobs",
+    "token": "madisoncountyal",
+    "industry": "government",
+    "jobs": 18,
+    "since": 2
+  },
+  {
+    "name": "Magnet Forensics",
+    "ats": "lever",
+    "token": "magnetforensics",
+    "industry": "govtech-defense",
+    "jobs": 30,
+    "since": 2
+  },
+  {
+    "name": "Manatee County Government, FL",
+    "ats": "governmentjobs",
+    "token": "manateecounty",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
+    "name": "Manatee County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "manateeso",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
+  },
+  {
     "name": "Manifold Bio",
     "ats": "greenhouse",
     "token": "manifoldbio",
@@ -1750,10 +3926,18 @@
     "jobs": 11
   },
   {
+    "name": "Marion County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "marionso",
+    "industry": "government",
+    "jobs": 7,
+    "since": 2
+  },
+  {
     "name": "Mark43",
     "ats": "greenhouse",
     "token": "mark43",
-    "industry": "other",
+    "industry": "govtech-defense",
     "jobs": 41
   },
   {
@@ -1762,6 +3946,14 @@
     "token": "markforged",
     "industry": "hardware-robotics",
     "jobs": 1
+  },
+  {
+    "name": "Martin County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "martinsheriff",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
   },
   {
     "name": "Material Security",
@@ -1820,6 +4012,14 @@
     "jobs": 71
   },
   {
+    "name": "Metropolitan Government of Nashville & Davidson County, TN",
+    "ats": "governmentjobs",
+    "token": "nashville",
+    "industry": "government",
+    "jobs": 90,
+    "since": 2
+  },
+  {
     "name": "Mill",
     "ats": "greenhouse",
     "token": "mill",
@@ -1855,6 +4055,14 @@
     "jobs": 41
   },
   {
+    "name": "Mobile Civil Service, AL",
+    "ats": "governmentjobs",
+    "token": "mobilecounty",
+    "industry": "government",
+    "jobs": 81,
+    "since": 2
+  },
+  {
     "name": "Modal",
     "ats": "ashby",
     "token": "modal",
@@ -1883,6 +4091,14 @@
     "jobs": 6
   },
   {
+    "name": "Mohave County, AZ",
+    "ats": "governmentjobs",
+    "token": "mohavecountyaz",
+    "industry": "government",
+    "jobs": 37,
+    "since": 2
+  },
+  {
     "name": "MongoDB",
     "ats": "greenhouse",
     "token": "mongodb",
@@ -1897,11 +4113,35 @@
     "jobs": 11
   },
   {
+    "name": "Montgomery County, MD",
+    "ats": "governmentjobs",
+    "token": "montgomerycountymd",
+    "industry": "government",
+    "jobs": 64,
+    "since": 2
+  },
+  {
+    "name": "Montgomery County, OH",
+    "ats": "governmentjobs",
+    "token": "montgomery",
+    "industry": "government",
+    "jobs": 46,
+    "since": 2
+  },
+  {
     "name": "Monzo",
     "ats": "greenhouse",
     "token": "monzo",
     "industry": "fintech",
     "jobs": 53
+  },
+  {
+    "name": "Morse Corp",
+    "ats": "greenhouse",
+    "token": "morsecorp",
+    "industry": "govtech-defense",
+    "jobs": 33,
+    "since": 2
   },
   {
     "name": "Motional",
@@ -1960,6 +4200,14 @@
     "jobs": 6
   },
   {
+    "name": "Nassau County, NY",
+    "ats": "governmentjobs",
+    "token": "nassaucountyny",
+    "industry": "government",
+    "jobs": 15,
+    "since": 2
+  },
+  {
     "name": "Natera",
     "ats": "greenhouse",
     "token": "natera",
@@ -1977,7 +4225,7 @@
     "name": "Nava PBC",
     "ats": "greenhouse",
     "token": "navapbc",
-    "industry": "other",
+    "industry": "govtech-defense",
     "jobs": 19
   },
   {
@@ -2030,6 +4278,14 @@
     "jobs": 5
   },
   {
+    "name": "Northampton County, PA",
+    "ats": "governmentjobs",
+    "token": "northamptoncounty",
+    "industry": "government",
+    "jobs": 37,
+    "since": 2
+  },
+  {
     "name": "Northbeam",
     "ats": "greenhouse",
     "token": "northbeam",
@@ -2061,8 +4317,16 @@
     "name": "Oddball",
     "ats": "greenhouse",
     "token": "oddball",
-    "industry": "other",
+    "industry": "govtech-defense",
     "jobs": 20
+  },
+  {
+    "name": "Office of the Chief Financial Officer (OCFO), DC",
+    "ats": "governmentjobs",
+    "token": "dc",
+    "industry": "government",
+    "jobs": 51,
+    "since": 2
   },
   {
     "name": "Oklo",
@@ -2100,11 +4364,27 @@
     "jobs": 54
   },
   {
+    "name": "Onebrief",
+    "ats": "ashby",
+    "token": "onebrief",
+    "industry": "govtech-defense",
+    "jobs": 33,
+    "since": 2
+  },
+  {
     "name": "OpenAI",
     "ats": "ashby",
     "token": "openai",
     "industry": "ai",
     "jobs": 874
+  },
+  {
+    "name": "OpenGov",
+    "ats": "ashby",
+    "token": "opengov",
+    "industry": "govtech-defense",
+    "jobs": 93,
+    "since": 2
   },
   {
     "name": "OpenSea",
@@ -2163,6 +4443,14 @@
     "jobs": 50
   },
   {
+    "name": "Oxnard School District, CA",
+    "ats": "governmentjobs",
+    "token": "oxnard",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
+  },
+  {
     "name": "Pacaso",
     "ats": "greenhouse",
     "token": "pacaso",
@@ -2180,7 +4468,7 @@
     "name": "Palantir",
     "ats": "lever",
     "token": "palantir",
-    "industry": "enterprise-software",
+    "industry": "govtech-defense",
     "jobs": 305
   },
   {
@@ -2254,11 +4542,27 @@
     "jobs": 45
   },
   {
+    "name": "Picogrid",
+    "ats": "ashby",
+    "token": "picogrid",
+    "industry": "govtech-defense",
+    "jobs": 27,
+    "since": 2
+  },
+  {
     "name": "Pie Insurance",
     "ats": "greenhouse",
     "token": "pieinsurance",
     "industry": "fintech",
     "jobs": 22
+  },
+  {
+    "name": "Pierce County, WA",
+    "ats": "governmentjobs",
+    "token": "piercecountywa",
+    "industry": "government",
+    "jobs": 29,
+    "since": 2
   },
   {
     "name": "Pika",
@@ -2273,6 +4577,14 @@
     "token": "pilothq",
     "industry": "fintech",
     "jobs": 7
+  },
+  {
+    "name": "Pinal County, AZ",
+    "ats": "governmentjobs",
+    "token": "pinalcounty",
+    "industry": "government",
+    "jobs": 52,
+    "since": 2
   },
   {
     "name": "Pinecone",
@@ -2366,11 +4678,27 @@
     "jobs": 15
   },
   {
+    "name": "Promise",
+    "ats": "ashby",
+    "token": "promise",
+    "industry": "govtech-defense",
+    "jobs": 14,
+    "since": 2
+  },
+  {
     "name": "Proof",
     "ats": "greenhouse",
     "token": "proof",
     "industry": "other",
     "jobs": 124
+  },
+  {
+    "name": "Propel",
+    "ats": "ashby",
+    "token": "propel",
+    "industry": "govtech-defense",
+    "jobs": 8,
+    "since": 2
   },
   {
     "name": "ProPublica",
@@ -2401,6 +4729,14 @@
     "jobs": 4
   },
   {
+    "name": "Pueblo County, CO",
+    "ats": "governmentjobs",
+    "token": "puebloco",
+    "industry": "government",
+    "jobs": 7,
+    "since": 2
+  },
+  {
     "name": "Quaise Energy",
     "ats": "greenhouse",
     "token": "quaise",
@@ -2422,6 +4758,14 @@
     "jobs": 8
   },
   {
+    "name": "Raft",
+    "ats": "greenhouse",
+    "token": "raft",
+    "industry": "govtech-defense",
+    "jobs": 32,
+    "since": 2
+  },
+  {
     "name": "Railway",
     "ats": "ashby",
     "token": "railway",
@@ -2439,7 +4783,7 @@
     "name": "RapidSOS",
     "ats": "greenhouse",
     "token": "rapidsos",
-    "industry": "other",
+    "industry": "govtech-defense",
     "jobs": 10
   },
   {
@@ -2541,6 +4885,14 @@
     "jobs": 48
   },
   {
+    "name": "Rhombus Power",
+    "ats": "greenhouse",
+    "token": "rhombuspower",
+    "industry": "govtech-defense",
+    "jobs": 14,
+    "since": 2
+  },
+  {
     "name": "Riot Games",
     "ats": "greenhouse",
     "token": "riotgames",
@@ -2618,11 +4970,27 @@
     "jobs": 35
   },
   {
+    "name": "Rune Technologies",
+    "ats": "ashby",
+    "token": "runetech",
+    "industry": "govtech-defense",
+    "jobs": 17,
+    "since": 2
+  },
+  {
     "name": "Runway",
     "ats": "ashby",
     "token": "runway",
     "industry": "enterprise-software",
     "jobs": 3
+  },
+  {
+    "name": "Saint Paul College, MN",
+    "ats": "governmentjobs",
+    "token": "saintpaul",
+    "industry": "government",
+    "jobs": 4,
+    "since": 2
   },
   {
     "name": "Salesloft",
@@ -2646,11 +5014,35 @@
     "jobs": 287
   },
   {
+    "name": "San Bernardino County, CA",
+    "ats": "governmentjobs",
+    "token": "sanbernardino",
+    "industry": "government",
+    "jobs": 225,
+    "since": 2
+  },
+  {
     "name": "Sanity",
     "ats": "ashby",
     "token": "sanity",
     "industry": "developer-tools",
     "jobs": 31
+  },
+  {
+    "name": "Santa Rosa County, FL",
+    "ats": "governmentjobs",
+    "token": "santarosa",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
+  },
+  {
+    "name": "Sarasota County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "sarasotasheriff",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
   },
   {
     "name": "Sardine",
@@ -2663,8 +5055,16 @@
     "name": "Saronic",
     "ats": "ashby",
     "token": "saronic",
-    "industry": "hardware-robotics",
+    "industry": "govtech-defense",
     "jobs": 307
+  },
+  {
+    "name": "Sarpy County, NE",
+    "ats": "governmentjobs",
+    "token": "sarpycountyne",
+    "industry": "government",
+    "jobs": 5,
+    "since": 2
   },
   {
     "name": "Scale AI",
@@ -2709,6 +5109,22 @@
     "jobs": 16
   },
   {
+    "name": "Seminole County Sheriff's Office, FL",
+    "ats": "governmentjobs",
+    "token": "seminolesheriff",
+    "industry": "government",
+    "jobs": 1,
+    "since": 2
+  },
+  {
+    "name": "Seminole County/Board of County Commissioners, FL",
+    "ats": "governmentjobs",
+    "token": "seminolecountyfl",
+    "industry": "government",
+    "jobs": 9,
+    "since": 2
+  },
+  {
     "name": "Sentry",
     "ats": "ashby",
     "token": "sentry",
@@ -2721,6 +5137,22 @@
     "token": "sesame",
     "industry": "ai",
     "jobs": 17
+  },
+  {
+    "name": "Shelby County Law Enforcement Personnel Board, AL",
+    "ats": "governmentjobs",
+    "token": "shelbysheriff",
+    "industry": "government",
+    "jobs": 2,
+    "since": 2
+  },
+  {
+    "name": "Shift5",
+    "ats": "greenhouse",
+    "token": "shift5",
+    "industry": "govtech-defense",
+    "jobs": 10,
+    "since": 2
   },
   {
     "name": "Sierra",
@@ -2744,6 +5176,22 @@
     "jobs": 44
   },
   {
+    "name": "Skydio",
+    "ats": "ashby",
+    "token": "skydio",
+    "industry": "govtech-defense",
+    "jobs": 184,
+    "since": 2
+  },
+  {
+    "name": "Skylight",
+    "ats": "greenhouse",
+    "token": "skylighthq",
+    "industry": "govtech-defense",
+    "jobs": 12,
+    "since": 2
+  },
+  {
     "name": "Sleeper",
     "ats": "ashby",
     "token": "sleeper",
@@ -2765,6 +5213,14 @@
     "jobs": 78
   },
   {
+    "name": "Smith County, TX",
+    "ats": "governmentjobs",
+    "token": "smithcountytx",
+    "industry": "government",
+    "jobs": 14,
+    "since": 2
+  },
+  {
     "name": "Snorkel AI",
     "ats": "greenhouse",
     "token": "snorkelai",
@@ -2779,11 +5235,27 @@
     "jobs": 23
   },
   {
+    "name": "Socure",
+    "ats": "ashby",
+    "token": "socure",
+    "industry": "govtech-defense",
+    "jobs": 84,
+    "since": 2
+  },
+  {
     "name": "SoFi",
     "ats": "greenhouse",
     "token": "sofi",
     "industry": "fintech",
     "jobs": 57
+  },
+  {
+    "name": "Solano County, CA",
+    "ats": "governmentjobs",
+    "token": "solanocounty",
+    "industry": "government",
+    "jobs": 60,
+    "since": 2
   },
   {
     "name": "Sony Interactive Entertainment",
@@ -2856,11 +5328,123 @@
     "jobs": 20
   },
   {
+    "name": "St. Lucie County Board of County Commissioners, FL",
+    "ats": "governmentjobs",
+    "token": "stluciecountyfl",
+    "industry": "government",
+    "jobs": 2,
+    "since": 2
+  },
+  {
     "name": "Stability AI",
     "ats": "greenhouse",
     "token": "stabilityai",
     "industry": "ai",
     "jobs": 3
+  },
+  {
+    "name": "State of Alabama",
+    "ats": "governmentjobs",
+    "token": "alabama",
+    "industry": "government",
+    "jobs": 188,
+    "since": 2
+  },
+  {
+    "name": "State of Alaska",
+    "ats": "governmentjobs",
+    "token": "alaska",
+    "industry": "government",
+    "jobs": 258,
+    "since": 2
+  },
+  {
+    "name": "State of Colorado",
+    "ats": "governmentjobs",
+    "token": "colorado",
+    "industry": "government",
+    "jobs": 521,
+    "since": 2
+  },
+  {
+    "name": "State of Hawai'i",
+    "ats": "governmentjobs",
+    "token": "hawaii",
+    "industry": "government",
+    "jobs": 437,
+    "since": 2
+  },
+  {
+    "name": "State of Iowa",
+    "ats": "governmentjobs",
+    "token": "iowa",
+    "industry": "government",
+    "jobs": 197,
+    "since": 2
+  },
+  {
+    "name": "State of Louisiana",
+    "ats": "governmentjobs",
+    "token": "louisiana",
+    "industry": "government",
+    "jobs": 622,
+    "since": 2
+  },
+  {
+    "name": "State of Michigan",
+    "ats": "governmentjobs",
+    "token": "michigan",
+    "industry": "government",
+    "jobs": 470,
+    "since": 2
+  },
+  {
+    "name": "State of Mississippi",
+    "ats": "governmentjobs",
+    "token": "mississippi",
+    "industry": "government",
+    "jobs": 198,
+    "since": 2
+  },
+  {
+    "name": "State of Nevada",
+    "ats": "governmentjobs",
+    "token": "nv",
+    "industry": "government",
+    "jobs": 339,
+    "since": 2
+  },
+  {
+    "name": "State of South Carolina",
+    "ats": "governmentjobs",
+    "token": "sc",
+    "industry": "government",
+    "jobs": 1238,
+    "since": 2
+  },
+  {
+    "name": "State of Washington",
+    "ats": "governmentjobs",
+    "token": "washington",
+    "industry": "government",
+    "jobs": 608,
+    "since": 2
+  },
+  {
+    "name": "State of West Virginia",
+    "ats": "governmentjobs",
+    "token": "wv",
+    "industry": "government",
+    "jobs": 151,
+    "since": 2
+  },
+  {
+    "name": "State of Wyoming",
+    "ats": "governmentjobs",
+    "token": "wyoming",
+    "industry": "government",
+    "jobs": 308,
+    "since": 2
   },
   {
     "name": "Stitch Fix",
@@ -2898,6 +5482,14 @@
     "jobs": 770
   },
   {
+    "name": "Striveworks",
+    "ats": "greenhouse",
+    "token": "striveworks",
+    "industry": "govtech-defense",
+    "jobs": 32,
+    "since": 2
+  },
+  {
     "name": "Substack",
     "ats": "ashby",
     "token": "substack",
@@ -2912,6 +5504,14 @@
     "jobs": 10
   },
   {
+    "name": "Sumter County Board of County Commissioners, FL",
+    "ats": "governmentjobs",
+    "token": "sumtercountyfl",
+    "industry": "government",
+    "jobs": 2,
+    "since": 2
+  },
+  {
     "name": "Suno",
     "ats": "ashby",
     "token": "suno",
@@ -2924,6 +5524,14 @@
     "token": "supabase",
     "industry": "developer-tools",
     "jobs": 80
+  },
+  {
+    "name": "Sutter County Human Resources, CA",
+    "ats": "governmentjobs",
+    "token": "suttercounty",
+    "industry": "government",
+    "jobs": 6,
+    "since": 2
   },
   {
     "name": "Svix",
@@ -3045,6 +5653,22 @@
     "jobs": 4
   },
   {
+    "name": "The City of Coral Gables, FL",
+    "ats": "governmentjobs",
+    "token": "coralgablesfl",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
+  },
+  {
+    "name": "The City of Frederick, MD",
+    "ats": "governmentjobs",
+    "token": "frederick",
+    "industry": "government",
+    "jobs": 8,
+    "since": 2
+  },
+  {
     "name": "The Farmer's Dog",
     "ats": "greenhouse",
     "token": "thefarmersdog",
@@ -3122,6 +5746,30 @@
     "jobs": 33
   },
   {
+    "name": "Town of Davie, FL",
+    "ats": "governmentjobs",
+    "token": "davie",
+    "industry": "government",
+    "jobs": 11,
+    "since": 2
+  },
+  {
+    "name": "Town of Gilbert, AZ",
+    "ats": "governmentjobs",
+    "token": "gilbert",
+    "industry": "government",
+    "jobs": 16,
+    "since": 2
+  },
+  {
+    "name": "Travis County, TX",
+    "ats": "governmentjobs",
+    "token": "traviscounty",
+    "industry": "government",
+    "jobs": 100,
+    "since": 2
+  },
+  {
     "name": "Trigger.dev",
     "ats": "ashby",
     "token": "triggerdev",
@@ -3150,6 +5798,14 @@
     "jobs": 111
   },
   {
+    "name": "TRM Labs",
+    "ats": "ashby",
+    "token": "trm-labs",
+    "industry": "govtech-defense",
+    "jobs": 112,
+    "since": 2
+  },
+  {
     "name": "Twilio",
     "ats": "greenhouse",
     "token": "twilio",
@@ -3171,11 +5827,35 @@
     "jobs": 50
   },
   {
+    "name": "Two Six Technologies",
+    "ats": "greenhouse",
+    "token": "twosixtechnologies",
+    "industry": "govtech-defense",
+    "jobs": 92,
+    "since": 2
+  },
+  {
     "name": "Udemy",
     "ats": "greenhouse",
     "token": "udemy",
     "industry": "education",
     "jobs": 2
+  },
+  {
+    "name": "Union County Sheriff's Office, NC",
+    "ats": "governmentjobs",
+    "token": "unionsheriff",
+    "industry": "government",
+    "jobs": 2,
+    "since": 2
+  },
+  {
+    "name": "Union County, NC",
+    "ats": "governmentjobs",
+    "token": "unioncounty",
+    "industry": "government",
+    "jobs": 13,
+    "since": 2
   },
   {
     "name": "Uniswap Labs",
@@ -3199,11 +5879,27 @@
     "jobs": 77
   },
   {
+    "name": "Ursa Major",
+    "ats": "greenhouse",
+    "token": "ursamajor",
+    "industry": "govtech-defense",
+    "jobs": 135,
+    "since": 2
+  },
+  {
     "name": "Valo Health",
     "ats": "greenhouse",
     "token": "valohealth",
     "industry": "biotech-pharma",
     "jobs": 3
+  },
+  {
+    "name": "Vannevar Labs",
+    "ats": "greenhouse",
+    "token": "vannevarlabs",
+    "industry": "govtech-defense",
+    "jobs": 35,
+    "since": 2
   },
   {
     "name": "Vanta",
@@ -3248,6 +5944,14 @@
     "jobs": 351
   },
   {
+    "name": "Versaterm",
+    "ats": "greenhouse",
+    "token": "versaterm",
+    "industry": "govtech-defense",
+    "jobs": 28,
+    "since": 2
+  },
+  {
     "name": "Vox Media",
     "ats": "greenhouse",
     "token": "voxmedia",
@@ -3274,6 +5978,14 @@
     "token": "warp",
     "industry": "developer-tools",
     "jobs": 20
+  },
+  {
+    "name": "Washoe County, NV",
+    "ats": "governmentjobs",
+    "token": "washoecounty",
+    "industry": "government",
+    "jobs": 19,
+    "since": 2
   },
   {
     "name": "Watershed",
@@ -3311,11 +6023,27 @@
     "jobs": 2
   },
   {
+    "name": "Webb County, TX",
+    "ats": "governmentjobs",
+    "token": "webbcounty",
+    "industry": "government",
+    "jobs": 21,
+    "since": 2
+  },
+  {
     "name": "Weee!",
     "ats": "greenhouse",
     "token": "weee",
     "industry": "ecommerce-retail",
     "jobs": 17
+  },
+  {
+    "name": "Whatcom County, WA",
+    "ats": "governmentjobs",
+    "token": "whatcomcounty",
+    "industry": "government",
+    "jobs": 14,
+    "since": 2
   },
   {
     "name": "Wikimedia Foundation",
@@ -3393,6 +6121,14 @@
     "token": "zed",
     "industry": "developer-tools",
     "jobs": 2
+  },
+  {
+    "name": "Zeromark",
+    "ats": "ashby",
+    "token": "zeromark",
+    "industry": "govtech-defense",
+    "jobs": 10,
+    "since": 2
   },
   {
     "name": "Zip",

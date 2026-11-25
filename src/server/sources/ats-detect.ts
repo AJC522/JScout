@@ -21,6 +21,7 @@ const LEVER_RESERVED = new Set(['v0', 'v1', 'api', 'static', 'assets', 'favicon.
 const ASHBY_RESERVED = new Set(['api', 'static', 'assets', 'favicon.ico', 'robots.txt']);
 const SMARTRECRUITERS_RESERVED = new Set(['oneclick-ui', 'sr-jobs', 'api', 'static', 'assets', 'favicon.ico', 'robots.txt']);
 const WORKABLE_RESERVED = new Set(['j', 'api', 'static', 'assets', 'careers', 'favicon.ico', 'robots.txt']);
+const GOVERNMENTJOBS_RESERVED = new Set(['home', 'jobs', 'api', 'app', 'content', 'bundles', 'searchengine', 'favicon.ico', 'robots.txt']);
 
 /**
  * Recognise a careers/posting URL, with or without scheme:
@@ -32,6 +33,8 @@ const WORKABLE_RESERVED = new Set(['j', 'api', 'static', 'assets', 'careers', 'f
  *  - SmartRecruiters: jobs.smartrecruiters.com/{Company}[/...], careers.smartrecruiters.com/{Company},
  *    api.smartrecruiters.com/v1/companies/{Company}/...
  *  - Workable: apply.workable.com/{slug}[/j/{id}]
+ *  - GovernmentJobs (NEOGOV): governmentjobs.com/careers/{agency}[/jobs/{id}[/{slug}]],
+ *    agency.governmentjobs.com/{agency}[/...], governmentjobs.com/SearchEngine/JobsFeed?agency={agency}
  * SmartRecruiters identifiers are case-sensitive and keep their case; the others are lower-cased.
  * Anything else (other hosts, EU-hosted boards, site pages without a board) is null.
  */
@@ -102,6 +105,15 @@ export function parseAtsUrl(input: string): AtsBoard | null {
     case 'apply.workable.com':
       if (!first || WORKABLE_RESERVED.has(first.toLowerCase())) return null;
       return make('workable', first);
+    case 'governmentjobs.com': {
+      const lower = first?.toLowerCase();
+      if (lower === 'careers') return GOVERNMENTJOBS_RESERVED.has(segments[1]?.toLowerCase() ?? '') ? null : make('governmentjobs', segments[1]);
+      if (lower === 'searchengine' && segments[1]?.toLowerCase() === 'jobsfeed') return make('governmentjobs', url.searchParams.get('agency'));
+      return null;
+    }
+    case 'agency.governmentjobs.com':
+      if (!first || GOVERNMENTJOBS_RESERVED.has(first.toLowerCase())) return null;
+      return make('governmentjobs', first);
     default:
       return null;
   }

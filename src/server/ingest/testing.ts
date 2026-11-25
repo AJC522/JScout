@@ -5,6 +5,7 @@
  */
 import { arbeitnowSource } from '../sources/arbeitnow';
 import { ashbySource } from '../sources/ashby';
+import { governmentjobsSource } from '../sources/governmentjobs';
 import { greenhouseSource } from '../sources/greenhouse';
 import { himalayasSource } from '../sources/himalayas';
 import { hnHiringSource } from '../sources/hn-hiring';
@@ -12,20 +13,26 @@ import { jobicySource } from '../sources/jobicy';
 import { leverSource } from '../sources/lever';
 import { remoteokSource } from '../sources/remoteok';
 import { remotiveSource } from '../sources/remotive';
+import { smartrecruitersSource } from '../sources/smartrecruiters';
 import { type FakeRoute, fakeHttp, readFixture, readJsonFixture, testContext } from '../sources/testing';
 import type { BoardRef, JobSource, RawPosting, UpstreamQuery } from '../sources/types';
+import { usajobsSource } from '../sources/usajobs';
 import { weworkremotelySource } from '../sources/weworkremotely';
 import { workingnomadsSource } from '../sources/workingnomads';
 import { feedKeyFor } from './normalize';
 
 /** The clock the adapters run with (the fixtures were captured around this time). */
 export const FIXTURE_NOW = new Date('2026-11-24T12:00:00Z');
+/** The government sources' and SmartRecruiters' fixtures were captured a day later. */
+const CAPTURED_NOV_25 = new Date('2026-11-25T15:00:00Z');
 
 export interface FixtureFeed {
   source: JobSource;
   board?: BoardRef;
   feedKey: string;
   postings: RawPosting[];
+  /** The clock the adapter ran with, when its fixtures were captured on another day than FIXTURE_NOW. */
+  now?: Date;
 }
 
 interface Scenario {
@@ -35,6 +42,8 @@ interface Scenario {
   /** Search-mode sources run this query instead of fetchFeed. */
   search?: UpstreamQuery;
   config?: Record<string, string>;
+  /** The adapter's clock, when its fixtures were captured on another day than FIXTURE_NOW. */
+  now?: Date;
 }
 
 type Envelope = Record<string, unknown> & { jobs: unknown[] };
@@ -157,6 +166,41 @@ const SCENARIOS: Scenario[] = [
   { source: remoteokSource, routes: () => [exact('https://remoteok.com/api', readFixture('remoteok', 'list.json'))] },
   { source: remotiveSource, routes: () => [exact('https://remotive.com/api/remote-jobs', readFixture('remotive', 'list.json'))] },
   { source: weworkremotelySource, routes: wwrRoutes },
+  ...(
+    [
+      ['washington', 'State of Washington', 'feed-washington.xml'],
+      ['lacounty', 'County of Los Angeles, CA', 'feed-lacounty.xml'],
+      ['honolulupd', 'Honolulu Police Department, HI', 'feed-honolulupd.xml'],
+    ] as const
+  ).map(
+    ([token, name, fixture]): Scenario => ({
+      source: governmentjobsSource,
+      board: { ats: 'governmentjobs', token, name },
+      now: CAPTURED_NOV_25,
+      routes: () => [{ match: (url) => url.startsWith('https://www.governmentjobs.com/SearchEngine/JobsFeed?') && param(url, 'agency') === token, body: readFixture('governmentjobs', fixture) }],
+    }),
+  ),
+  {
+    source: smartrecruitersSource,
+    board: { ats: 'smartrecruiters', token: 'CityAndCountyOfSanFrancisco1', name: 'City and County of San Francisco' },
+    now: CAPTURED_NOV_25,
+    routes: () => [
+      {
+        match: 'https://api.smartrecruiters.com/v1/companies/CityAndCountyOfSanFrancisco1/postings?',
+        body: readFixture('smartrecruiters', 'list-cityandcountyofsanfrancisco1.json'),
+      },
+    ],
+  },
+  {
+    source: usajobsSource,
+    // The list holds announcements that opened on the day it was captured.
+    now: CAPTURED_NOV_25,
+    routes: () => [
+      { match: (url) => url.startsWith('https://data.usajobs.gov/api/historicjoa?') && url.includes('continuationtoken='), body: readFixture('usajobs', 'joa-page2.json') },
+      { match: (url) => url.startsWith('https://data.usajobs.gov/api/historicjoa?'), body: readFixture('usajobs', 'joa-page1.json') },
+      ...['2210', '1811', '0083'].map((series): FakeRoute => ({ match: `PositionSeries=${series}`, body: readFixture('usajobs', `text-series-${series}.json`) })),
+    ],
+  },
   {
     source: workingnomadsSource,
     routes: () => [exact('https://www.workingnomads.com/api/exposed_jobs/', readFixture('workingnomads', 'exposed_jobs.json'))],
@@ -167,12 +211,12 @@ const SCENARIOS: Scenario[] = [
 export async function fetchFixtureFeeds(): Promise<FixtureFeed[]> {
   const feeds: FixtureFeed[] = [];
   for (const s of SCENARIOS) {
-    const ctx = testContext(fakeHttp(s.routes()), s.config, FIXTURE_NOW);
+    const ctx = testContext(fakeHttp(s.routes()), s.config, s.now ?? FIXTURE_NOW);
     const postings = s.search
       ? await s.source.search!(ctx, s.search)
       : (await s.source.fetchFeed!(ctx, s.board)).postings;
     if (postings.length === 0) throw new Error(`${s.source.def.id} ${s.board?.token ?? ''}: fixtures produced no postings`);
-    feeds.push({ source: s.source, board: s.board, feedKey: feedKeyFor(s.source.def.id, s.board), postings });
+    feeds.push({ source: s.source, board: s.board, feedKey: feedKeyFor(s.source.def.id, s.board), postings, ...(s.now ? { now: s.now } : {}) });
   }
   return feeds;
 }

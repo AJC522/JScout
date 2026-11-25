@@ -15,10 +15,13 @@ function isJobSource(value: unknown): value is JobSource {
 
 describe('source registry', () => {
   it('lists the core adapters first, in display order', () => {
-    expect(SOURCES.slice(0, 9).map((s) => s.def.id)).toEqual([
+    expect(SOURCES.slice(0, 12).map((s) => s.def.id)).toEqual([
       'greenhouse',
       'lever',
       'ashby',
+      'smartrecruiters',
+      'governmentjobs',
+      'usajobs',
       'remotive',
       'remoteok',
       'jobicy',

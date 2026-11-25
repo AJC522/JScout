@@ -1880,7 +1880,7 @@
 {"country":"MX","code":"01","name":"Aguascalientes","aliases":["AGU","Ags."]},
 {"country":"MX","code":"02","name":"Baja California","aliases":["BCN","B.C."]},
 {"country":"MX","code":"03","name":"Baja California Sur","aliases":["BCS","B.C.S."]},
-{"country":"MX","code":"04","name":"Campeche","aliases":["CAM","Camp."]},
+{"country":"MX","code":"04","name":"Campeche","aliases":["CAM"]},
 {"country":"MX","code":"05","name":"Chiapas","aliases":["CHP","Chis."]},
 {"country":"MX","code":"06","name":"Chihuahua","aliases":["CHH","Chih."]},
 {"country":"MX","code":"07","name":"Coahuila","aliases":["COA","Coah.","Coahuila de Zaragoza"]},

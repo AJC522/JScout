@@ -30,8 +30,15 @@ import { absoluteUrl, asArray, asNumber, asRecord, asString, compactStrings, req
 
 const API = 'https://boards-api.greenhouse.io/v1/boards';
 const MIN_INTERVAL_MS = 1_000;
-/** The largest boards are ~6 MB of JSON; allow slow links. */
+/** Most boards are a few MB of JSON; allow slow links. */
 const FEED_TIMEOUT_MS = 60_000;
+/**
+ * With descriptions, the largest boards are tens of MB (Anduril's ~2,600 posts passed the HTTP
+ * client's 40 MB default on 2026-11-25). Above this the board is read without descriptions instead,
+ * and each description is fetched when its posting is opened.
+ */
+const FEED_MAX_BYTES = 150 * 1024 * 1024;
+const LARGE_FEED_TIMEOUT_MS = 180_000;
 
 /** ISO 4217 currencies whose minor unit is not 1/100 (Greenhouse's *_cents are minor units). */
 const ZERO_DECIMAL = new Set(['BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW', 'PYG', 'RWF', 'UGX', 'UYI', 'VND', 'VUV', 'XAF', 'XOF', 'XPF']);
@@ -61,13 +68,27 @@ export const greenhouseSource: JobSource = {
   async fetchFeed(ctx, board, cursor): Promise<FeedResult> {
     const ref = requireBoard(board);
     checkAborted(ctx);
-    const res = await ctx.http.getJson(`${boardUrl(ref.token)}/jobs`, {
-      query: { content: 'true', pay_transparency: 'true' },
-      etag: cursor?.etag,
-      minIntervalMs: MIN_INTERVAL_MS,
-      timeoutMs: FEED_TIMEOUT_MS,
-      signal: ctx.signal,
-    });
+    let res: HttpResponse<unknown>;
+    try {
+      res = await ctx.http.getJson(`${boardUrl(ref.token)}/jobs`, {
+        query: { content: 'true', pay_transparency: 'true' },
+        etag: cursor?.etag,
+        minIntervalMs: MIN_INTERVAL_MS,
+        timeoutMs: LARGE_FEED_TIMEOUT_MS,
+        maxBytes: FEED_MAX_BYTES,
+        signal: ctx.signal,
+      });
+    } catch (err) {
+      if (!(err instanceof SourceError && err.kind === 'parse' && /exceeded|too large/i.test(err.message))) throw err;
+      ctx.log.warn('greenhouse: board too large to read with descriptions; reading it without them', { board: ref.token });
+      checkAborted(ctx);
+      res = await ctx.http.getJson(`${boardUrl(ref.token)}/jobs`, {
+        query: { pay_transparency: 'true' },
+        minIntervalMs: MIN_INTERVAL_MS,
+        timeoutMs: FEED_TIMEOUT_MS,
+        signal: ctx.signal,
+      });
+    }
     if (res.status === 304) {
       return { postings: [], complete: false, notModified: true, cursor: validators(res, cursor) };
     }

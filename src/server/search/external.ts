@@ -14,6 +14,10 @@ const INDEED_HOSTS: Record<string, string> = {
   AT: 'at.indeed.com', CH: 'ch.indeed.com', SG: 'sg.indeed.com', NZ: 'nz.indeed.com', BE: 'be.indeed.com',
 };
 
+/** Searches that are about public-sector, law-enforcement or cleared work: they get the government job sites without a place. */
+const GOVERNMENT_QUERY =
+  /\b(?:government|federal|state|county|city of|municipal|public sector|public safety|police|sheriff|deputy|law enforcement|crime|criminal|forensic|investigat\w*|detective|trooper|corrections?|probation|dispatch\w*|911|intelligence|clearance|cleared|secret|ts\/sci|homeland|defense|military|veterans?|gs-?\d+|it specialist|infosec)\b/i;
+
 const slug = (s: string): string => normalizeText(s).replace(/[+#]/g, '').trim().replace(/\s+/g, '-');
 
 function url(base: string, params: Record<string, string | undefined>): string {
@@ -36,7 +40,13 @@ export function externalLinks(parsed: ParsedQuery, locationText: string | undefi
     { id: 'glassdoor', name: 'Glassdoor', url: url('https://www.glassdoor.com/Job/jobs.htm', { 'sc.keyword': keywords, locKeyword: where }) },
   ];
   if (first) links.push({ id: 'wellfound', name: 'Wellfound', url: `https://wellfound.com/role/${encodeURIComponent(slug(first))}` });
-  if (country === 'US') links.push({ id: 'usajobs', name: 'USAJOBS', url: url('https://www.usajobs.gov/Search/Results', { k: keywords, l: where }) });
+  if (country === 'US' || (!country && GOVERNMENT_QUERY.test(keywords))) {
+    links.push(
+      { id: 'usajobs', name: 'USAJOBS', url: url('https://www.usajobs.gov/Search/Results', { k: keywords, l: where }) },
+      { id: 'governmentjobs', name: 'GovernmentJobs', url: url('https://www.governmentjobs.com/jobs', { keyword: keywords, location: where }) },
+      { id: 'clearancejobs', name: 'ClearanceJobs', url: url('https://www.clearancejobs.com/jobs', { keywords, location: where }) },
+    );
+  }
   if (country === 'DE') {
     links.push({ id: 'arbeitnow', name: 'Arbeitnow', url: url('https://www.arbeitnow.com/', { search: keywords }) });
     const city = place?.kind === 'city' ? place.city : undefined;

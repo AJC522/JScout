@@ -170,7 +170,10 @@ export interface JobStore {
 // --- companies (ATS boards) -------------------------------------------------------
 
 export interface CompaniesService {
-  /** Load the bundled seed registry on first run. Returns rows inserted. */
+  /**
+   * Load the bundled seed registry on first run, and on later runs add the boards bundled since
+   * (and refresh bundled boards' industries). Returns rows inserted.
+   */
   seedIfEmpty(): number;
   list(query: CompanyListQuery): CompanyList;
   get(id: string): CompanyBoard | undefined;

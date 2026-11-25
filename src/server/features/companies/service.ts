@@ -1,6 +1,6 @@
 import type { CompanyBulkUpdate, CompanyList, CompanyListQuery, DataExport } from '../../../shared/api';
 import type { AtsKind, CompanyBoard, SyncStatus } from '../../../shared/types';
-import { hasReference, loadReference } from '../../data';
+import { hasReference, loadReference, type SeedCompany } from '../../data';
 import type { SqlValue } from '../../db';
 import { badRequest, notFound } from '../../errors';
 import { feedKeyFor } from '../../ingest/normalize';
@@ -34,6 +34,8 @@ const DEFAULT_LIMIT = 200;
 const MAX_NAME = 200;
 const PROBE_TIMEOUT_MS = 10_000;
 const SYNC_STATUSES: ReadonlySet<string> = new Set<SyncStatus>(['idle', 'queued', 'running', 'ok', 'error']);
+/** settings key: the highest seed version (SeedCompany.since) this database has received. */
+const SEED_VERSION_KEY = 'companies.seedVersion';
 
 export interface CompaniesOptions {
   /** Adapters to use (tests pass fakes); defaults to the registry. */
@@ -138,7 +140,6 @@ export function createCompaniesService(ctx: AppContext, options: CompaniesOption
 
   return {
     seedIfEmpty() {
-      if (db.scalar(`SELECT 1 FROM companies WHERE origin = 'seed' LIMIT 1`) !== undefined) return 0;
       if (!hasReference('companies.seed')) return 0;
       let seed: unknown;
       try {
@@ -148,27 +149,45 @@ export function createCompaniesService(ctx: AppContext, options: CompaniesOption
         return 0;
       }
       if (!Array.isArray(seed)) return 0;
-      const entries = seed as BoardInput[];
+      const entries = seed as Array<BoardInput & Pick<SeedCompany, 'since'>>;
+      const versionOf = (e: { since?: number }) => (Number.isInteger(e.since) && e.since! > 0 ? e.since! : 1);
+      const latest = entries.reduce((max, e) => Math.max(max, versionOf(e)), 1);
+      const seeded = db.scalar(`SELECT 1 FROM companies WHERE origin = 'seed' LIMIT 1`) !== undefined;
+      const storedJson = db.scalar<string>('SELECT value FROM settings WHERE key = ?', SEED_VERSION_KEY);
+      const stored = storedJson !== undefined ? Number(JSON.parse(storedJson)) || 0 : seeded ? 1 : 0;
+      if (stored >= latest) return 0;
       const now = ctx.now().toISOString();
       // Bundled boards start unfollowed: all of them together are ~38k postings and hundreds of MB,
       // too much to download before the user has said what they want. Onboarding (or the Companies
       // page) follows the industries they pick; the aggregator sources keep search useful meanwhile.
+      // An upgrade adds only boards bundled since the stored version, so bundled boards the user removed
+      // stay removed, and brings bundled boards' industries up to date.
       return db.tx(() => {
         let inserted = 0;
         for (const entry of entries) {
           const board = tryNormalize(entry);
           if (!board) continue;
-          inserted += db.run(
-            `INSERT OR IGNORE INTO companies (id, name, ats, token, industry, origin, enabled, added_at)
-             VALUES (?, ?, ?, ?, ?, 'seed', 0, ?)`,
-            `${board.ats}:${board.token}`,
-            board.name,
-            board.ats,
-            board.token,
-            board.industry ?? null,
-            now,
-          ).changes;
+          const id = `${board.ats}:${board.token}`;
+          if (versionOf(entry) > stored) {
+            inserted += db.run(
+              `INSERT OR IGNORE INTO companies (id, name, ats, token, industry, origin, enabled, added_at)
+               VALUES (?, ?, ?, ?, ?, 'seed', 0, ?)`,
+              id,
+              board.name,
+              board.ats,
+              board.token,
+              board.industry ?? null,
+              now,
+            ).changes;
+          } else if (stored > 0 && board.industry) {
+            db.run(`UPDATE companies SET industry = ? WHERE id = ? AND origin = 'seed' AND industry IS NOT ?`, board.industry, id, board.industry);
+          }
         }
+        db.run(
+          'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value',
+          SEED_VERSION_KEY,
+          JSON.stringify(latest),
+        );
         return inserted;
       });
     },

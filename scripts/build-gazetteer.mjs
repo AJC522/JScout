@@ -268,7 +268,7 @@ const A1 = {
     'Santa Catarina': ['SC'], 'São Paulo': ['SP', 'Sao Paulo'], Sergipe: ['SE'], 'Goiás': ['GO', 'Goias'], Pernambuco: ['PE'], Tocantins: ['TO'],
   },
   MX: {
-    Aguascalientes: ['AGU', 'Ags.'], 'Baja California': ['BCN', 'B.C.'], 'Baja California Sur': ['BCS', 'B.C.S.'], Campeche: ['CAM', 'Camp.'],
+    Aguascalientes: ['AGU', 'Ags.'], 'Baja California': ['BCN', 'B.C.'], 'Baja California Sur': ['BCS', 'B.C.S.'], Campeche: ['CAM'],
     Chiapas: ['CHP', 'Chis.'], Chihuahua: ['CHH', 'Chih.'], Coahuila: ['COA', 'Coah.', 'Coahuila de Zaragoza'], Colima: ['COL', 'Col.'],
     'Mexico City': ['CMX', 'CDMX', 'Ciudad de México', 'Ciudad de Mexico', 'Distrito Federal', 'D.F.'], Durango: ['DUR', 'Dgo.'],
     Guanajuato: ['GUA', 'Gto.'], Guerrero: ['GRO', 'Gro.'], Hidalgo: ['HID', 'Hgo.'], Jalisco: ['JAL', 'Jal.'],

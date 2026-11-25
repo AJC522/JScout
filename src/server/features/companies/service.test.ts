@@ -126,6 +126,37 @@ describe('seeding', () => {
     expect(requestSync).not.toHaveBeenCalled();
   });
 
+  it('adds boards bundled since the stored seed version on upgrade, without restoring removed ones', () => {
+    build();
+    expect(companies.seedIfEmpty()).toBe(3);
+    companies.remove('lever:acme');
+    data.seed = [
+      ...data.seed.map((e) => (e.token === 'globex' ? { ...e, industry: 'govtech-defense' } : e)),
+      { name: 'City of Seattle', ats: 'greenhouse', token: 'seattle', industry: 'government', jobs: 58, since: 2 },
+    ];
+    expect(companies.seedIfEmpty()).toBe(1);
+    expect(companies.get('greenhouse:seattle')).toMatchObject({ origin: 'seed', enabled: false, industry: 'government' });
+    expect(companies.get('lever:acme')).toBeUndefined();
+    expect(companies.get('greenhouse:globex')?.industry).toBe('govtech-defense');
+    expect(companies.seedIfEmpty()).toBe(0);
+  });
+
+  it('treats a database seeded before versions existed as version 1', () => {
+    build();
+    expect(companies.seedIfEmpty()).toBe(3);
+    db.run(`DELETE FROM settings WHERE key = 'companies.seedVersion'`);
+    data.seed = [...data.seed, { name: 'Agency', ats: 'greenhouse', token: 'agency', industry: 'government', jobs: 1, since: 2 }];
+    expect(companies.seedIfEmpty()).toBe(1);
+    expect(companies.list({}).total).toBe(4);
+  });
+
+  it('loads every board, whatever its version, into an empty database', () => {
+    build();
+    data.seed = [...data.seed, { name: 'Agency', ats: 'greenhouse', token: 'agency', industry: 'government', jobs: 1, since: 2 }];
+    expect(companies.seedIfEmpty()).toBe(4);
+    expect(companies.seedIfEmpty()).toBe(0);
+  });
+
   it('does nothing without the bundled file', () => {
     build();
     data.present = false;

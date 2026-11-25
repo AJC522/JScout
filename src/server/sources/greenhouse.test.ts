@@ -201,6 +201,25 @@ describe('greenhouseSource.fetchFeed', () => {
     expect(byId(postings, '8365363').department).toBeUndefined();
   });
 
+  it('reads a board too large to fetch with descriptions without them, as a complete snapshot', async () => {
+    const http = fakeHttp([
+      { match: (u) => u.startsWith(`${API}/airbnb/jobs?content=true`), error: new SourceError('parse', 'Response exceeded 157286400 bytes') },
+      { match: `${API}/airbnb/jobs?pay_transparency=true`, body: consistent('jobs-no-content-airbnb.json') },
+    ]);
+    const result = await greenhouseSource.fetchFeed!(testContext(http), board('airbnb', 'Airbnb'));
+    expect(http.requests.map((r) => r.url)).toEqual([`${API}/airbnb/jobs?content=true&pay_transparency=true`, `${API}/airbnb/jobs?pay_transparency=true`]);
+    expect(http.requests[0]!.options.maxBytes).toBeGreaterThan(40 * 1024 * 1024);
+    expect(result.complete).toBe(true);
+    expect(result.postings.length).toBeGreaterThan(0);
+    expect(result.postings.every((p) => p.descriptionHtml === undefined)).toBe(true);
+  });
+
+  it('passes other failures on without retrying', async () => {
+    const http = fakeHttp([{ match: `${API}/airbnb/jobs`, error: new SourceError('parse', 'invalid JSON') }]);
+    await expect(greenhouseSource.fetchFeed!(testContext(http), board('airbnb'))).rejects.toMatchObject({ kind: 'parse' });
+    expect(http.requests).toHaveLength(1);
+  });
+
   it('uses the board name as the company for every posting, never company_name', async () => {
     const http = fakeHttp([{ match: `${API}/stripe/jobs`, body: consistent('jobs-content-stripe.json') }]);
     const { postings } = await greenhouseSource.fetchFeed!(testContext(http), board('stripe', 'Stripe Payments'));

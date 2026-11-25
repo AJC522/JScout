@@ -10,6 +10,7 @@ export const ATS_LABELS: Record<AtsKind, string> = {
   ashby: 'Ashby',
   smartrecruiters: 'SmartRecruiters',
   workable: 'Workable',
+  governmentjobs: 'GovernmentJobs',
 };
 export const ATS_KINDS = Object.keys(ATS_LABELS) as AtsKind[];
 

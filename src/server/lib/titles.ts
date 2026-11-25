@@ -17,6 +17,8 @@ import {
   COUNTRIES,
   CURATED_TITLE_ALIASES,
   EMPLOYMENT_WORDS,
+  FEDERAL_IT_HEADS,
+  FEDERAL_IT_SPECIALTIES,
   FIELD_TO_PRACTITIONER,
   FOREIGN_HEADS,
   GENERIC_HEADS,
@@ -87,6 +89,11 @@ const RANK: Record<Seniority, number> = {
   director: 6,
   executive: 7,
 };
+
+const FEDERAL_IT_HEAD_SET: ReadonlySet<string> = new Set(FEDERAL_IT_HEADS);
+
+/** table[key] for the table's own entries only: title words such as "constructor" must not reach Object.prototype. */
+const own = (table: Readonly<Record<string, string>>, key: string): string | undefined => (Object.hasOwn(table, key) ? table[key] : undefined);
 
 const phraseSet = (list: string[]): Set<string> => new Set(list.map((w) => normalizeText(w)).filter(Boolean));
 const maxWords = (set: Set<string>): number => {
@@ -871,7 +878,7 @@ function expandAbbreviations(tokens: string[]): string[] | undefined {
   const out: string[] = [];
   for (let i = 0; i < tokens.length; i++) {
     const w = tokens[i]!;
-    const x = TITLE_ABBREVIATIONS[w];
+    const x = own(TITLE_ABBREVIATIONS, w);
     if (x && !(w === 'tech' && (tokens[i + 1] === 'lead' || i < tokens.length - 1))) {
       out.push(...x.split(' '));
       changed = true;
@@ -908,7 +915,7 @@ function mapRole(main: string[], all: string[], teams: string[][], asides: strin
     }
   }
   // inverted titles: "Manager, Sales Recruiting" / "Manager of Engineering" / "Sr. Mgr, Product Marketing"
-  const head0 = TITLE_ABBREVIATIONS[main[0]!] ?? main[0]!;
+  const head0 = own(TITLE_ABBREVIATIONS, main[0]!) ?? main[0]!;
   if (GENERIC_HEADS.has(head0)) {
     const rest = main.length === 1 ? teams[0] : main[1] === 'of' && main.length > 2 ? main.slice(2) : undefined;
     if (rest && rest.length > 0) {
@@ -935,14 +942,14 @@ function mapRole(main: string[], all: string[], teams: string[][], asides: strin
     }
   }
   // "Data Science (Intern)" -> "data scientist"
-  const practitioner = FIELD_TO_PRACTITIONER[main[main.length - 1]!];
+  const practitioner = own(FIELD_TO_PRACTITIONER, main[main.length - 1]!);
   if (practitioner) {
     const swapped = [...main.slice(0, -1), practitioner];
     const e = lookupPhrase(swapped.join(' ')) ?? (swapped.length > 1 ? containedRole(swapped, true) : undefined);
     if (e) return e.role;
   }
   // "Développeur Full Stack" -> "full stack developer"
-  const foreign = FOREIGN_HEADS[lead];
+  const foreign = own(FOREIGN_HEADS, lead);
   if (foreign && main.length > 1) {
     const moved = [...main.slice(1).filter((w) => w !== 'de' && w !== 'des' && w !== 'del' && w !== 'da' && w !== 'do'), foreign];
     const e = lookupPhrase(moved.join(' ')) ?? containedRole(moved, true);
@@ -1091,7 +1098,11 @@ function parseTitle(input: string): ParsedTitle {
     main = all;
   }
   const asideKept = asideSegs.map(keptTokens).filter((x) => x.length > 0 && x.length <= 2);
-  const role = all.length > 0 ? mapRole(main, all, kept.slice(1), asideKept) : undefined;
+  // "IT Specialist (INFOSEC)": the federal specialty code decides the role and stays in the core.
+  const specialty = FEDERAL_IT_HEAD_SET.has(main.join(' ')) ? asideSegs.flatMap((x) => x.tokens).find((w) => Object.hasOwn(FEDERAL_IT_SPECIALTIES, w)) : undefined;
+  if (specialty && !all.includes(specialty)) all = [...all, specialty];
+  const specialtyRole = specialty ? getRoleIndex().byId.get(FEDERAL_IT_SPECIALTIES[specialty]!) : undefined;
+  const role = specialtyRole ?? (all.length > 0 ? mapRole(main, all, kept.slice(1), asideKept) : undefined);
 
   // manager words: people manager or IC "manager"?
   for (const [seg, at] of managerAt) {
