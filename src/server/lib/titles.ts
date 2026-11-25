@@ -357,6 +357,8 @@ const STAFF_TECH_NEXT = new Set([
   'network', 'game', 'graphics', 'ai', 'analytics', 'design', 'web', 'application', 'applications', 'reliability',
   'performance', 'compiler', 'distributed', 'search', 'privacy', 'mechanical', 'electrical', 'manufacturing',
 ]);
+/** Level words that may follow "or"/"and"/"to" in a level range ("Senior or Staff"). */
+const LEVEL_WORDS = new Set(['senior', 'sr', 'staff', 'principal', 'lead', 'junior', 'jr', 'mid', 'entry', 'intermediate']);
 const TEAM_LEAD_PREFIX = new Set(['team', 'shift', 'crew', 'store', 'department', 'dept', 'section', 'unit', 'group', 'floor', 'site', 'squad', 'pod']);
 const MANAGER_WORDS = new Set(['manager', 'mgr', 'mngr', 'managers']);
 const SUPERVISOR_WORDS = new Set([
@@ -364,7 +366,7 @@ const SUPERVISOR_WORDS = new Set([
   'abteilungsleiter', 'abteilungsleiterin', 'gruppenleiter', 'gruppenleiterin', 'filialleiter', 'filialleiterin',
   'leitung', 'responsable', 'gerente', 'jefe', 'jefa',
 ]);
-const DIRECTOR_WORDS = new Set(['director', 'directors', 'directeur', 'directrice', 'directora', 'bereichsleiter', 'bereichsleiterin']);
+const DIRECTOR_WORDS = new Set(['director', 'directors', 'dir', 'directeur', 'directrice', 'directora', 'bereichsleiter', 'bereichsleiterin']);
 const CXO = new Set([
   'ceo', 'coo', 'cfo', 'cto', 'cio', 'cmo', 'cro', 'cpo', 'chro', 'ciso', 'cso', 'cdo', 'cco', 'cno', 'cao', 'cco',
   'cxo', 'cbo', 'cgo', 'clo', 'cpto', 'geschaftsfuhrer', 'geschaftsfuhrerin', 'geschaeftsfuehrer',
@@ -584,6 +586,19 @@ function markSeniority(seg: Segment, first: boolean, hits: Seniority[], managerA
         keep[i] = false;
       }
       continue;
+    }
+    // "Senior or Staff Engineer", "Junior/Mid Developer": alternatives between level words
+    if (i > 0 && prefixPos(i) && nextKept(i) >= 0) {
+      const nx = tokens[nextKept(i)]!;
+      if ((tok === 'or' || tok === 'and' || tok === 'to') && LEVEL_WORDS.has(nx)) {
+        keep[i] = false;
+        continue;
+      }
+      if (tok === 'mid' && nx !== 'senior') {
+        hits.push('mid');
+        keep[i] = false;
+        continue;
+      }
     }
     if (tok === 'mid' && tokens[i + 1] === 'senior') {
       hits.push('senior');
@@ -867,34 +882,40 @@ function expandAbbreviations(tokens: string[]): string[] | undefined {
 
 const OF_HEADS = new Set(['vp', 'svp', 'evp', 'head', 'director']);
 
-function mapRole(main: string[], all: string[], teams: string[][]): RoleRef | undefined {
+function mapRole(main: string[], all: string[], teams: string[][], asides: string[][]): RoleRef | undefined {
   const whole = lookupPhrase(all.join(' '));
-  if (whole) return whole.role;
-  const exact = lookupPhrase(main.join(' '));
+  if (whole && !(all.length === main.length && asides.length > 0)) return whole.role;
+  const exact = whole ?? lookupPhrase(main.join(' '));
   if (exact) {
-    // "Software Engineer, Backend" -> "backend software engineer" / "backend engineer", when that is a
-    // more specific role of the same family
-    const team = teams[0];
-    if (team && team.length <= 2) {
+    // "Software Engineer, Backend" / "Software Engineer (Frontend)" -> "backend software engineer" /
+    // "frontend engineer", when that is a more specific role of the same family
+    for (const team of [teams[0], ...asides]) {
+      if (!team || team.length > 2) continue;
       const spec = lookupPhrase([...team, ...main].join(' ')) ?? lookupPhrase([...team, main[main.length - 1]!].join(' '));
       if (spec && spec.role.familyId === exact.role.familyId) return spec.role;
     }
     return exact.role;
   }
-  // "VP Sales", "VP, Sales", "Head, Design" -> "vp of sales"
-  const lead = main[0]!;
-  if (OF_HEADS.has(lead) && main[1] !== 'of') {
-    const rest = main.length > 1 ? main.slice(1) : (teams[0] ?? []);
+  // "VP Sales", "VP, Sales", "Vice President, Engineering", "Head, Design" -> "vp of sales"
+  const vicePresident = main[0] === 'vice' && main[1] === 'president';
+  const lead = vicePresident ? 'vp' : main[0]!;
+  const afterLead = main.slice(vicePresident ? 2 : 1);
+  if (OF_HEADS.has(lead) && afterLead[0] !== 'of') {
+    const rest = afterLead.length > 0 ? afterLead : (teams[0] ?? []);
     if (rest.length > 0) {
-      const e = lookupPhrase([lead, 'of', ...rest].join(' '));
+      const e = lookupPhrase([lead, 'of', ...rest].join(' ')) ?? (vicePresident ? lookupPhrase(['vice', 'president', 'of', ...rest].join(' ')) : undefined);
       if (e) return e.role;
     }
   }
-  // inverted titles: "Manager, Sales Recruiting" -> "sales recruiting manager"
-  if (main.length === 1 && GENERIC_HEADS.has(main[0]!) && teams.length > 0 && teams[0]!.length > 0) {
-    const inv = [...teams[0]!, main[0]!];
-    const e = lookupPhrase(inv.join(' ')) ?? containedRole(inv, false);
-    if (e && e.tokens[e.tokens.length - 1] === main[0]) return e.role;
+  // inverted titles: "Manager, Sales Recruiting" / "Manager of Engineering" / "Sr. Mgr, Product Marketing"
+  const head0 = TITLE_ABBREVIATIONS[main[0]!] ?? main[0]!;
+  if (GENERIC_HEADS.has(head0)) {
+    const rest = main.length === 1 ? teams[0] : main[1] === 'of' && main.length > 2 ? main.slice(2) : undefined;
+    if (rest && rest.length > 0) {
+      const inv = [...rest, head0];
+      const e = lookupPhrase(inv.join(' ')) ?? containedRole(inv, false);
+      if (e && e.tokens[e.tokens.length - 1] === head0) return e.role;
+    }
   }
   const inMain = containedRole(main, true);
   if (inMain) return inMain.role;
@@ -943,8 +964,8 @@ function managerRank(seg: Segment, at: number): Seniority {
   let start = at;
   while (start > 0 && seg.keep[start - 1]) start--;
   if (start === at) return 'manager';
-  // longest taxonomy phrase ending at this token
-  for (let s = start; s < at; s++) {
+  // longest taxonomy phrase ending at this token (no taxonomy title is longer than eight words)
+  for (let s = Math.max(start, at - 7); s < at; s++) {
     const e = lookupPhrase(toks.slice(s, at + 1).join(' '));
     if (!e) continue;
     if (e.role.familyId === 'executive-leadership' && toks[at - 1] === 'general' && s === at - 1) {
@@ -962,8 +983,12 @@ function emptyParsed(raw: string): ParsedTitle {
   return { core: normalizeText(raw), seniority: 'unknown', employment: 'unknown' };
 }
 
-function parseTitle(raw: string): ParsedTitle {
-  if (typeof raw !== 'string' || !raw.trim()) return emptyParsed(typeof raw === 'string' ? raw : '');
+/** Longer "titles" are pasted descriptions or garbage; only their start is analysed. */
+const MAX_TITLE_LENGTH = 300;
+
+function parseTitle(input: string): ParsedTitle {
+  if (typeof input !== 'string' || !input.trim()) return emptyParsed(typeof input === 'string' ? input : '');
+  const raw = input.length > MAX_TITLE_LENGTH ? input.slice(0, MAX_TITLE_LENGTH) : input;
   let s = raw;
   // cheap guards first: most titles have no digits, gender markers or apostrophes
   if (GENDER_HINT_RE.test(s)) s = s.replace(GENDER_SUFFIX_RE, '$1').replace(GENDER_RE, ' ');
@@ -1043,6 +1068,8 @@ function parseTitle(raw: string): ParsedTitle {
 
   // assemble the core from kept segments
   const kept = segs.map(keptTokens).filter((x) => x.length > 0);
+  // "Now Hiring: Line Cook" - a first segment that is only an ad phrase goes
+  if (kept.length > 1 && phraseAt(kept[0]!, 0, getTables().leadingNoise) === kept[0]!.length) kept.shift();
   const head = kept[0];
   if (head) {
     const t = getTables();
@@ -1063,7 +1090,8 @@ function parseTitle(raw: string): ParsedTitle {
     all = fallback.length > 0 ? fallback : normalizeText(raw).split(' ').filter(Boolean);
     main = all;
   }
-  const role = all.length > 0 ? mapRole(main, all, kept.slice(1)) : undefined;
+  const asideKept = asideSegs.map(keptTokens).filter((x) => x.length > 0 && x.length <= 2);
+  const role = all.length > 0 ? mapRole(main, all, kept.slice(1), asideKept) : undefined;
 
   // manager words: people manager or IC "manager"?
   for (const [seg, at] of managerAt) {

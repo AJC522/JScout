@@ -31,6 +31,8 @@ const EXTRA_ALIASES: Record<string, string[]> = {
   'Microsoft Excel': ['MS-Excel'],
   'Machine Learning': ['ML'],
   'Large Language Models': ['LLMs', 'large language model'],
+  'iOS Development': ['iOS'],
+  'Android Development': ['Android'],
 };
 
 /** Terms (as spelled here) that must match with exactly this casing, without needing list context. */
@@ -54,9 +56,10 @@ const DISABLED_TERMS = new Set(['translating', 'calibration']);
 
 /**
  * Terms of unflagged entries that collide with another common meaning and so get the ambiguous-entry
- * treatment (exact case + list/skill context): "CRO" is also a Contract Research Organization.
+ * treatment (exact case + list/skill context): "CRO" is also a Contract Research Organization, and
+ * "iOS"/"Android" are also the phone a field worker must own.
  */
-const FORCE_CONTEXTUAL = new Set(['CRO']);
+const FORCE_CONTEXTUAL = new Set(['CRO', 'iOS', 'Android']);
 
 /**
  * Ambiguous entries that are also department names ("work with Sales, Finance and Legal"): the
@@ -426,30 +429,46 @@ interface Match {
 }
 
 function listAdjacent(text: string, a: Match, b: Match): boolean {
+  if (b.s - a.e > 14) return false;
   const gap = text.slice(a.e, b.s);
-  if (gap.length > 14) return false;
   if (!LIST_SEP_RE.test(gap)) return false;
   if (HAS_DELIM_RE.test(gap)) return true;
   return false;
 }
 
-/** The candidate is alone on its line (a bullet item), so a neighbouring line's skill counts as adjacent. */
+const BULLET_PREFIX_RE = /[\s\-*•·>\d.)]/;
+const LINE_END_RE = /[\s,;.]/;
+
+/**
+ * The candidate is alone on its line (a bullet item), so a neighbouring line's skill counts as adjacent.
+ * Scans only the few characters around the match, so long single-line texts stay linear.
+ */
 function aloneOnLine(text: string, m: Match): boolean {
-  let ls = text.lastIndexOf('\n', m.s - 1) + 1;
-  let le = text.indexOf('\n', m.e);
-  if (le < 0) le = text.length;
-  const before = text.slice(ls, m.s);
-  const after = text.slice(m.e, le);
-  ls = 0;
-  return /^[\s\-*•·>\d.)]*$/.test(before) && /^[\s,;.]*$/.test(after);
+  for (let k = m.s - 1; ; k--) {
+    if (k < 0 || text[k] === '\n') break;
+    if (m.s - k > 24 || !BULLET_PREFIX_RE.test(text[k]!)) return false;
+  }
+  for (let k = m.e; ; k++) {
+    if (k >= text.length || text[k] === '\n') break;
+    if (k - m.e > 12 || !LINE_END_RE.test(text[k]!)) return false;
+  }
+  return true;
+}
+
+/** Start of the line containing position `at` (looks back at most `max` characters; -1 when further). */
+function lineStart(text: string, at: number, max: number): number {
+  for (let k = at - 1; k >= 0 && at - k <= max; k--) if (text[k] === '\n') return k + 1;
+  return at <= max ? 0 : -1;
 }
 
 function introduced(text: string, m: Match, strong: boolean): boolean {
   const from = Math.max(0, m.s - 60);
   const before = text.slice(from, m.s);
   if ((strong ? STRONG_INTRO_RE : INTRO_RE).test(before)) return true;
-  const ls = text.lastIndexOf('\n', m.s - 1) + 1;
-  return HEADING_RE.test(text.slice(ls, m.s));
+  // a skills-style heading sits at the start of the line, within its first ~120 characters
+  const ls = lineStart(text, m.s, 400);
+  if (ls < 0) return false;
+  return HEADING_RE.test(text.slice(ls, Math.min(m.s, ls + 120)));
 }
 
 /** Sentence/line spans that contain boilerplate markers. */
@@ -494,8 +513,12 @@ function resolveContext(text: string, matches: Match[], entries: SkillEntry[]): 
       }
       // bullet lists: one skill per line
       if (aloneOnLine(text, m)) {
-        const near = (o: Match | undefined): boolean =>
-          !!o && o.ok && aloneOnLine(text, o) && !/\n\s*\n/.test(text.slice(Math.min(o.e, m.e), Math.max(o.s, m.s)));
+        const near = (o: Match | undefined): boolean => {
+          if (!o || !o.ok) return false;
+          const a = Math.min(o.e, m.e);
+          const b = Math.max(o.s, m.s);
+          return b - a <= 200 && aloneOnLine(text, o) && !/\n\s*\n/.test(text.slice(a, b));
+        };
         if (near(prev) || near(next)) {
           m.ok = true;
           changed = true;
@@ -553,8 +576,11 @@ function endOk(term: Term, toks: Tok[], j: number): boolean {
       if (term.short && term.orig.length === 1 && term.orig[0]!.length === 1) return false;
       if (HYPHEN_SUFFIX_OK.has(nx.t)) return true;
       return !term.contextual && !term.short;
-    case Sep.Direct:
-      return nx.t === '/' && !!toks[j + 2] && toks[j + 2]!.sep === Sep.Direct && !toks[j + 2]!.sym;
+    case Sep.Direct: {
+      // "CI/CD"-style pairs and "C#/.NET": a slash followed directly by another word or ".word"
+      const after = toks[j + 2];
+      return nx.t === '/' && !!after && after.sep === Sep.Direct && (!after.sym || after.t === '.');
+    }
   }
 }
 

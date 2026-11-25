@@ -60,7 +60,9 @@ export const REGIONS = words(
     'asia pacific|uki|ukie|ukandi|cee|ssa|gcc|iberia|baltics|caribbean|oceania|scandinavia|' +
     'bay area|sf bay area|silicon valley|greater boston|dfw|socal|norcal|tri state|twin cities|puget sound|' +
     'research triangle|east coast|west coast|midwest|northeast|northwest|southeast|southwest|pacific northwest|pnw|' +
-    'new england|mid atlantic|gulf coast|nyc|sf|la metro|dmv|gta|lower mainland',
+    'new england|mid atlantic|gulf coast|nyc|sf|la metro|dmv|gta|lower mainland|orange county|inland empire|' +
+    'long island|westchester|north jersey|south jersey|central jersey|northern virginia|hudson valley|east bay|' +
+    'south bay|san fernando valley|greater london|greater manchester|randstad|ruhr',
 );
 
 /** Places accepted only when they make up a whole segment ("- Global", "| NA"). */
@@ -312,6 +314,20 @@ export const CURATED_TITLE_ALIASES: Record<string, string> = {
   'go developer': 'backend-engineer',
   'php developer': 'web-developer',
   'magento developer': 'web-developer',
+  'react native developer': 'mobile-engineer',
+  'react native engineer': 'mobile-engineer',
+  'flutter developer': 'mobile-engineer',
+  'flutter engineer': 'mobile-engineer',
+  'c++ developer': 'software-engineer',
+  'c++ engineer': 'software-engineer',
+  'c++ software engineer': 'software-engineer',
+  'c# developer': 'dotnet-developer',
+  'c# engineer': 'dotnet-developer',
+  'softwareentwickler': 'software-engineer',
+  'softwareentwicklerin': 'software-engineer',
+  'softwareingenieur': 'software-engineer',
+  'ingenieur logiciel': 'software-engineer',
+  'developpeur logiciel': 'software-engineer',
   'secops engineer': 'security-engineer',
   'security operations engineer': 'security-engineer',
 };
@@ -350,7 +366,7 @@ export const LANGUAGE_NAMES = words(
 
 /** Words that make a segment of language names a language requirement. */
 export const SPEAKER_WORDS = words(
-  'speaker|speakers|speaking|spoken|bilingual|trilingual|multilingual|fluent|fluency|native|language|languages',
+  'speaker|speakers|speaking|spoken|bilingual|trilingual|multilingual|fluent|fluency|native',
 );
 
 /** Leading phrases of ad-style titles ("Looking for Online ESL Teachers"). */
@@ -360,7 +376,7 @@ export const LEADING_NOISE = words(
 );
 
 /** Function words dropped from the start of a core ("Praktikum im Customer Success" -> "customer success"). */
-export const LEADING_FUNCTION_WORDS = words('im|fur|als|en|for|the|of|und|and|to|at|with|zum|zur|del');
+export const LEADING_FUNCTION_WORDS = words('im|fur|als|en|for|the|und|and|to|at|with|zum|zur|del');
 
 /**
  * A team/function noun at the end of a core that names the job of its practitioner, for titles such as
