@@ -48,13 +48,12 @@ describe('user state', () => {
 
   it('keeps the latest view and unhides', () => {
     service.markViewed({ id: 'j1', clusterKey: 'c1' });
-    const first = now.toISOString();
     now = new Date(now.getTime() + 60_000);
     service.markViewed({ id: 'j1b', clusterKey: 'c1' });
-    expect(service.forCluster('c1').viewedAt).toBe(now.toISOString());
+    expect(service.forCluster('c1').viewedAt).toBe('2026-11-20T12:01:00.000Z');
+    // A clock that went backwards (or an older copy viewed) never rewinds the timestamp.
     now = new Date('2026-01-01T00:00:00.000Z');
     service.markViewed({ id: 'j1', clusterKey: 'c1' });
-    expect(service.forCluster('c1').viewedAt).not.toBe(first);
     expect(service.forCluster('c1').viewedAt).toBe('2026-11-20T12:01:00.000Z');
 
     service.hide({ id: 'j1', clusterKey: 'c1' });

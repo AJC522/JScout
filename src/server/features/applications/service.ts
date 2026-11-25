@@ -86,6 +86,15 @@ function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
   return groups;
 }
 
+/**
+ * Insert order for imported rows: oldest first, so rows sharing a timestamp keep their
+ * order (reads tie-break on rowid). Exports list newest first, hence the reverse before
+ * the stable sort.
+ */
+function oldestFirst<T>(items: T[], date: (item: T) => string): T[] {
+  return [...items].reverse().sort((a, b) => (date(a) < date(b) ? -1 : date(a) > date(b) ? 1 : 0));
+}
+
 function importedSnapshot(job: ApplicationImport['job']): JobSnapshot {
   const { applyUrl, salaryText, postedAt, ...rest } = job;
   return mergeSnapshot(rest, {
@@ -261,10 +270,8 @@ export function createApplicationsService(ctx: AppContext): ApplicationsService 
       updatedAt,
       item.sortOrder,
     );
-    // Oldest first, so rows sharing a timestamp keep their order (reads tie-break on rowid).
-    const events = [...item.events].reverse().map((e) => ({ ...e, at: toIso(e.at, 'event.at') }));
-    events.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-    for (const e of events) {
+    const events = item.events.map((e) => ({ ...e, at: toIso(e.at, 'event.at') }));
+    for (const e of oldestFirst(events, (e) => e.at)) {
       db.run(
         `INSERT INTO application_events (id, application_id, at, type, title, detail) VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET application_id = excluded.application_id, at = excluded.at,
@@ -277,10 +284,8 @@ export function createApplicationsService(ctx: AppContext): ApplicationsService 
         e.detail,
       );
     }
-    const documents = [...item.documents].reverse().map((d) => ({ ...d, createdAt: toIso(d.createdAt, 'document.createdAt') }));
-    documents.sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
-    for (const d of documents) {
-      const docCreated = d.createdAt;
+    const documents = item.documents.map((d) => ({ ...d, createdAt: toIso(d.createdAt, 'document.createdAt') }));
+    for (const d of oldestFirst(documents, (d) => d.createdAt)) {
       db.run(
         `INSERT INTO documents (id, application_id, kind, title, content, generated_by, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -293,8 +298,8 @@ export function createApplicationsService(ctx: AppContext): ApplicationsService 
         d.title,
         d.content,
         d.generatedBy,
-        docCreated,
-        d.updatedAt ? toIso(d.updatedAt, 'document.updatedAt') : docCreated,
+        d.createdAt,
+        d.updatedAt ? toIso(d.updatedAt, 'document.updatedAt') : d.createdAt,
       );
     }
   }
