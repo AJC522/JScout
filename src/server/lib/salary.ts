@@ -186,6 +186,10 @@ function readNumber(s: string, i: number): NumRead | undefined {
   return { value: Number(`${p[1]}${p[2] ? `.${p[2]}` : ''}`), len: p[0].length, grouped: false };
 }
 
+function isLowerCaseCode(marker: string): boolean {
+  return /^[A-Za-z]{3}$/.test(marker) && marker !== marker.toUpperCase();
+}
+
 /** Find every amount-like token, skipping dates, times, fractions, percentages, versions and identifiers. */
 function scanAmounts(text: string, country: string | undefined): Tok[] {
   const toks: Tok[] = [];
@@ -212,6 +216,8 @@ function scanAmounts(text: string, country: string | undefined): Tok[] {
     const before = text.slice(Math.max(0, start - 10), start);
     const pre = PREFIX_CUR_RE.exec(before);
     let marker = pre?.[1];
+    // In free text a three-letter code only counts in capitals ("USD 100k", not "try 100 times").
+    if (marker && isLowerCaseCode(marker)) marker = undefined;
     let resolved = marker ? resolveMarker(marker, country) : undefined;
     if (marker && resolved === undefined) marker = undefined;
     // Digits glued to letters ("Q4", "H1B", "B2B") are identifiers unless the letters are a currency.
@@ -230,7 +236,7 @@ function scanAmounts(text: string, country: string | undefined): Tok[] {
       if (!/^(?:kr|zł|lpa)/i.test(text.slice(end, end + 3))) continue;
     }
     const suf = SUFFIX_CUR_RE.exec(text.slice(end, end + 8));
-    if (suf?.[1]) {
+    if (suf?.[1] && !isLowerCaseCode(suf[1])) {
       const r = resolveMarker(suf[1], country);
       if (r !== undefined) {
         if (resolved === undefined || resolved === null) resolved = r;

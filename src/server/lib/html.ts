@@ -147,9 +147,12 @@ export function fixMojibake(s: string): string {
 /** C0/C1 controls (except whitespace), zero-width spaces/joiners used as junk, BOMs. */
 const JUNK_RE = /[\u0000-\u0008\u000e-\u001f\u007f-\u009f​⁠﻿]/g;
 
+/** Unpaired UTF-16 surrogates (broken emoji, or a pair split by truncation); they cannot be encoded. */
+const LONE_SURROGATE_RE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+
 /** Text clean-up shared by every path, so textToHtml output is stable under sanitizeHtml. */
 function cleanText(s: string): string {
-  return fixMojibake(s).replace(JUNK_RE, '');
+  return fixMojibake(s).replace(JUNK_RE, '').replace(LONE_SURROGATE_RE, '');
 }
 
 function collapse(s: string): string {

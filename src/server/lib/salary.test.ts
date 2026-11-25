@@ -305,6 +305,11 @@ describe('parseSalaryText: sanity', () => {
     expect(parseSalaryText('H1B sponsorship')).toBeUndefined();
     expect(parseSalaryText('24/7')).toBeUndefined();
     expect(parseSalaryText('99.9%')).toBeUndefined();
+    // Lower-case words that happen to be ISO codes are not currencies in free text.
+    expect(extractSalaryFromText('We pay you to try 100 recipes a month.')).toBeUndefined();
+    expect(parseSalaryText('try 100 times')).toBeUndefined();
+    expect(core(parseSalaryText('100,000 usd'))).toEqual({ min: 100000, max: 100000, period: 'year' });
+    expect(normalizeSalary({ min: 100000, currency: 'usd' })?.currency).toBe('USD');
   });
 
   it('never throws on hostile input', () => {

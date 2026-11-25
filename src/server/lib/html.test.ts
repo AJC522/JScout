@@ -490,6 +490,7 @@ describe('sanitizeHtml output hygiene', () => {
     ['<p>Rocket 🚀 emoji ✅</p>', '<p>Rocket 🚀 emoji ✅</p>'],
     ['<p>donâ€™t move to MÃ¼nchen</p>', '<p>don’t move to München</p>'],
     ['<p>a\u0000b​c</p>', '<p>abc</p>'],
+    ['<p>broken \uD83D emoji \uDE80 and 🚀</p>', '<p>broken emoji and 🚀</p>'],
     ['<p>Tom &amp; Jerry &lt;3 &nbsp;&copy;</p>', '<p>Tom &amp; Jerry &lt;3 ©</p>'],
     ['<p>Click <a href="https://x.example/apply"><img src="btn.png"></a></p>', `<p>Click ${a('https://x.example/apply', 'https://x.example/apply')}</p>`],
     ['<a href="mailto:jobs@x.example"></a>', `<p>${a('mailto:jobs@x.example', 'jobs@x.example')}</p>`],
@@ -498,6 +499,14 @@ describe('sanitizeHtml output hygiene', () => {
     ['Line one\nLine two', '<p>Line one<br>Line two</p>'],
   ])('%s', (input, expected) => {
     expect(expectSafe(input)).toBe(expected);
+  });
+
+  it('truncates oversized input without splitting a character', () => {
+    const big = `<p>${'a'.repeat(MAX_HTML_INPUT_CHARS - 4)}🚀🚀</p>`;
+    const out = sanitizeHtml(big);
+    expect(out.endsWith('a</p>')).toBe(true);
+    expect(out.length).toBeLessThanOrEqual(MAX_HTML_INPUT_CHARS + 10);
+    expect(htmlToText(big)).toBe('a'.repeat(MAX_HTML_INPUT_CHARS - 4));
   });
 
   it('returns empty string for empty, whitespace-only and non-string input', () => {
