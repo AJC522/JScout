@@ -110,9 +110,10 @@ export interface ParsedExperience {
  * job's header precedes its dates) or just after it, and the lines up to the next job are highlights.
  */
 export function parseExperience(lines: string[], now: Date): ParsedExperience[] {
+  // A dated bullet or sentence ("Grew sales 30% in 2019 - 2020") is an achievement, not a job.
   const anchors = lines.flatMap((line, i) => {
-    const range = findDateRanges(line, now)[0];
-    return range ? [{ i, range }] : [];
+    const range = isBullet(line) ? undefined : findDateRanges(line, now)[0];
+    return range && cutSpan(line, range).split(/\s+/).length <= 14 ? [{ i, range }] : [];
   });
   const firstAnchor = anchors[0];
   if (!firstAnchor) return [];

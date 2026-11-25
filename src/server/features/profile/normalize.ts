@@ -126,7 +126,7 @@ const str = (v: unknown, max = 10_000): string => (typeof v === 'string' ? v.tri
 const isoOr = (v: unknown, fallback: string): string =>
   typeof v === 'string' && v && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : fallback;
 const yearMonth = (v: unknown): string => {
-  const s = str(v, 7);
+  const s = str(v, 20);
   return YEAR_MONTH.test(s) ? s : '';
 };
 const nullableBool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : null);
@@ -159,6 +159,7 @@ function normalizePersonal(p: PersonalInfo, mode: NormalizeOptions['mode']): Per
     throw badRequest(`personal.${field}: must be a web address starting with http:// or https://`);
   };
   const email = str(p.email, 254).toLowerCase();
+  if (email && !isValidEmail(email) && mode === 'reject') throw badRequest('personal.email: must be an email address');
   const otherLinks = ensureIds(
     asArray(p.otherLinks)
       .filter(isRecord)
@@ -169,7 +170,7 @@ function normalizePersonal(p: PersonalInfo, mode: NormalizeOptions['mode']): Per
   return {
     fullName: str(p.fullName, 200),
     preferredName: str(p.preferredName, 100),
-    email: mode === 'import' && email && !isValidEmail(email) ? '' : email,
+    email: email && !isValidEmail(email) ? '' : email,
     phone: str(p.phone, 50).replace(/\s+/g, ' '),
     location: str(p.location, 200),
     linkedin: link('linkedin', p.linkedin),

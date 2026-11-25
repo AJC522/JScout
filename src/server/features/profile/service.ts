@@ -1,6 +1,6 @@
 import type { ProfilePatch, ResumeResult } from '../../../shared/api';
 import type { Profile, ResumeInfo } from '../../../shared/types';
-import { parseJson } from '../../db';
+import { type Db, parseJson } from '../../db';
 import { badRequest } from '../../errors';
 import { extractSkills } from '../../lib/skills';
 import { uniqueFolded } from '../../lib/text';
@@ -21,6 +21,12 @@ import { deleteResumeFile, readResumeFile, writeResumeFile } from './resume-stor
 
 const PASTED_NAME = 'Pasted résumé';
 
+/**
+ * A profile written inside a transaction must not be cached: it may still roll back (a failed data
+ * import). Node versions without `isTransaction` are treated as always inside one (uncached).
+ */
+const inTransaction = (db: Db): boolean => db.raw.isTransaction ?? true;
+
 /** Whether two résumé records describe the same upload (used to keep the stored file across a data import). */
 const sameResume = (a: ResumeInfo | null, b: ResumeInfo | null) =>
   !!a && !!b && a.fileName === b.fileName && a.mimeType === b.mimeType && a.sizeBytes === b.sizeBytes && a.text === b.text;
@@ -39,11 +45,11 @@ export function createProfileService(ctx: AppContext): ProfileService {
   let effective: { profile: Profile; skills: string[] } | undefined;
 
   function load(): Profile {
-    if (!cached) {
-      const raw = db.scalar<string>("SELECT data FROM profile WHERE id = 'default'");
-      cached = withDefaults(parseJson<unknown>(raw, undefined), nowIso());
-    }
-    return cached;
+    if (cached) return cached;
+    const raw = db.scalar<string>("SELECT data FROM profile WHERE id = 'default'");
+    const profile = withDefaults(parseJson<unknown>(raw, undefined), nowIso());
+    if (!inTransaction(db)) cached = profile;
+    return profile;
   }
 
   function save(profile: Profile): Profile {
@@ -54,8 +60,9 @@ export function createProfileService(ctx: AppContext): ProfileService {
       json,
       profile.updatedAt,
     );
-    cached = JSON.parse(json) as Profile;
-    return structuredClone(cached);
+    const saved = JSON.parse(json) as Profile;
+    cached = inTransaction(db) ? undefined : saved;
+    return structuredClone(saved);
   }
 
   function setResume(resume: ResumeInfo | null): Profile {

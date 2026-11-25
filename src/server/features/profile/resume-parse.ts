@@ -120,7 +120,7 @@ const REGION_CODES = new Set(
 
 /** Words that mean a "City, Region"-shaped string is something else (a school, a company, a job). */
 export const NOT_A_PLACE_RE =
-  /\b(?:university|college|institute|school|academy|inc|llc|ltd|corp|company|group|hospital|clinic|bank|engineer|developer|manager|analyst|nurse|accountant|designer|director|intern|assistant|specialist|consultant|officer|technician|teacher|software|senior|junior|street|st|avenue|ave|road|rd|suite|apt|floor)\b/i;
+  /\b(?:university|college|institute|school|academy|inc|llc|ltd|corp|company|group|hospital|clinic|bank|engineer|developer|manager|analyst|nurse|accountant|designer|director|intern|assistant|specialist|consultant|officer|technician|teacher|software|senior|junior|street|avenue|road|suite|apt|floor)\b/i;
 
 const CITY = "\\p{Lu}[\\p{L}.'’-]*(?:\\s(?:\\p{Lu}[\\p{L}.'’-]*|de|del|la|le|upon|on|am|im|sur))*";
 const PLACE_RE = new RegExp(`(?:^|[,\\s])(${CITY}),\\s*([A-Z]{2}|\\p{Lu}\\p{L}+(?:\\s\\p{Lu}\\p{L}+){0,2})(?:\\s+[A-Z0-9]{3,5}(?:[\\s-][A-Z0-9]{3,4})?)?$`, 'du');
@@ -147,6 +147,7 @@ export function findPlace(text: string): { place: string; index: number } | unde
 // --- contact ----------------------------------------------------------------------------
 
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)*\.[A-Z]{2,24}/i;
+const EMAILS_RE = new RegExp(EMAIL_RE.source, 'gi');
 const LINKEDIN_RE = /(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub)\/[\w%-]+\/?/i;
 const GITHUB_RE = /(?:https?:\/\/)?(?:www\.)?github\.com\/(?!(?:orgs|features|about|topics|sponsors|marketplace|settings)\b)[A-Za-z0-9][A-Za-z0-9-]{0,38}(?![\w-])/i;
 const WEBSITE_RE =
@@ -209,7 +210,8 @@ export function extractContact(sections: Section[], text: string): ResumeAnalysi
   const name = firstLine ? nameFromLine(firstLine) : undefined;
   if (name) contact.fullName = name;
 
-  const email = EMAIL_RE.exec(text)?.[0];
+  // Prefer the header's address over one further down (a referee's, say); two-column PDFs may put it last.
+  const email = (EMAIL_RE.exec(top.join('\n')) ?? EMAIL_RE.exec(text))?.[0];
   if (email) contact.email = email.toLowerCase();
 
   const phone = top.map(phoneIn).find(Boolean) ?? allLines.filter((l) => PHONE_LABEL_RE.test(l)).map(phoneIn).find(Boolean);
@@ -220,7 +222,7 @@ export function extractContact(sections: Section[], text: string): ResumeAnalysi
   const github = GITHUB_RE.exec(text)?.[0];
   if (github) contact.github = normalizeLink(github) ?? undefined;
 
-  const topText = top.join('\n').replace(new RegExp(EMAIL_RE.source, 'gi'), ' ');
+  const topText = top.join('\n').replace(EMAILS_RE, ' ');
   for (const m of topText.matchAll(WEBSITE_RE)) {
     const url = m[0].replace(/[.)]+$/, '');
     const explicit = /^(?:https?:\/\/|www\.)/i.test(url);
@@ -233,7 +235,7 @@ export function extractContact(sections: Section[], text: string): ResumeAnalysi
   }
 
   for (const line of top.slice(0, 8)) {
-    const found = splitParts(line.replace(new RegExp(EMAIL_RE.source, 'gi'), ' '))
+    const found = splitParts(line.replace(EMAILS_RE, ' '))
       .map((part) => findPlace(part))
       .find(Boolean);
     if (found) {

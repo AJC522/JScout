@@ -58,6 +58,12 @@ function readSourceState(value: unknown): SourceState {
   return state;
 }
 
+/**
+ * Values written inside a transaction must not be cached: it may still roll back. Node versions
+ * without `isTransaction` are treated as always inside one (correct, just uncached).
+ */
+const inTransaction = (db: Db): boolean => db.raw.isTransaction ?? true;
+
 /** Cache invalidators per database, so a data reset can wipe the table without leaving stale values in memory. */
 const invalidators = new WeakMap<Db, () => void>();
 
@@ -84,7 +90,7 @@ export function createSettingsService(ctx: AppContext): SettingsService {
         ctx.log.warn('Ignoring a malformed stored setting', { key });
       }
     }
-    cache.set(key, value);
+    if (!inTransaction(db)) cache.set(key, value);
     return value;
   }
 
@@ -96,12 +102,14 @@ export function createSettingsService(ctx: AppContext): SettingsService {
     const json = JSON.stringify(value);
     db.run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value', key, json);
     // Cache a private copy so later mutation of `value` by the caller cannot leak in.
-    cache.set(key, JSON.parse(json));
+    if (inTransaction(db)) cache.delete(key);
+    else cache.set(key, JSON.parse(json));
   }
 
   function remove(key: string): void {
     db.run('DELETE FROM settings WHERE key = ?', key);
-    cache.set(key, undefined);
+    if (inTransaction(db)) cache.delete(key);
+    else cache.set(key, undefined);
   }
 
   function getSecret(key: 'ai.apiKey'): string | undefined {

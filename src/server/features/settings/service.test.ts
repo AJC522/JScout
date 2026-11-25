@@ -133,6 +133,18 @@ describe('generic JSON storage', () => {
     expect(spy).toHaveBeenCalledTimes(2); // settings.app and the stored API key, once each
   });
 
+  it('does not keep values from a transaction that rolled back', () => {
+    settings.setJson('k', 'before');
+    expect(() =>
+      db.tx(() => {
+        settings.setJson('k', 'during');
+        expect(settings.getJson('k')).toBe('during');
+        throw new Error('rollback');
+      }),
+    ).toThrow('rollback');
+    expect(settings.getJson('k')).toBe('before');
+  });
+
   it('clearAllSettings wipes the table and the cache', () => {
     settings.updateApp({ theme: 'dark', ai: { apiKey: 'sk' } });
     settings.setJson('x', 1);

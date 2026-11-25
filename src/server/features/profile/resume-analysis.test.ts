@@ -25,6 +25,7 @@ Software Engineer, Initech, Inc.             Jun 2016 - Dec 2019
 • Maintained Node.js services backed by PostgreSQL.
 Software Engineering Intern | Globex | Summer 2015
 - Wrote internal tools in Python.
+- Cut build times 40% across 2015 - 2016 releases.
 
 EDUCATION
 B.S. Computer Science, University of Texas at Austin, 2012 - 2016
@@ -191,6 +192,7 @@ describe('contact details', () => {
     expect(analyze('Vincent van Gogh | Painter\nx').contact.fullName).toBe('Vincent van Gogh');
     expect(analyze('Résumé\nAda Lovelace\nada@example.com').contact.fullName).toBe('Ada Lovelace');
     expect(analyze('Acme Corp 2024\nx').contact.fullName).toBeUndefined();
+    expect(analyze('Sam Lee\nSt. Louis, MO 63101 | sam@example.com').contact).toMatchObject({ fullName: 'Sam Lee', location: 'St. Louis, MO' });
   });
 });
 

@@ -37,18 +37,17 @@ function zipEntryNames(bytes: Buffer, limit = 400): string[] {
   return names;
 }
 
-/** Entry names from the zip's central directory (at the end of the file). */
+/** Entry names from the zip's central directory, found through the end-of-central-directory record. */
 function zipCentralNames(bytes: Buffer): string[] {
   const names: string[] = [];
-  const signature = Buffer.from([0x50, 0x4b, 0x01, 0x02]);
-  let offset = bytes.indexOf(signature);
-  while (offset !== -1 && offset + 46 <= bytes.length && names.length < 2000) {
+  const eocd = bytes.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  if (eocd < 0 || eocd + 22 > bytes.length) return names;
+  const count = Math.min(bytes.readUInt16LE(eocd + 10), 2000);
+  let offset = bytes.readUInt32LE(eocd + 16);
+  while (names.length < count && offset + 46 <= bytes.length && bytes.readUInt32LE(offset) === 0x02014b50) {
     const nameLength = bytes.readUInt16LE(offset + 28);
-    const extraLength = bytes.readUInt16LE(offset + 30);
-    const commentLength = bytes.readUInt16LE(offset + 32);
     names.push(bytes.toString('utf8', offset + 46, offset + 46 + nameLength));
-    const next = offset + 46 + nameLength + extraLength + commentLength;
-    offset = bytes.readUInt32LE(next) === 0x02014b50 ? next : -1;
+    offset += 46 + nameLength + bytes.readUInt16LE(offset + 30) + bytes.readUInt16LE(offset + 32);
   }
   return names;
 }
