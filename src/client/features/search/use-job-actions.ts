@@ -41,8 +41,11 @@ export function useJobActions(): JobActions {
   const save = useCallback(
     (item: JobRef) => {
       const { applicationId, applicationStatus } = item.userState;
-      if (applicationId || applicationStatus) {
-        if (applicationId) navigate(`/tracker/${applicationId}`);
+      if (applicationStatus) {
+        toast.info('Already in your tracker', {
+          description: item.job.title,
+          action: applicationId ? { label: 'Open', onClick: () => navigate(`/tracker/${applicationId}`) } : undefined,
+        });
         return;
       }
       saveMutate(item, {

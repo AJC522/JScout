@@ -6,7 +6,7 @@ import { api, errorMessage } from '../../api/client';
 import { useToast } from '../../components/ui';
 import { qk } from '../../lib/query';
 
-export type ResultPages = InfiniteData<SearchResponse, number>;
+export type ResultPages = InfiniteData<SearchResponse>;
 
 export function useSearchResults(query: SearchQuery, enabled: boolean) {
   return useInfiniteQuery({

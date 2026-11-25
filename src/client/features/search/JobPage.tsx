@@ -1,14 +1,30 @@
-import { Briefcase } from 'lucide-react';
+/** /jobs/:id — one job on its own page, with the same detail view as the search page's split view. */
+import { useParams } from 'react-router';
 import { Page } from '../../components/layout/Page';
-import { EmptyState, PageHeader } from '../../components/ui';
+import { PageHeader, Skeleton } from '../../components/ui';
 import { useDocumentTitle } from '../../lib/hooks';
+import { JobDetailView } from './JobDetailView';
+import { useJobDetail } from './queries';
+import { useJobActions } from './use-job-actions';
 
 export function JobPage() {
-  useDocumentTitle('Job details');
+  const { id = '' } = useParams();
+  // Shares the cache entry with the detail view below, so this costs no extra request.
+  const detail = useJobDetail(id);
+  const job = detail.data?.job;
+  const actions = useJobActions();
+  useDocumentTitle(job ? `${job.title} at ${job.company}` : 'Job details');
+
   return (
     <Page>
-      <PageHeader title="Job details" description="The full posting, how it matches your profile, and where to apply." />
-      <EmptyState bordered icon={<Briefcase />} title="Job details are on their way" description="This page will show the complete description, salary, location and a fit analysis for the posting." />
+      <PageHeader
+        back={{ to: '/', label: 'Search' }}
+        title={job ? job.title : detail.isError ? 'Job details' : <Skeleton className="h-7 w-80 max-w-full" />}
+        description={job ? [job.company, job.locationText].filter(Boolean).join(' · ') : undefined}
+      />
+      <div className="max-w-4xl">
+        <JobDetailView jobId={id} actions={actions} variant="embedded" />
+      </div>
     </Page>
   );
 }

@@ -114,9 +114,9 @@ export function SearchBar({ query, resolvedPlace, onSearch, whatRef }: SearchBar
             renderOption={(s, { query: typed }) => (
               <span className="flex w-full items-center gap-3">
                 <span className="min-w-0 flex-1 truncate">
-                  <HighlightMatch text={s.title} query={typed} />
+                  <HighlightMatch text={s.title} query={typed} />{' '}
                   {s.family ? <span className="ml-2 text-xs text-subtle">{s.family}</span> : null}
-                </span>
+                </span>{' '}
                 {s.count > 0 ? <span className="shrink-0 text-xs text-muted tabular-nums">{formatCompactNumber(s.count)} open</span> : null}
               </span>
             )}
